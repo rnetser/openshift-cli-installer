@@ -7,10 +7,9 @@ from pathlib import Path
 
 import click
 import yaml
+from click_dict_type import DictParamType
 from clouds.aws.aws_utils import set_and_verify_aws_credentials
 from ocp_utilities.utils import run_command
-
-from click_dict_type import DictParamType
 
 
 def generate_cluster_dir_path(clusters, base_directory):
@@ -171,7 +170,7 @@ Required parameters:
     platform: Cloud platform to install the cluster on. (Currently only AWS supported).
     region: Region to use for the cloud platform.
     version: Openshift cluster version to install
-    
+
 Every parameter in install-config.yaml can be override by the user.
 For example:
     fips=true
