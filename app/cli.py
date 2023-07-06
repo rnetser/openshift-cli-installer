@@ -50,12 +50,12 @@ def download_openshift_install_binary(clusters, pull_secret_file):
     for version in versions:
         binary_dir = os.path.join("/tmp", version)
         openshift_install_str = "openshift-install"
-        cluster = [_cluster for _cluster in clusters if _cluster["version"] == version][
-            0
-        ]
-        cluster["openshift-install-binary"] = os.path.join(
-            binary_dir, openshift_install_str
-        )
+        clusters = [_cluster for _cluster in clusters if _cluster["version"] == version]
+        for cluster in clusters:
+            cluster["openshift-install-binary"] = os.path.join(
+                binary_dir, openshift_install_str
+            )
+
         run_command(
             command=shlex.split(
                 "oc adm release extract "
