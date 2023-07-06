@@ -20,19 +20,17 @@ def generate_cluster_dir_path(clusters, base_directory):
     return clusters
 
 
-def verify_jobs_passed(jobs, action):
-    failed_jobs = {}
-    for job in jobs:
-        job.start()
+def verify_processes_passed(processes, action):
+    failed_processes = {}
 
-        for _job in jobs:
-            _job.join()
-            if _job.exitcode != 0:
-                failed_jobs[_job.name] = _job.exitcode
+    for _proc in processes:
+        _proc.join()
+        if _proc.exitcode != 0:
+            failed_processes[_proc.name] = _proc.exitcode
 
-        if failed_jobs:
-            click.echo(f"Some jobs failed to {action}: {failed_jobs}\n")
-            raise click.Abort()
+    if failed_processes:
+        click.echo(f"Some jobs failed to {action}: {failed_processes}\n")
+        raise click.Abort()
 
 
 def update_base_install_config(pull_secret_file):
@@ -44,52 +42,55 @@ def update_base_install_config(pull_secret_file):
     return base_install_config
 
 
-def download_openshift_install(version, pull_secret_file):
-    binary_dir = os.path.join("/tmp", version)
-    openshift_install_str = "openshift-install"
-    run_command(
-        command=shlex.split(
-            "oc adm release extract "
-            f"quay.io/openshift-release-dev/ocp-release:{version}-x86_64 "
-            f"--command={openshift_install_str} --to={binary_dir} --registry-config={pull_secret_file}"
-        ),
-        check=False,
-    )
-    return os.path.join(binary_dir, openshift_install_str)
+def download_openshift_install_binary(clusters, pull_secret_file):
+    versions = set()
+    for cluster in clusters:
+        versions.add(cluster["version"])
+
+    for version in versions:
+        binary_dir = os.path.join("/tmp", version)
+        openshift_install_str = "openshift-install"
+        cluster = [_cluster for _cluster in clusters if _cluster["version"] == version][
+            0
+        ]
+        cluster["openshift-install-binary"] = os.path.join(
+            binary_dir, openshift_install_str
+        )
+        run_command(
+            command=shlex.split(
+                "oc adm release extract "
+                f"quay.io/openshift-release-dev/ocp-release:{version}-x86_64 "
+                f"--command={openshift_install_str} --to={binary_dir} --registry-config={pull_secret_file}"
+            ),
+            check=False,
+        )
+
+    return clusters
 
 
-def install_openshift(cluster_data, pull_secret_file):
+def install_openshift(cluster_data):
     directory = cluster_data["install-dir"]
-    version = cluster_data["version"]
-    binary_path = download_openshift_install(
-        version=version, pull_secret_file=pull_secret_file
-    )
+    binary_path = cluster_data["openshift-install-binary"]
     return run_command(
         command=shlex.split(f"{binary_path} create cluster --dir {directory}"),
         capture_output=False,
     )[0]
 
 
-def uninstall_openshift(cluster_data, pull_secret_file):
+def uninstall_openshift(cluster_data):
     directory = cluster_data["install-dir"]
-    version = cluster_data["version"]
-    binary_path = download_openshift_install(
-        version=version, pull_secret_file=pull_secret_file
-    )
+    binary_path = cluster_data["openshift-install-binary"]
     return run_command(
         command=shlex.split(f"{binary_path} destroy cluster --dir {directory}"),
         capture_output=False,
     )[0]
 
 
-def create_install_config_file(
-    clusters, base_install_config, clusters_install_data_directory
-):
+def create_install_config_file(clusters, base_install_config):
     for _cluster in clusters:
         base_install_config_copy = copy.deepcopy(base_install_config)
         cluster_name = _cluster["name"]
         install_dir = _cluster["install-dir"]
-
         base_install_config_copy["metadata"]["name"] = cluster_name
         base_install_config_copy["baseDomain"] = _cluster["baseDomain"]
         base_install_config_copy["platform"] = {
@@ -203,31 +204,35 @@ def main(
     clusters = generate_cluster_dir_path(
         clusters=cluster, base_directory=clusters_install_data_directory
     )
+    clusters = download_openshift_install_binary(
+        clusters=clusters, pull_secret_file=pull_secret_file
+    )
     if install:
         clusters = create_install_config_file(
             clusters=cluster,
             base_install_config=base_install_config,
-            clusters_install_data_directory=clusters_install_data_directory,
         )
 
-    jobs = []
-    action = "install" if install else "uninstall"
+    processes = []
+    action_str = "install" if install else "uninstall"
+    action_func = install_openshift if install else uninstall_openshift
 
     for _cluster in clusters:
-        kwargs = {"cluster_data": _cluster, "pull_secret_file": pull_secret_file}
+        kwargs = {"cluster_data": _cluster}
         if parallel:
-            job = multiprocessing.Process(
-                name=f"{_cluster['name']}---{action}",
-                target=install_openshift if install else uninstall_openshift,
+            proc = multiprocessing.Process(
+                name=f"{_cluster['name']}---{action_str}",
+                target=action_func,
                 kwargs=kwargs,
             )
-            jobs.append(job)
-            job.start()
+            processes.append(proc)
+            proc.start()
 
         else:
-            install_openshift(**kwargs) if install else uninstall_openshift(**kwargs)
+            action_func(**kwargs)
 
-    verify_jobs_passed(jobs=jobs, action=action)
+    if processes:
+        verify_processes_passed(processes=processes, action=action_str)
 
 
 if __name__ == "__main__":
