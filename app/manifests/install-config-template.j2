@@ -34,6 +34,5 @@ platform:
     region: {{ region }}
 publish: External
 fips: {{ fips|default("false", true) }}
-sshKey: |
-  {{ ssh_key }}
-pullSecret: {{ pull_secret }}
+sshKey: {{ ssh_key }}
+pullSecret: '{{ pull_secret }}'
