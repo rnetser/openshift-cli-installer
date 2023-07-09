@@ -1,4 +1,3 @@
-import copy
 import json
 import multiprocessing
 import os
@@ -9,14 +8,34 @@ import click
 import yaml
 from click_dict_type import DictParamType
 from clouds.aws.aws_utils import set_and_verify_aws_credentials
+from jinja2 import DebugUndefined, Environment, FileSystemLoader, meta
 from ocp_utilities.utils import run_command
+
+
+def get_install_config_j2_template(cluster_dict):
+    template_file = "install-config-template.j2"
+    env = Environment(
+        loader=FileSystemLoader("app/manifests/"),
+        trim_blocks=True,
+        lstrip_blocks=True,
+        undefined=DebugUndefined,
+    )
+
+    template = env.get_template(name=template_file)
+    rendered = template.render(cluster_dict)
+    undefined = meta.find_undeclared_variables(env.parse(rendered))
+    if undefined:
+        click.echo(f"The following variables are undefined: {undefined}")
+        raise click.Abort()
+
+    return yaml.safe_load(rendered)
 
 
 def generate_cluster_dir_path(clusters, base_directory):
     for _cluster in clusters:
-        cluster_name = _cluster["name"]
-        platform = _cluster["platform"]
-        _cluster["install-dir"] = os.path.join(base_directory, platform, cluster_name)
+        _cluster["install-dir"] = os.path.join(
+            base_directory, _cluster["platform"], _cluster["name"]
+        )
     return clusters
 
 
@@ -33,23 +52,15 @@ def verify_processes_passed(processes, action):
         raise click.Abort()
 
 
-def update_base_install_config(pull_secret_file):
-    base_install_config = get_base_install_config_data()
-    base_install_config["pullSecret"] = json.dumps(
-        get_pull_secret_data(pull_secret_file=pull_secret_file)
-    )
-    base_install_config["sshKey"] = get_local_ssh_key()
-    return base_install_config
-
-
 def download_openshift_install_binary(clusters, pull_secret_file):
     versions = set()
+    openshift_install_str = "openshift-install"
+
     for cluster in clusters:
         versions.add(cluster["version"])
 
     for version in versions:
         binary_dir = os.path.join("/tmp", version)
-        openshift_install_str = "openshift-install"
         clusters = [_cluster for _cluster in clusters if _cluster["version"] == version]
         for cluster in clusters:
             cluster["openshift-install-binary"] = os.path.join(
@@ -68,37 +79,36 @@ def download_openshift_install_binary(clusters, pull_secret_file):
     return clusters
 
 
-def install_openshift(cluster_data):
+def create_or_destroy_cluster(cluster_data, action):
     directory = cluster_data["install-dir"]
     binary_path = cluster_data["openshift-install-binary"]
     return run_command(
-        command=shlex.split(f"{binary_path} create cluster --dir {directory}"),
+        command=shlex.split(f"{binary_path} {action} cluster --dir {directory}"),
         capture_output=False,
     )[0]
+
+
+def install_openshift(cluster_data):
+    create_or_destroy_cluster(cluster_data=cluster_data, action="create")
 
 
 def uninstall_openshift(cluster_data):
-    directory = cluster_data["install-dir"]
-    binary_path = cluster_data["openshift-install-binary"]
-    return run_command(
-        command=shlex.split(f"{binary_path} destroy cluster --dir {directory}"),
-        capture_output=False,
-    )[0]
+    create_or_destroy_cluster(cluster_data=cluster_data, action="destroy")
 
 
-def create_install_config_file(clusters, base_install_config):
+def create_install_config_file(clusters, pull_secret_file):
+    ssh_key = get_local_ssh_key()
+    pull_secret = json.dumps(get_pull_secret_data(pull_secret_file=pull_secret_file))
     for _cluster in clusters:
-        base_install_config_copy = copy.deepcopy(base_install_config)
-        cluster_name = _cluster["name"]
         install_dir = _cluster["install-dir"]
-        base_install_config_copy["metadata"]["name"] = cluster_name
-        base_install_config_copy["baseDomain"] = _cluster["baseDomain"]
-        base_install_config_copy["platform"] = {
-            _cluster["platform"]: {"region": _cluster["region"]}
-        }
+        _cluster["pull_secret"] = pull_secret
+        _cluster["ssh_key"] = ssh_key
+
+        cluster_install_config = get_install_config_j2_template(cluster_dict=_cluster)
         Path(install_dir).mkdir(parents=True, exist_ok=True)
+
         with open(os.path.join(install_dir, "install-config.yaml"), "w") as fd:
-            fd.write(yaml.dump(base_install_config_copy))
+            fd.write(yaml.dump(cluster_install_config))
 
     return clusters
 
@@ -106,16 +116,6 @@ def create_install_config_file(clusters, base_install_config):
 def get_pull_secret_data(pull_secret_file):
     with open(pull_secret_file) as fd:
         return json.load(fd)
-
-
-def get_base_install_config_data():
-    with open("app/manifests/install-config.yaml") as fd:
-        return yaml.safe_load(fd)
-
-
-def set_debug_os_flags():
-    os.environ["OCM_PYTHON_WRAPPER_LOG_LEVEL"] = "DEBUG"
-    os.environ["OPENSHIFT_PYTHON_WRAPPER_LOG_LEVEL"] = "DEBUG"
 
 
 def get_local_ssh_key():
@@ -139,7 +139,7 @@ def get_local_ssh_key():
 \b
 Path to cluster install data
     For install this will be used to store the install data.
-    For uninstall this will be used to uninstall the cluster and must be provided.
+    For uninstall this will be used to uninstall the cluster.
 """,
     default=os.environ.get(
         "CLUSTER_INSTALL_DATA_DIRECTORY",
@@ -164,30 +164,29 @@ Path to cluster install data
 \b
 Cluster/s to install.
 Format to pass is:
-    'name=cluster1;baseDomain=aws.domain.com;platform=aws;region=us-east-2;version=4.14.0-ec.2'
+    'name=cluster1;base_domain=aws.domain.com;platform=aws;region=us-east-2;version=4.14.0-ec.2'
 Required parameters:
     name: Cluster name.
-    baseDomain: Base domain for the cluster.
+    base_domain: Base domain for the cluster.
     platform: Cloud platform to install the cluster on. (Currently only AWS supported).
     region: Region to use for the cloud platform.
     version: Openshift cluster version to install
 
-Every parameter in install-config.yaml can be override by the user.
+Check install-config-template.j2 for variables that can be overwritten by the user.
 For example:
     fips=true
-    compute_platform_aws_type=m5.xlarge
+    worker_flavor=m5.xlarge
+    worker_replicas=6
     """,
     required=True,
     multiple=True,
 )
-@click.option("--debug", help="Enable debug logs", is_flag=True)
 def main(
     install,
     uninstall,
     pull_secret_file,
     parallel,
     cluster,
-    debug,
     clusters_install_data_directory,
 ):
     """
@@ -197,20 +196,17 @@ def main(
     if not (install or uninstall):
         raise ValueError("One of install/uninstall must be specified")
 
-    if debug:
-        set_debug_os_flags()
-
-    base_install_config = update_base_install_config(pull_secret_file=pull_secret_file)
     clusters = generate_cluster_dir_path(
         clusters=cluster, base_directory=clusters_install_data_directory
     )
+
     clusters = download_openshift_install_binary(
         clusters=clusters, pull_secret_file=pull_secret_file
     )
+
     if install:
         clusters = create_install_config_file(
-            clusters=cluster,
-            base_install_config=base_install_config,
+            clusters=cluster, pull_secret_file=pull_secret_file
         )
 
     processes = []

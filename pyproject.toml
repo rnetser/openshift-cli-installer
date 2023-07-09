@@ -29,9 +29,6 @@ cli = "app.cli:main"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-colorlog = "*"
-openshift-python-wrapper = "*"
-openshift-python-utilities = "*"
 click = "*"
 redhat-qe-cloud-tools = "^1.0.8"
 
