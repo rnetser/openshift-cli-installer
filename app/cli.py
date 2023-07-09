@@ -238,9 +238,15 @@ def main(
     """
     Install/Uninstall Openshift cluster/s
     """
-    set_and_verify_aws_credentials()
     if not (install or uninstall):
         raise ValueError("One of install/uninstall must be specified")
+
+    if install and uninstall:
+        raise ValueError(
+            "Both install and uninstall specified, only one can be specified"
+        )
+
+    set_and_verify_aws_credentials()
 
     clusters = generate_cluster_dir_path(
         clusters=cluster, base_directory=clusters_install_data_directory
