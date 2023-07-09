@@ -23,9 +23,9 @@ def get_install_config_j2_template(cluster_dict):
 
     template = env.get_template(name=template_file)
     rendered = template.render(cluster_dict)
-    undefined = meta.find_undeclared_variables(env.parse(rendered))
-    if undefined:
-        click.echo(f"The following variables are undefined: {undefined}")
+    undefined_variables = meta.find_undeclared_variables(env.parse(rendered))
+    if undefined_variables:
+        click.echo(f"The following variables are undefined: {undefined_variables}")
         raise click.Abort()
 
     return yaml.safe_load(rendered)

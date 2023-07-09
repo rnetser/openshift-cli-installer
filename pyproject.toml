@@ -31,6 +31,7 @@ cli = "app.cli:main"
 python = "^3.8"
 click = "*"
 redhat-qe-cloud-tools = "^1.0.8"
+jinja2 = "^3.1.2"
 
 [tool.poetry.dev-dependencies]
 ipython = "*"
