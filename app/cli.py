@@ -2,14 +2,27 @@ import json
 import multiprocessing
 import os
 import shlex
+import shutil
 from pathlib import Path
 
 import click
+import shortuuid
 import yaml
 from click_dict_type import DictParamType
 from clouds.aws.aws_utils import set_and_verify_aws_credentials
+from clouds.aws.session_clients import s3_client
 from jinja2 import DebugUndefined, Environment, FileSystemLoader, meta
 from ocp_utilities.utils import run_command
+
+
+class RunInstallUninstallCommandError(Exception):
+    def __init__(self, action, out, err):
+        self.action = action
+        self.out = out
+        self.err = err
+
+    def __str__(self):
+        return f"Failed to run cluster {self.action}\nERR: {self.err}\nOUT: {self.out}"
 
 
 def get_install_config_j2_template(cluster_dict):
@@ -79,17 +92,38 @@ def download_openshift_install_binary(clusters, pull_secret_file):
     return clusters
 
 
-def create_or_destroy_cluster(cluster_data, action):
+def create_or_destroy_cluster(
+    cluster_data, action, s3_bucket_name=None, s3_bucket_path=None
+):
     directory = cluster_data["install-dir"]
     binary_path = cluster_data["openshift-install-binary"]
-    return run_command(
+    res, out, err = run_command(
         command=shlex.split(f"{binary_path} {action} cluster --dir {directory}"),
         capture_output=False,
-    )[0]
+        check=False,
+    )
+    if action == "create" and s3_bucket_name:
+        zip_file = shutil.make_archive(
+            base_name=f"{directory}-{shortuuid.uuid()}",
+            format="zip",
+            root_dir=directory,
+        )
+        s3_client().upload_file(
+            Filename=zip_file,
+            Bucket=s3_bucket_name,
+            Key=os.path.join(s3_bucket_path or "", os.path.split(zip_file)[-1]),
+        )
+    if not res:
+        raise RunInstallUninstallCommandError(action=action, out=out, err=err)
 
 
-def install_openshift(cluster_data):
-    create_or_destroy_cluster(cluster_data=cluster_data, action="create")
+def install_openshift(cluster_data, s3_bucket_name, s3_bucket_path):
+    create_or_destroy_cluster(
+        cluster_data=cluster_data,
+        action="create",
+        s3_bucket_name=s3_bucket_name,
+        s3_bucket_path=s3_bucket_path,
+    )
 
 
 def uninstall_openshift(cluster_data):
@@ -157,6 +191,16 @@ Path to cluster install data
     show_default=True,
 )
 @click.option(
+    "--s3-bucket-name",
+    help="S3 bucket name to store install folder backups",
+    show_default=True,
+)
+@click.option(
+    "--s3-bucket-path",
+    help="S3 bucket path to store the backups",
+    show_default=True,
+)
+@click.option(
     "-c",
     "--cluster",
     type=DictParamType(),
@@ -188,6 +232,8 @@ def main(
     parallel,
     cluster,
     clusters_install_data_directory,
+    s3_bucket_name,
+    s3_bucket_path,
 ):
     """
     Install/Uninstall Openshift cluster/s
@@ -210,11 +256,19 @@ def main(
         )
 
     processes = []
-    action_str = "install" if install else "uninstall"
-    action_func = install_openshift if install else uninstall_openshift
+    kwargs = {}
+    if install:
+        action_str = "create"
+        action_func = install_openshift
+        kwargs.update(
+            {"s3_bucket_name": s3_bucket_name, "s3_bucket_path": s3_bucket_path}
+        )
+    else:
+        action_str = "destroy"
+        action_func = uninstall_openshift
 
     for _cluster in clusters:
-        kwargs = {"cluster_data": _cluster}
+        kwargs["cluster_data"] = _cluster
         if parallel:
             proc = multiprocessing.Process(
                 name=f"{_cluster['name']}---{action_str}",
