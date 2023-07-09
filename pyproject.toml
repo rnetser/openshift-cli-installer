@@ -1,6 +1,6 @@
 [tool.black]
 line-length = 88
-target_version = ['py37', 'py38', 'py39', 'py310', "py311"]
+target_version = ['py38', 'py39', 'py310', "py311"]
 exclude = '''
 (
   /(
@@ -29,14 +29,15 @@ cli = "app.cli:main"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-click = "*"
-redhat-qe-cloud-tools = "^1.0.8"
 jinja2 = "^3.1.2"
 shortuuid = "^1.0.11"
+click = "^8.1.4"
+redhat-qe-cloud-tools = "^1.0.9"
 
-[tool.poetry.dev-dependencies]
+
+[tool.poetry.group.dev.dependencies]
+ipdb = "^0.13.13"
 ipython = "*"
-ipdb = "*"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

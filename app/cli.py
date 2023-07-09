@@ -117,7 +117,7 @@ def create_or_destroy_cluster(
         raise RunInstallUninstallCommandError(action=action, out=out, err=err)
 
 
-def install_openshift(cluster_data, s3_bucket_name, s3_bucket_path):
+def create_openshift_cluster(cluster_data, s3_bucket_name, s3_bucket_path):
     create_or_destroy_cluster(
         cluster_data=cluster_data,
         action="create",
@@ -126,7 +126,7 @@ def install_openshift(cluster_data, s3_bucket_name, s3_bucket_path):
     )
 
 
-def uninstall_openshift(cluster_data):
+def destroy_openshift_cluster(cluster_data):
     create_or_destroy_cluster(cluster_data=cluster_data, action="destroy")
 
 
@@ -239,7 +239,7 @@ def main(
     s3_bucket_path,
 ):
     """
-    Install/Uninstall Openshift cluster/s
+    Create/Destroy Openshift cluster/s
     """
     set_and_verify_aws_credentials()
 
@@ -260,12 +260,12 @@ def main(
     processes = []
     kwargs = {}
     if create:
-        action_func = install_openshift
+        action_func = create_openshift_cluster
         kwargs.update(
             {"s3_bucket_name": s3_bucket_name, "s3_bucket_path": s3_bucket_path}
         )
     else:
-        action_func = uninstall_openshift
+        action_func = destroy_openshift_cluster
 
     for _cluster in clusters:
         kwargs["cluster_data"] = _cluster
