@@ -158,8 +158,12 @@ def get_local_ssh_key():
 
 
 @click.command()
-@click.option("-i", "--install", is_flag=True, help="Install Openshift cluster/s")
-@click.option("-u", "--uninstall", is_flag=True, help="Uninstall Openshift cluster/s")
+@click.option(
+    "-a",
+    "--action",
+    type=click.Choice(["create", "destroy"]),
+    help="Action to perform Openshift cluster/s",
+)
 @click.option(
     "-p",
     "--parallel",
@@ -226,8 +230,7 @@ For example:
     multiple=True,
 )
 def main(
-    install,
-    uninstall,
+    action,
     pull_secret_file,
     parallel,
     cluster,
@@ -238,14 +241,6 @@ def main(
     """
     Install/Uninstall Openshift cluster/s
     """
-    if not (install or uninstall):
-        raise ValueError("One of install/uninstall must be specified")
-
-    if install and uninstall:
-        raise ValueError(
-            "Both install and uninstall specified, only one can be specified"
-        )
-
     set_and_verify_aws_credentials()
 
     clusters = generate_cluster_dir_path(
@@ -256,28 +251,27 @@ def main(
         clusters=clusters, pull_secret_file=pull_secret_file
     )
 
-    if install:
+    create = action == "create"
+    if create:
         clusters = create_install_config_file(
             clusters=cluster, pull_secret_file=pull_secret_file
         )
 
     processes = []
     kwargs = {}
-    if install:
-        action_str = "create"
+    if create:
         action_func = install_openshift
         kwargs.update(
             {"s3_bucket_name": s3_bucket_name, "s3_bucket_path": s3_bucket_path}
         )
     else:
-        action_str = "destroy"
         action_func = uninstall_openshift
 
     for _cluster in clusters:
         kwargs["cluster_data"] = _cluster
         if parallel:
             proc = multiprocessing.Process(
-                name=f"{_cluster['name']}---{action_str}",
+                name=f"{_cluster['name']}---{action}",
                 target=action_func,
                 kwargs=kwargs,
             )
@@ -288,7 +282,7 @@ def main(
             action_func(**kwargs)
 
     if processes:
-        verify_processes_passed(processes=processes, action=action_str)
+        verify_processes_passed(processes=processes, action=action)
 
 
 if __name__ == "__main__":
