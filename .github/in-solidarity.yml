@@ -11,4 +11,4 @@ ignore:
  - ".github/in-solidarity.yml"  # default
  - ".github/workflows/*.yml"
  - "**/*.yml"
- - "app/manifest/*.j2"
+ - "app/manifests/install-config-template.j2"
