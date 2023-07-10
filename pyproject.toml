@@ -1,0 +1,44 @@
+[tool.black]
+line-length = 88
+target_version = ['py38', 'py39', 'py310', "py311"]
+exclude = '''
+(
+  /(
+    | \.git
+    | \.venv
+    | \.mypy_cache
+    | \.tox
+  )/
+)
+'''
+
+[tool.isort]
+line_length = 88
+profile = "black"
+
+[tool.poetry]
+name = "openshift-cli-installer"
+version = "1.0.0"
+description = "CLI to install/uninstall Openshift clusters."
+authors = ["Meni Yakove", "Ruth Netser"]
+readme = "README.md"
+repository = "https://github.com/RedHatQE/openshift-cli-installer"
+
+[tool.poetry.scripts]
+cli = "app.cli:main"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+jinja2 = "^3.1.2"
+shortuuid = "^1.0.11"
+click = "^8.1.4"
+redhat-qe-cloud-tools = "^1.0.9"
+
+
+[tool.poetry.group.dev.dependencies]
+ipdb = "^0.13.13"
+ipython = "*"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
