@@ -11,6 +11,34 @@ from clouds.aws.session_clients import s3_client
 from jinja2 import DebugUndefined, Environment, FileSystemLoader, meta
 from ocp_utilities.utils import run_command
 
+# TODO: enable spot
+"""
+function inject_spot_instance_config() {
+  local dir=${1}
+
+  if [ ! -f /tmp/yq ]; then
+    curl -L https://github.com/mikefarah/yq/releases/download/3.3.0/yq_linux_amd64 -o /tmp/yq && chmod +x /tmp/yq
+  fi
+
+  PATCH="${SHARED_DIR}/machinesets-spot-instances.yaml.patch"
+  cat > "${PATCH}" << EOF
+spec:
+  template:
+    spec:
+      providerSpec:
+        value:
+          spotMarketOptions: {}
+EOF
+
+  for MACHINESET in $dir/openshift/99_openshift-cluster-api_worker-machineset-*.yaml; do
+    /tmp/yq m -x -i "${MACHINESET}" "${PATCH}"
+    echo "Patched spotMarketOptions into ${MACHINESET}"
+  done
+
+  echo "Enabled AWS Spot instances for worker nodes"
+}
+"""
+
 
 class RunInstallUninstallCommandError(Exception):
     def __init__(self, action, out, err):

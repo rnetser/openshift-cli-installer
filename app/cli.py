@@ -79,9 +79,10 @@ def destroy_openshift_cluster(cluster_data):
     "--clusters-install-data-directory",
     help="""
 \b
-Path to cluster install data (Needed only for AWS IPI clusters).
+Path to cluster install data.
     For install this will be used to store the install data.
     For uninstall this will be used to uninstall the cluster.
+    Also used to store clusters kubeconfig
 """,
     default=os.environ.get(
         "CLUSTER_INSTALL_DATA_DIRECTORY",
@@ -89,6 +90,7 @@ Path to cluster install data (Needed only for AWS IPI clusters).
     ),
     type=click.Path(),
     show_default=True,
+    required=True,
 )
 @click.option(
     "--pull-secret-file",
@@ -114,8 +116,8 @@ Path to pull secret json file, can be obtained from console.redhat.com.
 @click.option(
     "--ocm-env",
     help="OCM env to log in into. needed for managed AWS cluster",
+    type=click.Choice(["stage", "production"]),
     default="stage",
-    type=click.Choice(["production", "stage"]),
     show_default=True,
 )
 @click.option(
@@ -193,8 +195,14 @@ def main(
 
     if aws_managed_clusters:
         abort_no_ocm_token(ocm_token)
+        clusters = generate_cluster_dir_path(
+            clusters=aws_managed_clusters,
+            base_directory=clusters_install_data_directory,
+        )
         clusters = prepare_clusters_data(
-            clusters=cluster, ocm_token=ocm_token, ocm_env=ocm_env
+            clusters=clusters,
+            ocm_token=ocm_token,
+            ocm_env=ocm_env,
         )
 
     processes = []

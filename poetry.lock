@@ -655,6 +655,16 @@ files = [
 ]
 
 [[package]]
+name = "importlib"
+version = "1.0.4"
+description = "Backport of importlib.import_module() from Python 2.7"
+optional = false
+python-versions = "*"
+files = [
+    {file = "importlib-1.0.4.zip", hash = "sha256:b6ee7066fea66e35f8d0acee24d98006de1a0a8a94a8ce6efe73a9a23c8d9826"},
+]
+
+[[package]]
 name = "importlib-metadata"
 version = "6.8.0"
 description = "Read metadata from Python packages"
@@ -1133,6 +1143,43 @@ files = [
 kubernetes = ">=12.0"
 python-string-utils = "*"
 six = "*"
+
+[[package]]
+name = "openshift-cluster-management-python-client"
+version = "1.0.23"
+description = "A python client for https://api.openshift.com/api/ APIs"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "openshift-cluster-management-python-client-1.0.23.tar.gz", hash = "sha256:06dc4d19fcbcc58191e9ede78c0c96935c788616949c4045746de209a5082152"},
+]
+
+[package.dependencies]
+python-dateutil = "*"
+urllib3 = ">=1.25.3"
+
+[[package]]
+name = "openshift-cluster-management-python-wrapper"
+version = "1.0.27"
+description = "Wrapper around https://github.com/openshift/openshift-cluster-management-python-client"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "openshift-cluster-management-python-wrapper-1.0.27.tar.gz", hash = "sha256:6c8f12c1cd27d02bc10b32291207b5f4c329f103c8c0700a2ee2232694c82bb4"},
+]
+
+[package.dependencies]
+colorlog = "*"
+importlib = "*"
+openshift-cluster-management-python-client = "*"
+openshift-python-utilities = "*"
+openshift-python-wrapper = "*"
+python-benedict = "*"
+python-simple-logger = "*"
+pyyaml = "*"
+redhat-qe-cloud-tools = "*"
+requests = "*"
+rosa-python-client = "*"
 
 [[package]]
 name = "openshift-python-utilities"
@@ -2360,4 +2407,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "e609e19c7d7c3def9af45f7caafa1ad4056f0c73e84b0bc55a2af0f1f09a9ca6"
+content-hash = "c2c6f4c9c843b1f6253d586dd8f6b36f11d51018aa8fc1ff0d30675644938baf"
