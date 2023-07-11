@@ -1868,6 +1868,22 @@ files = [
 requests = ">=2.0.1,<3.0.0"
 
 [[package]]
+name = "rosa-python-client"
+version = "1.0.16"
+description = "Wrapper for rosa cli"
+optional = false
+python-versions = ">=3.8,<4.0"
+files = [
+    {file = "rosa_python_client-1.0.16-py3-none-any.whl", hash = "sha256:244bc2e84b8cea1815a98bbfe5e93eb7782cf9fe6853ee5d4b348fca444ef860"},
+    {file = "rosa_python_client-1.0.16.tar.gz", hash = "sha256:23511081be073f79e048e8ec388e54db70a1480f52be44e1dabd9b8ce2926bdd"},
+]
+
+[package.dependencies]
+python-benedict = ">=0.31.0,<0.32.0"
+python-simple-logger = ">=1.0.5,<2.0.0"
+redhat-qe-cloud-tools = ">=1.0.6,<2.0.0"
+
+[[package]]
 name = "rpds-py"
 version = "0.8.10"
 description = "Python bindings to Rust's persistent data structures (rpds)"
@@ -2344,4 +2360,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "0b24e68799bd0ed8e4898156e4f04b983c50f9b9015d21b4e37ef6267d0b2ca4"
+content-hash = "e609e19c7d7c3def9af45f7caafa1ad4056f0c73e84b0bc55a2af0f1f09a9ca6"

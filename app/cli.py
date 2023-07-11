@@ -1,55 +1,27 @@
-import json
 import multiprocessing
 import os
-import shlex
-import shutil
-from pathlib import Path
 
 import click
-import shortuuid
-import yaml
-from click_dict_type import DictParamType
 from clouds.aws.aws_utils import set_and_verify_aws_credentials
-from clouds.aws.session_clients import s3_client
-from jinja2 import DebugUndefined, Environment, FileSystemLoader, meta
-from ocp_utilities.utils import run_command
+from libs.aws_ipi_clusters import (
+    create_install_config_file,
+    create_or_destroy_aws_ipi_cluster,
+    download_openshift_install_binary,
+    generate_cluster_dir_path,
+)
+from libs.rosa_clusters import (
+    prepare_clusters_data,
+    rosa_create_cluster,
+    rosa_delete_cluster,
+)
+from utils.click_dict_type import DictParamType
+from utils.const import AWS_MANAGED_STR, AWS_STR, HYPERSHIFT_STR
 
 
-class RunInstallUninstallCommandError(Exception):
-    def __init__(self, action, out, err):
-        self.action = action
-        self.out = out
-        self.err = err
-
-    def __str__(self):
-        return f"Failed to run cluster {self.action}\nERR: {self.err}\nOUT: {self.out}"
-
-
-def get_install_config_j2_template(cluster_dict):
-    template_file = "install-config-template.j2"
-    env = Environment(
-        loader=FileSystemLoader("app/manifests/"),
-        trim_blocks=True,
-        lstrip_blocks=True,
-        undefined=DebugUndefined,
-    )
-
-    template = env.get_template(name=template_file)
-    rendered = template.render(cluster_dict)
-    undefined_variables = meta.find_undeclared_variables(env.parse(rendered))
-    if undefined_variables:
-        click.echo(f"The following variables are undefined: {undefined_variables}")
+def abort_no_ocm_token(ocm_token):
+    if not ocm_token:
+        click.echo("--ocm-token is required for managed cluster")
         raise click.Abort()
-
-    return yaml.safe_load(rendered)
-
-
-def generate_cluster_dir_path(clusters, base_directory):
-    for _cluster in clusters:
-        _cluster["install-dir"] = os.path.join(
-            base_directory, _cluster["platform"], _cluster["name"]
-        )
-    return clusters
 
 
 def verify_processes_passed(processes, action):
@@ -65,96 +37,27 @@ def verify_processes_passed(processes, action):
         raise click.Abort()
 
 
-def download_openshift_install_binary(clusters, pull_secret_file):
-    versions = set()
-    openshift_install_str = "openshift-install"
-
-    for cluster in clusters:
-        versions.add(cluster["version"])
-
-    for version in versions:
-        binary_dir = os.path.join("/tmp", version)
-        clusters = [_cluster for _cluster in clusters if _cluster["version"] == version]
-        for cluster in clusters:
-            cluster["openshift-install-binary"] = os.path.join(
-                binary_dir, openshift_install_str
-            )
-
-        run_command(
-            command=shlex.split(
-                "oc adm release extract "
-                f"quay.io/openshift-release-dev/ocp-release:{version}-x86_64 "
-                f"--command={openshift_install_str} --to={binary_dir} --registry-config={pull_secret_file}"
-            ),
-            check=False,
+def create_openshift_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
+    cluster_platform = cluster_data["platform"]
+    if cluster_platform == AWS_STR:
+        create_or_destroy_aws_ipi_cluster(
+            cluster_data=cluster_data,
+            action="create",
+            s3_bucket_name=s3_bucket_name,
+            s3_bucket_path=s3_bucket_path,
         )
 
-    return clusters
-
-
-def create_or_destroy_cluster(
-    cluster_data, action, s3_bucket_name=None, s3_bucket_path=None
-):
-    directory = cluster_data["install-dir"]
-    binary_path = cluster_data["openshift-install-binary"]
-    res, out, err = run_command(
-        command=shlex.split(f"{binary_path} {action} cluster --dir {directory}"),
-        capture_output=False,
-        check=False,
-    )
-    if action == "create" and s3_bucket_name:
-        zip_file = shutil.make_archive(
-            base_name=f"{directory}-{shortuuid.uuid()}",
-            format="zip",
-            root_dir=directory,
-        )
-        s3_client().upload_file(
-            Filename=zip_file,
-            Bucket=s3_bucket_name,
-            Key=os.path.join(s3_bucket_path or "", os.path.split(zip_file)[-1]),
-        )
-    if not res:
-        raise RunInstallUninstallCommandError(action=action, out=out, err=err)
-
-
-def create_openshift_cluster(cluster_data, s3_bucket_name, s3_bucket_path):
-    create_or_destroy_cluster(
-        cluster_data=cluster_data,
-        action="create",
-        s3_bucket_name=s3_bucket_name,
-        s3_bucket_path=s3_bucket_path,
-    )
+    elif cluster_platform in (AWS_MANAGED_STR, HYPERSHIFT_STR):
+        rosa_create_cluster(cluster_data=cluster_data)
 
 
 def destroy_openshift_cluster(cluster_data):
-    create_or_destroy_cluster(cluster_data=cluster_data, action="destroy")
+    cluster_platform = cluster_data["platform"]
+    if cluster_platform == AWS_STR:
+        create_or_destroy_aws_ipi_cluster(cluster_data=cluster_data, action="destroy")
 
-
-def create_install_config_file(clusters, pull_secret_file):
-    ssh_key = get_local_ssh_key()
-    pull_secret = json.dumps(get_pull_secret_data(pull_secret_file=pull_secret_file))
-    for _cluster in clusters:
-        install_dir = _cluster["install-dir"]
-        _cluster["pull_secret"] = pull_secret
-        _cluster["ssh_key"] = ssh_key
-
-        cluster_install_config = get_install_config_j2_template(cluster_dict=_cluster)
-        Path(install_dir).mkdir(parents=True, exist_ok=True)
-
-        with open(os.path.join(install_dir, "install-config.yaml"), "w") as fd:
-            fd.write(yaml.dump(cluster_install_config))
-
-    return clusters
-
-
-def get_pull_secret_data(pull_secret_file):
-    with open(pull_secret_file) as fd:
-        return json.load(fd)
-
-
-def get_local_ssh_key():
-    with open(os.path.expanduser("~/.ssh/id_rsa.pub")) as fd:
-        return fd.read().strip()
+    elif cluster_platform in (AWS_MANAGED_STR, HYPERSHIFT_STR):
+        rosa_delete_cluster(cluster_data=cluster_data)
 
 
 @click.command()
@@ -163,6 +66,7 @@ def get_local_ssh_key():
     "--action",
     type=click.Choice(["create", "destroy"]),
     help="Action to perform Openshift cluster/s",
+    required=True,
 )
 @click.option(
     "-p",
@@ -175,7 +79,7 @@ def get_local_ssh_key():
     "--clusters-install-data-directory",
     help="""
 \b
-Path to cluster install data
+Path to cluster install data (Needed only for AWS IPI clusters).
     For install this will be used to store the install data.
     For uninstall this will be used to uninstall the cluster.
 """,
@@ -183,13 +87,16 @@ Path to cluster install data
         "CLUSTER_INSTALL_DATA_DIRECTORY",
         "/openshift-cli-installer/clusters-install-data",
     ),
-    type=click.Path(exists=True),
+    type=click.Path(),
     show_default=True,
 )
 @click.option(
     "--pull-secret-file",
-    help="Path to pull secret json file, can be obtained from console.redhat.com",
-    required=True,
+    help="""
+    \b
+Path to pull secret json file, can be obtained from console.redhat.com.
+(Needed only for AWS IPI clusters)
+    """,
     default=os.environ.get("PULL_SECRET"),
     type=click.Path(exists=True),
     show_default=True,
@@ -205,6 +112,18 @@ Path to cluster install data
     show_default=True,
 )
 @click.option(
+    "--ocm-env",
+    help="OCM env to log in into. needed for managed AWS cluster",
+    default="stage",
+    type=click.Choice(["production", "stage"]),
+    show_default=True,
+)
+@click.option(
+    "--ocm-token",
+    help="OCM token, needed for managed AWS cluster.",
+    default=os.environ.get("OCM_TOKEN"),
+)
+@click.option(
     "-c",
     "--cluster",
     type=DictParamType(),
@@ -216,7 +135,7 @@ Format to pass is:
 Required parameters:
     name: Cluster name.
     base_domain: Base domain for the cluster.
-    platform: Cloud platform to install the cluster on. (Currently only AWS supported).
+    platform: Cloud platform to install the cluster on. (Currently only AWS IPI supported).
     region: Region to use for the cloud platform.
     version: Openshift cluster version to install
 
@@ -237,35 +156,49 @@ def main(
     clusters_install_data_directory,
     s3_bucket_name,
     s3_bucket_path,
+    ocm_token,
+    ocm_env,
 ):
     """
     Create/Destroy Openshift cluster/s
     """
-    set_and_verify_aws_credentials()
-
-    clusters = generate_cluster_dir_path(
-        clusters=cluster, base_directory=clusters_install_data_directory
-    )
-
-    clusters = download_openshift_install_binary(
-        clusters=clusters, pull_secret_file=pull_secret_file
-    )
-
+    clusters = []
+    kwargs = {}
     create = action == "create"
-    if create:
-        clusters = create_install_config_file(
-            clusters=cluster, pull_secret_file=pull_secret_file
+    aws_ipi_clusters = [
+        _cluster for _cluster in cluster if _cluster["platform"] == AWS_STR
+    ]
+    aws_managed_clusters = [
+        _cluster
+        for _cluster in cluster
+        if _cluster["platform"] in (AWS_MANAGED_STR, HYPERSHIFT_STR)
+    ]
+    if aws_ipi_clusters or aws_managed_clusters:
+        set_and_verify_aws_credentials()
+
+    if aws_ipi_clusters:
+        clusters = generate_cluster_dir_path(
+            clusters=aws_ipi_clusters, base_directory=clusters_install_data_directory
+        )
+        clusters = download_openshift_install_binary(
+            clusters=clusters, pull_secret_file=pull_secret_file
+        )
+        if create:
+            kwargs.update(
+                {"s3_bucket_name": s3_bucket_name, "s3_bucket_path": s3_bucket_path}
+            )
+            clusters = create_install_config_file(
+                clusters=cluster, pull_secret_file=pull_secret_file
+            )
+
+    if aws_managed_clusters:
+        abort_no_ocm_token(ocm_token)
+        clusters = prepare_clusters_data(
+            clusters=cluster, ocm_token=ocm_token, ocm_env=ocm_env
         )
 
     processes = []
-    kwargs = {}
-    if create:
-        action_func = create_openshift_cluster
-        kwargs.update(
-            {"s3_bucket_name": s3_bucket_name, "s3_bucket_path": s3_bucket_path}
-        )
-    else:
-        action_func = destroy_openshift_cluster
+    action_func = create_openshift_cluster if create else destroy_openshift_cluster
 
     for _cluster in clusters:
         kwargs["cluster_data"] = _cluster
