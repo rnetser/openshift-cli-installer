@@ -1,5 +1,6 @@
 import multiprocessing
 import os
+from pathlib import Path
 
 import click
 from clouds.aws.aws_utils import set_and_verify_aws_credentials
@@ -7,15 +8,24 @@ from libs.aws_ipi_clusters import (
     create_install_config_file,
     create_or_destroy_aws_ipi_cluster,
     download_openshift_install_binary,
-    generate_cluster_dir_path,
 )
 from libs.rosa_clusters import (
-    prepare_clusters_data,
+    prepare_managed_clusters_data,
     rosa_create_cluster,
     rosa_delete_cluster,
 )
 from utils.click_dict_type import DictParamType
 from utils.const import AWS_MANAGED_STR, AWS_STR, HYPERSHIFT_STR
+
+
+def generate_cluster_dir_path(clusters, base_directory):
+    for _cluster in clusters:
+        cluster_dir = os.path.join(
+            base_directory, _cluster["platform"], _cluster["name"]
+        )
+        _cluster["install-dir"] = cluster_dir
+        Path(cluster_dir).mkdir(parents=True, exist_ok=True)
+    return clusters
 
 
 def abort_no_ocm_token(ocm_token):
@@ -199,7 +209,7 @@ def main(
             clusters=aws_managed_clusters,
             base_directory=clusters_install_data_directory,
         )
-        clusters = prepare_clusters_data(
+        clusters = prepare_managed_clusters_data(
             clusters=clusters,
             ocm_token=ocm_token,
             ocm_env=ocm_env,

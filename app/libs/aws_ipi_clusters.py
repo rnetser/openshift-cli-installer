@@ -2,7 +2,6 @@ import json
 import os
 import shlex
 import shutil
-from pathlib import Path
 
 import click
 import shortuuid
@@ -59,7 +58,6 @@ def create_install_config_file(clusters, pull_secret_file):
         _cluster["ssh_key"] = ssh_key
 
         cluster_install_config = get_install_config_j2_template(cluster_dict=_cluster)
-        Path(install_dir).mkdir(parents=True, exist_ok=True)
 
         with open(os.path.join(install_dir, "install-config.yaml"), "w") as fd:
             fd.write(yaml.dump(cluster_install_config))
@@ -94,14 +92,6 @@ def get_install_config_j2_template(cluster_dict):
         raise click.Abort()
 
     return yaml.safe_load(rendered)
-
-
-def generate_cluster_dir_path(clusters, base_directory):
-    for _cluster in clusters:
-        _cluster["install-dir"] = os.path.join(
-            base_directory, _cluster["platform"], _cluster["name"]
-        )
-    return clusters
 
 
 def download_openshift_install_binary(clusters, pull_secret_file):
