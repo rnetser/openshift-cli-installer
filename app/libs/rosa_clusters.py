@@ -14,6 +14,19 @@ from python_terraform import IsNotFlagged, Terraform, TerraformCommandError
 from utils.const import HYPERSHIFT_STR
 
 
+def time_string_to_seconds(time_string):
+    time_and_unit = re.match(r"(?P<time>\d+)(?P<unit>\w)", time_string).groupdict()
+    _time = int(time_and_unit["time"])
+    _unit = time_and_unit["unit"]
+    if _unit == "s":
+        return _time
+    elif _unit == "m":
+        return _time * 60
+    elif _unit == "h":
+        return _time * 60 * 60
+    return int(time_string)
+
+
 def get_ocm_client(ocm_token, ocm_env):
     return OCMPythonClient(
         token=ocm_token,
@@ -28,17 +41,16 @@ def create_oidc(cluster_data):
     oidc_prefix = cluster_data["cluster-name"]
     ocm_token, ocm_env, _ = extract_ocm_data_from_cluster_data(cluster_data)
     ocm_client = get_ocm_client(ocm_token, ocm_env)
-    rosa.cli.execute(
-        command=f"create oidc-config --managed=false --prefix={oidc_prefix}",
-        aws_region=aws_region,
-        ocm_client=ocm_client,
-    )
-    # `rosa list oidc-config` command does not have `region` as part of the help menu
-    res = rosa.cli.execute(
-        command=f"list oidc-config --region={aws_region}",
-        ocm_client=ocm_client,
-        aws_region=aws_region,
-    )["out"]
+    for cmd in (
+        f"create oidc-config --managed=false --prefix={oidc_prefix}",
+        f"list oidc-config --region={aws_region}",
+    ):
+        res = rosa.cli.execute(
+            command=cmd,
+            aws_region=aws_region,
+            ocm_client=ocm_client,
+        )["out"]
+
     _oidc_config_id = [
         oidc_config["id"]
         for oidc_config in res
@@ -50,6 +62,7 @@ def create_oidc(cluster_data):
 
 def terraform_init(cluster_data):
     aws_region = cluster_data["region"]
+    # az_id example: us-east-2 -> ["use2-az1", "use2-az2"]
     az_id_prefix = "".join(re.match(r"(.*)-(\w).*-(\d)", aws_region).groups())
     cluster_parameters = {
         "aws_region": aws_region,
@@ -103,7 +116,7 @@ def extract_ocm_data_from_cluster_data(cluster_data):
 def get_cluster_object(ocm_token, ocm_env, cluster_data):
     ocm_client = get_ocm_client(ocm_token, ocm_env)
     for sample in TimeoutSampler(
-        wait_timeout=60 * 5,
+        wait_timeout=time_string_to_seconds(time_string="5m"),
         sleep=1,
         func=Cluster,
         client=ocm_client,
@@ -118,7 +131,9 @@ def prepare_managed_clusters_data(clusters, ocm_token, ocm_env):
         _cluster["cluster-name"] = _cluster["name"]
         _cluster["ocm-token"] = ocm_token
         _cluster["ocm-env"] = ocm_env
-        _cluster["timeout"] = _cluster.get("timeout", 1800)
+        _cluster["timeout"] = time_string_to_seconds(
+            time_string=_cluster.get("timeout", "30m")
+        )
         if _cluster["platform"] == HYPERSHIFT_STR:
             _cluster["hosted-cp"] = "true"
             _cluster["tags"] = "dns:external"
@@ -177,7 +192,9 @@ def rosa_create_cluster(cluster_data):
         client=ocp_client, name="osd-cluster-ready", namespace="openshift-monitoring"
     )
     job.wait_for_condition(
-        condition=job.Condition.COMPLETE, status="True", timeout=60 * 40
+        condition=job.Condition.COMPLETE,
+        status="True",
+        timeout=time_string_to_seconds(time_string="40m"),
     )
 
 
