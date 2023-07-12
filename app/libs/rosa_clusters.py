@@ -14,17 +14,38 @@ from python_terraform import IsNotFlagged, Terraform, TerraformCommandError
 from utils.const import HYPERSHIFT_STR
 
 
-def time_string_to_seconds(time_string):
-    time_and_unit = re.match(r"(?P<time>\d+)(?P<unit>\w)", time_string).groupdict()
+def tts(ts):
+    """
+    Convert time string to seconds.
+
+    Args:
+        ts (str): time string to convert, can be and int followed by s/m/h
+            if only numbers was sent return int(ts)
+
+    Example:
+        >>> tts(ts="1h")
+        3600
+        >>> tts(ts="3600")
+        3600
+
+    Returns:
+        int: Time in seconds
+    """
+    try:
+        time_and_unit = re.match(r"(?P<time>\d+)(?P<unit>\w)", str(ts)).groupdict()
+    except AttributeError:
+        return int(ts)
+
     _time = int(time_and_unit["time"])
-    _unit = time_and_unit["unit"]
+    _unit = time_and_unit["unit"].lower()
     if _unit == "s":
         return _time
     elif _unit == "m":
         return _time * 60
     elif _unit == "h":
         return _time * 60 * 60
-    return int(time_string)
+    else:
+        return int(ts)
 
 
 def get_ocm_client(ocm_token, ocm_env):
@@ -116,7 +137,7 @@ def extract_ocm_data_from_cluster_data(cluster_data):
 def get_cluster_object(ocm_token, ocm_env, cluster_data):
     ocm_client = get_ocm_client(ocm_token, ocm_env)
     for sample in TimeoutSampler(
-        wait_timeout=time_string_to_seconds(time_string="5m"),
+        wait_timeout=tts(ts="5m"),
         sleep=1,
         func=Cluster,
         client=ocm_client,
@@ -131,9 +152,7 @@ def prepare_managed_clusters_data(clusters, ocm_token, ocm_env):
         _cluster["cluster-name"] = _cluster["name"]
         _cluster["ocm-token"] = ocm_token
         _cluster["ocm-env"] = ocm_env
-        _cluster["timeout"] = time_string_to_seconds(
-            time_string=_cluster.get("timeout", "30m")
-        )
+        _cluster["timeout"] = tts(ts=_cluster.get("timeout", "30m"))
         if _cluster["platform"] == HYPERSHIFT_STR:
             _cluster["hosted-cp"] = "true"
             _cluster["tags"] = "dns:external"
@@ -194,7 +213,7 @@ def rosa_create_cluster(cluster_data):
     job.wait_for_condition(
         condition=job.Condition.COMPLETE,
         status="True",
-        timeout=time_string_to_seconds(time_string="40m"),
+        timeout=tts(ts="40m"),
     )
 
 
@@ -222,7 +241,8 @@ def rosa_delete_cluster(cluster_data):
             if _line.startswith("rosa"):
                 base_command = _line.split(maxsplit=1)[-1]
                 str_to_replace = re.search(r"-c.*", base_command).group(0)
-                command = str_to_replace.replace("-c ", "--cluster=")
+                replaced_str = str_to_replace.replace("-c ", "--cluster=")
+                command = base_command.replace(str_to_replace, replaced_str)
                 rosa.cli.execute(
                     command=command,
                     ocm_env=ocm_env_url,
