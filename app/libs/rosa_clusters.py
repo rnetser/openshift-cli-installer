@@ -54,18 +54,9 @@ def wait_for_osd_cluster_ready_job(ocp_client):
         name="osd-cluster-ready",
         namespace="openshift-monitoring",
     )
-    # TODO: use job.wait_for_condition() once https://github.com/RedHatQE/openshift-python-wrapper/pull/1248 merged
-    # job.wait_for_condition(
-    #     condition=job.Condition.COMPLETE, status="True", timeout=tts(ts="40m")
-    # )
-    for sample in TimeoutSampler(
-        wait_timeout=tts(ts="40m"),
-        sleep=1,
-        func=lambda: job.instance,
-    ):
-        for cond in sample.get("status", {}).get("conditions", []):
-            if cond["type"] == job.Condition.COMPLETE and cond["status"] == "True":
-                return
+    job.wait_for_condition(
+        condition=job.Condition.COMPLETE, status="True", timeout=tts(ts="40m")
+    )
 
 
 def dump_cluster_data_to_file(cluster_data):
