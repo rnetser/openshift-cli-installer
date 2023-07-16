@@ -182,7 +182,7 @@ registry-config file, can be obtained from https://console.redhat.com/openshift/
 )
 @click.option(
     "--ocm-env",
-    help="OCM env to log in into. needed for managed AWS cluster",
+    help="OCM env to log in into. Needed for managed AWS cluster",
     type=click.Choice(["stage", "production"]),
     default="stage",
     show_default=True,
@@ -204,7 +204,7 @@ Format to pass is:
 Required parameters:
     name: Cluster name.
     base_domain: Base domain for the cluster.
-    platform: Cloud platform to install the cluster on. (Currently only AWS IPI supported).
+    platform: Cloud platform to install the cluster on (aws, rosa or hypershift).
     region: Region to use for the cloud platform.
     version: Openshift cluster version to install
 
@@ -249,8 +249,12 @@ def main(
 
     aws_managed_clusters = rosa_clusters + hypershift_clusters
     if aws_ipi_clusters or aws_managed_clusters:
+        _regions_to_verify = set()
         for _cluster in aws_ipi_clusters + aws_managed_clusters:
-            set_and_verify_aws_credentials(region_name=_cluster["region"])
+            _regions_to_verify.add(_cluster["region"])
+
+        for _region in _regions_to_verify:
+            set_and_verify_aws_credentials(region_name=_region)
 
     if aws_ipi_clusters:
         clusters = generate_cluster_dirs_path(

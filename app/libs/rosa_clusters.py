@@ -93,12 +93,11 @@ def create_oidc(cluster_data):
         ocm_client=ocm_client,
     )["out"]
 
-    _oidc_config_id = [
+    cluster_data["oidc-config-id"] = [
         oidc_config["id"]
         for oidc_config in res
         if oidc_prefix in oidc_config["secret_arn"]
     ][0]
-    cluster_data["oidc-config-id"] = _oidc_config_id
     return cluster_data
 
 
