@@ -3,9 +3,11 @@ FROM python:3.11
 ENV PATH="/root/.local/bin:$PATH"
 
 RUN apt-get update \
-    && apt-get install -y ssh
+    && apt-get install -y ssh gnupg software-properties-common curl gpg
 
-RUN curl -L https://mirror.openshift.com/pub/openshift-v4/clients/rosa/latest/rosa-linux.tar.gz --output /tmp/rosa-linux.tar.gz \
+RUN wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/hashicorp.list \
+    && curl -L https://mirror.openshift.com/pub/openshift-v4/clients/rosa/latest/rosa-linux.tar.gz --output /tmp/rosa-linux.tar.gz \
     && tar xvf /tmp/rosa-linux.tar.gz --no-same-owner \
     && mv rosa /usr/bin/rosa \
     && chmod +x /usr/bin/rosa \
@@ -16,6 +18,9 @@ RUN curl -L https://mirror.openshift.com/pub/openshift-v4/clients/rosa/latest/ro
     && mv kubectl /usr/bin/kubectl \
     && chmod +x /usr/bin/oc \
     && chmod +x /usr/bin/kubectl
+
+RUN apt-get update \
+    && apt-get install -y terraform
 
 RUN ssh-keygen -t rsa -N '' -f /root/.ssh/id_rsa
 

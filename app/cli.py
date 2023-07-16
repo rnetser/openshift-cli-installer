@@ -18,13 +18,15 @@ from utils.click_dict_type import DictParamType
 from utils.const import AWS_MANAGED_STR, AWS_STR, HYPERSHIFT_STR
 
 
-def generate_cluster_dir_path(clusters, base_directory):
+def generate_cluster_dirs_path(clusters, base_directory):
     for _cluster in clusters:
         cluster_dir = os.path.join(
             base_directory, _cluster["platform"], _cluster["name"]
         )
         _cluster["install-dir"] = cluster_dir
-        Path(cluster_dir).mkdir(parents=True, exist_ok=True)
+        auth_path = os.path.join(cluster_dir, "auth")
+        _cluster["auth-dir"] = auth_path
+        Path(auth_path).mkdir(parents=True, exist_ok=True)
     return clusters
 
 
@@ -103,10 +105,10 @@ Path to cluster install data.
     required=True,
 )
 @click.option(
-    "--pull-secret-file",
+    "--registry-config-file",
     help="""
     \b
-Path to pull secret json file, can be obtained from console.redhat.com.
+registry-config file, can be obtained from https://console.redhat.com/openshift/create/local.
 (Needed only for AWS IPI clusters)
     """,
     default=os.environ.get("PULL_SECRET"),
@@ -162,7 +164,7 @@ For example:
 )
 def main(
     action,
-    pull_secret_file,
+    registry_config_file,
     parallel,
     cluster,
     clusters_install_data_directory,
@@ -186,26 +188,28 @@ def main(
         if _cluster["platform"] in (AWS_MANAGED_STR, HYPERSHIFT_STR)
     ]
     if aws_ipi_clusters or aws_managed_clusters:
-        set_and_verify_aws_credentials()
+        for _cluster in aws_ipi_clusters + aws_managed_clusters:
+            set_and_verify_aws_credentials(region_name=_cluster["region"])
 
     if aws_ipi_clusters:
-        clusters = generate_cluster_dir_path(
+        clusters = generate_cluster_dirs_path(
             clusters=aws_ipi_clusters, base_directory=clusters_install_data_directory
         )
+
         clusters = download_openshift_install_binary(
-            clusters=clusters, pull_secret_file=pull_secret_file
+            clusters=clusters, registry_config_file=registry_config_file
         )
         if create:
             kwargs.update(
                 {"s3_bucket_name": s3_bucket_name, "s3_bucket_path": s3_bucket_path}
             )
             clusters = create_install_config_file(
-                clusters=cluster, pull_secret_file=pull_secret_file
+                clusters=cluster, registry_config_file=registry_config_file
             )
 
     if aws_managed_clusters:
         abort_no_ocm_token(ocm_token)
-        clusters = generate_cluster_dir_path(
+        clusters = generate_cluster_dirs_path(
             clusters=aws_managed_clusters,
             base_directory=clusters_install_data_directory,
         )

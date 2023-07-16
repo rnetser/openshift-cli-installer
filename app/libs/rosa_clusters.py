@@ -5,13 +5,14 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import rosa.cli
+import yaml
 from ocm_python_wrapper.cluster import Cluster
 from ocm_python_wrapper.ocm_client import OCMPythonClient
 from ocp_resources.job import Job
-from ocp_resources.resource import get_client
 from ocp_resources.utils import TimeoutSampler
 from python_terraform import IsNotFlagged, Terraform, TerraformCommandError
 from utils.const import HYPERSHIFT_STR
+from utils.helpers import RunInstallUninstallCommandError
 
 
 def tts(ts):
@@ -48,6 +49,13 @@ def tts(ts):
         return int(ts)
 
 
+def dump_cluster_data_to_file(cluster_data):
+    with open(
+        os.path.join(cluster_data["install-dir"], "cluster_data.yaml"), "w"
+    ) as fd:
+        fd.write(yaml.dump(cluster_data))
+
+
 def get_ocm_client(ocm_token, ocm_env):
     return OCMPythonClient(
         token=ocm_token,
@@ -62,15 +70,18 @@ def create_oidc(cluster_data):
     oidc_prefix = cluster_data["cluster-name"]
     ocm_token, ocm_env, _ = extract_ocm_data_from_cluster_data(cluster_data)
     ocm_client = get_ocm_client(ocm_token, ocm_env)
-    for cmd in (
-        f"create oidc-config --managed=false --prefix={oidc_prefix}",
-        f"list oidc-config --region={aws_region}",
-    ):
-        res = rosa.cli.execute(
-            command=cmd,
-            aws_region=aws_region,
-            ocm_client=ocm_client,
-        )["out"]
+
+    rosa.cli.execute(
+        command=f"create oidc-config --managed=false --prefix={oidc_prefix}",
+        aws_region=aws_region,
+        ocm_client=ocm_client,
+    )
+
+    res = rosa.cli.execute(
+        command=f"list oidc-config --region={aws_region}",
+        aws_region=aws_region,
+        ocm_client=ocm_client,
+    )["out"]
 
     _oidc_config_id = [
         oidc_config["id"]
@@ -79,6 +90,16 @@ def create_oidc(cluster_data):
     ][0]
     cluster_data["oidc-config-id"] = _oidc_config_id
     return cluster_data
+
+
+def delete_oidc(cluster_data):
+    ocm_token, _, ocm_env_url = extract_ocm_data_from_cluster_data(cluster_data)
+    rosa.cli.execute(
+        command=f"delete oidc-config --oidc-config-id={cluster_data['oidc-config-id']}",
+        aws_region=cluster_data["region"],
+        ocm_env=ocm_env_url,
+        token=ocm_token,
+    )
 
 
 def terraform_init(cluster_data):
@@ -109,11 +130,13 @@ def destroy_hypershift_vpc(cluster_data):
 
 
 def prepare_hypershift_vpc(cluster_data):
-    shutil.copy("app/manifests/setup-vpc.tf", cluster_data)
+    shutil.copy("app/manifests/setup-vpc.tf", cluster_data["install-dir"])
     terraform = terraform_init(cluster_data=cluster_data)
     try:
         terraform.plan(dir_or_plan="rosa.plan")
         terraform.apply(capture_output=False, skip_plan=True, raise_on_error=True)
+        cluster_data["hypershift-vpc"] = True
+        return cluster_data
     except TerraformCommandError:
         # Clean up already created resources from the plan
         terraform.destroy(
@@ -169,7 +192,15 @@ def prepare_managed_clusters_data(clusters, ocm_token, ocm_env):
 
 def rosa_create_cluster(cluster_data):
     hosted_cp_arg = "--hosted-cp"
-    ignore_keys = ("name", "platform", "ocm-env", "ocm-token", "install-dir", "timeout")
+    ignore_keys = (
+        "name",
+        "platform",
+        "ocm-env",
+        "ocm-token",
+        "install-dir",
+        "timeout",
+        "auth-dir",
+    )
     ocm_token, ocm_env, ocm_env_url = extract_ocm_data_from_cluster_data(cluster_data)
     command = "create cluster --sts "
     command_kwargs = {
@@ -178,15 +209,17 @@ def rosa_create_cluster(cluster_data):
         if _key not in ignore_keys
     }
 
-    if cluster_data["platform"] == HYPERSHIFT_STR:
-        cluster_data = create_oidc(cluster_data=cluster_data)
-        prepare_hypershift_vpc(cluster_data=cluster_data)
-
     for cmd in command_kwargs:
         if hosted_cp_arg in cmd:
             command += f"{hosted_cp_arg} "
         else:
             command += f"{cmd} "
+
+    if cluster_data["platform"] == HYPERSHIFT_STR:
+        cluster_data = create_oidc(cluster_data=cluster_data)
+        cluster_data = prepare_hypershift_vpc(cluster_data=cluster_data)
+
+    dump_cluster_data_to_file(cluster_data=cluster_data)
 
     rosa.cli.execute(
         command=command,
@@ -200,15 +233,19 @@ def rosa_create_cluster(cluster_data):
     )
     cluster_object.wait_for_cluster_ready(wait_timeout=cluster_data["timeout"])
 
-    kubeconfig_path = os.path.join(cluster_data["install-dir"], "auth")
-    Path(kubeconfig_path).mkdir(parents=True, exist_ok=True)
+    auth_path = os.path.join(cluster_data["install-dir"], "auth")
+    Path(auth_path).mkdir(parents=True, exist_ok=True)
 
-    with open(os.path.join(kubeconfig_path, "kubeconfig"), "w") as fd:
-        fd.write(cluster_object.credentials.kubeconfig)
+    with open(os.path.join(auth_path, "kubeconfig"), "w") as fd:
+        fd.write(yaml.dump(cluster_object.kubeconfig))
 
-    ocp_client = get_client(config_dict=cluster_object.kubeconfig)
+    with open(os.path.join(auth_path, "kubeadmin-password"), "w") as fd:
+        fd.write(cluster_object.kubeadmin_password)
+
     job = Job(
-        client=ocp_client, name="osd-cluster-ready", namespace="openshift-monitoring"
+        client=cluster_object.ocp_client,
+        name="osd-cluster-ready",
+        namespace="openshift-monitoring",
     )
     job.wait_for_condition(
         condition=job.Condition.COMPLETE,
@@ -218,37 +255,62 @@ def rosa_create_cluster(cluster_data):
 
 
 def rosa_delete_cluster(cluster_data):
-    ocm_token, ocm_env, ocm_env_url = extract_ocm_data_from_cluster_data(cluster_data)
-    command = f"delete cluster --cluster={cluster_data['cluster-name']}"
-    res = rosa.cli.execute(
-        command=command,
-        ocm_env=ocm_env_url,
-        token=ocm_token,
-        aws_region=cluster_data["region"],
-    )
-    cluster_object = get_cluster_object(
-        ocm_token=ocm_token, ocm_env=ocm_env, cluster_data=cluster_data
-    )
-    cluster_object.wait_for_cluster_deletion(wait_timeout=cluster_data["timeout"])
-    leftovers = re.search(
-        r"INFO: Once the cluster is uninstalled use the following commands to remove the above aws resources(.*?)INFO:",
-        res.get("out", ""),
-        re.DOTALL,
-    )
-    if leftovers:
-        for line in leftovers.group(1).splitlines():
-            _line = line.strip()
-            if _line.startswith("rosa"):
-                base_command = _line.split(maxsplit=1)[-1]
-                str_to_replace = re.search(r"-c.*", base_command).group(0)
-                replaced_str = str_to_replace.replace("-c ", "--cluster=")
-                command = base_command.replace(str_to_replace, replaced_str)
-                rosa.cli.execute(
-                    command=command,
-                    ocm_env=ocm_env_url,
-                    token=ocm_token,
-                    aws_region=cluster_data["region"],
-                )
+    with open(os.path.join(cluster_data["install-dir"], "cluster_data.yaml")) as fd:
+        base_cluster_data = yaml.safe_load(fd.read())
 
-    if cluster_data["platform"] == HYPERSHIFT_STR:
-        destroy_hypershift_vpc(cluster_data=cluster_data)
+    base_cluster_data.update(cluster_data)
+
+    should_raise = False
+    res = {}
+    aws_region = base_cluster_data["region"]
+    ocm_token, ocm_env, ocm_env_url = extract_ocm_data_from_cluster_data(
+        base_cluster_data
+    )
+    command = f"delete cluster --cluster={base_cluster_data['cluster-name']}"
+    try:
+        res = rosa.cli.execute(
+            command=command,
+            ocm_env=ocm_env_url,
+            token=ocm_token,
+            aws_region=aws_region,
+        )
+        cluster_object = get_cluster_object(
+            ocm_token=ocm_token, ocm_env=ocm_env, cluster_data=base_cluster_data
+        )
+        cluster_object.wait_for_cluster_deletion(
+            wait_timeout=base_cluster_data["timeout"]
+        )
+        leftovers = re.search(
+            r"INFO: Once the cluster is uninstalled use the following commands to remove the above "
+            r"aws resources(.*?)INFO:",
+            res.get("out", ""),
+            re.DOTALL,
+        )
+        if leftovers:
+            for line in leftovers.group(1).splitlines():
+                _line = line.strip()
+                if _line.startswith("rosa"):
+                    base_command = _line.split(maxsplit=1)[-1]
+                    command = base_command.replace("-c ", "--cluster=")
+                    rosa.cli.execute(
+                        command=command,
+                        ocm_env=ocm_env_url,
+                        token=ocm_token,
+                        aws_region=aws_region,
+                    )
+    except rosa.cli.CommandExecuteError:
+        should_raise = True
+
+    if base_cluster_data["platform"] == HYPERSHIFT_STR:
+        destroy_hypershift_vpc(cluster_data=base_cluster_data)
+        rosa.cli.execute(
+            command=f"delete oidc-config --oidc-config-id={base_cluster_data['oidc-config-id']}",
+            aws_region=aws_region,
+            ocm_env=ocm_env_url,
+            token=ocm_token,
+        )
+
+    if should_raise:
+        raise RunInstallUninstallCommandError(
+            action="uninstall", out=res.get("out"), err=res.get("err")
+        )

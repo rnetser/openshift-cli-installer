@@ -9,6 +9,7 @@ import yaml
 from clouds.aws.session_clients import s3_client
 from jinja2 import DebugUndefined, Environment, FileSystemLoader, meta
 from ocp_utilities.utils import run_command
+from utils.helpers import RunInstallUninstallCommandError
 
 # TODO: enable spot
 """
@@ -39,24 +40,25 @@ EOF
 """
 
 
-class RunInstallUninstallCommandError(Exception):
-    def __init__(self, action, out, err):
-        self.action = action
-        self.out = out
-        self.err = err
+def prepare_pull_secret(clusters, pull_secret):
+    for cluster in clusters:
+        pull_secret_file = os.path.join(cluster["auth-dir"], "pull-secret.json")
+        with open(pull_secret_file, "w") as fd:
+            fd.write(json.dumps(pull_secret))
 
-    def __str__(self):
-        return f"Failed to run cluster {self.action}\nERR: {self.err}\nOUT: {self.out}"
+        cluster["registry_config"] = pull_secret
+        cluster["pull-secret-file"] = pull_secret_file
 
 
-def create_install_config_file(clusters, pull_secret_file):
+def create_install_config_file(clusters, registry_config_file):
     ssh_key = get_local_ssh_key()
-    pull_secret = json.dumps(get_pull_secret_data(pull_secret_file=pull_secret_file))
+    pull_secret = json.dumps(
+        get_pull_secret_data(registry_config_file=registry_config_file)
+    )
     for _cluster in clusters:
         install_dir = _cluster["install-dir"]
-        _cluster["pull_secret"] = pull_secret
         _cluster["ssh_key"] = ssh_key
-
+        _cluster["pull_secret"] = pull_secret
         cluster_install_config = get_install_config_j2_template(cluster_dict=_cluster)
 
         with open(os.path.join(install_dir, "install-config.yaml"), "w") as fd:
@@ -65,8 +67,8 @@ def create_install_config_file(clusters, pull_secret_file):
     return clusters
 
 
-def get_pull_secret_data(pull_secret_file):
-    with open(pull_secret_file) as fd:
+def get_pull_secret_data(registry_config_file):
+    with open(registry_config_file) as fd:
         return json.load(fd)
 
 
@@ -94,7 +96,7 @@ def get_install_config_j2_template(cluster_dict):
     return yaml.safe_load(rendered)
 
 
-def download_openshift_install_binary(clusters, pull_secret_file):
+def download_openshift_install_binary(clusters, registry_config_file):
     versions = set()
     openshift_install_str = "openshift-install"
 
@@ -113,7 +115,7 @@ def download_openshift_install_binary(clusters, pull_secret_file):
             command=shlex.split(
                 "oc adm release extract "
                 f"quay.io/openshift-release-dev/ocp-release:{version}-x86_64 "
-                f"--command={openshift_install_str} --to={binary_dir} --registry-config={pull_secret_file}"
+                f"--command={openshift_install_str} --to={binary_dir} --registry-config={registry_config_file}"
             ),
             check=False,
         )
@@ -124,18 +126,18 @@ def download_openshift_install_binary(clusters, pull_secret_file):
 def create_or_destroy_aws_ipi_cluster(
     cluster_data, action, s3_bucket_name=None, s3_bucket_path=None
 ):
-    directory = cluster_data["install-dir"]
+    install_dir = cluster_data["install-dir"]
     binary_path = cluster_data["openshift-install-binary"]
     res, out, err = run_command(
-        command=shlex.split(f"{binary_path} {action} cluster --dir {directory}"),
+        command=shlex.split(f"{binary_path} {action} cluster --dir {install_dir}"),
         capture_output=False,
         check=False,
     )
     if action == "create" and s3_bucket_name:
         zip_file = shutil.make_archive(
-            base_name=f"{directory}-{shortuuid.uuid()}",
+            base_name=f"{install_dir}-{shortuuid.uuid()}",
             format="zip",
-            root_dir=directory,
+            root_dir=install_dir,
         )
         s3_client().upload_file(
             Filename=zip_file,
