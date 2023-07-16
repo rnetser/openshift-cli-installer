@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 import click
+import rosa.cli
 from clouds.aws.aws_utils import set_and_verify_aws_credentials
 from libs.aws_ipi_clusters import (
     create_install_config_file,
@@ -15,7 +16,61 @@ from libs.rosa_clusters import (
     rosa_delete_cluster,
 )
 from utils.click_dict_type import DictParamType
-from utils.const import AWS_MANAGED_STR, AWS_STR, HYPERSHIFT_STR
+from utils.const import AWS_STR, HYPERSHIFT_STR, ROSA_STR
+from utils.helpers import get_ocm_client
+
+
+def get_clusters_by_type(clusters):
+    aws_ipi_clusters = [
+        _cluster for _cluster in clusters if _cluster["platform"] == AWS_STR
+    ]
+    rosa_clusters = [
+        _cluster for _cluster in clusters if _cluster["platform"] == ROSA_STR
+    ]
+    hypershift_clusters = [
+        _cluster for _cluster in clusters if _cluster["platform"] == HYPERSHIFT_STR
+    ]
+    return aws_ipi_clusters, rosa_clusters, hypershift_clusters
+
+
+def is_platform_supported(clusters):
+    supported_platform = (AWS_STR, ROSA_STR, HYPERSHIFT_STR)
+    for _cluster in clusters:
+        _platform = _cluster["platform"]
+        if _platform not in supported_platform:
+            raise ValueError(
+                f"Cluster platform '{_platform}' is not supported.\n{_cluster}"
+            )
+
+
+def rosa_regions(ocm_client):
+    return rosa.cli.execute(
+        command="list regions",
+        aws_region="us-west-2",
+        ocm_client=ocm_client,
+    )["out"]
+
+
+def hypershift_regions(ocm_client):
+    return [
+        region["id"]
+        for region in rosa_regions(ocm_client=ocm_client)
+        if region["supports_hypershift"] is True
+    ]
+
+
+def is_region_support_hypershift(ocm_token, ocm_env, hypershift_clusters):
+    _hypershift_regions = hypershift_regions(
+        ocm_client=get_ocm_client(ocm_token=ocm_token, ocm_env=ocm_env)
+    )
+    for _cluster in hypershift_clusters:
+        _region = _cluster["region"]
+        if _region not in _hypershift_regions:
+            raise ValueError(
+                f"region '{_region}' does not supported {HYPERSHIFT_STR}."
+                f"\nSupported hypershift regions are: {_hypershift_regions}"
+                f"\n{_cluster}"
+            )
 
 
 def generate_cluster_dirs_path(clusters, base_directory):
@@ -59,7 +114,7 @@ def create_openshift_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=N
             s3_bucket_path=s3_bucket_path,
         )
 
-    elif cluster_platform in (AWS_MANAGED_STR, HYPERSHIFT_STR):
+    elif cluster_platform in (ROSA_STR, HYPERSHIFT_STR):
         rosa_create_cluster(cluster_data=cluster_data)
 
 
@@ -68,7 +123,7 @@ def destroy_openshift_cluster(cluster_data):
     if cluster_platform == AWS_STR:
         create_or_destroy_aws_ipi_cluster(cluster_data=cluster_data, action="destroy")
 
-    elif cluster_platform in (AWS_MANAGED_STR, HYPERSHIFT_STR):
+    elif cluster_platform in (ROSA_STR, HYPERSHIFT_STR):
         rosa_delete_cluster(cluster_data=cluster_data)
 
 
@@ -176,17 +231,23 @@ def main(
     """
     Create/Destroy Openshift cluster/s
     """
+    is_platform_supported(clusters=cluster)
     clusters = []
     kwargs = {}
     create = action == "create"
-    aws_ipi_clusters = [
-        _cluster for _cluster in cluster if _cluster["platform"] == AWS_STR
-    ]
-    aws_managed_clusters = [
-        _cluster
-        for _cluster in cluster
-        if _cluster["platform"] in (AWS_MANAGED_STR, HYPERSHIFT_STR)
-    ]
+
+    aws_ipi_clusters, rosa_clusters, hypershift_clusters = get_clusters_by_type(
+        clusters=cluster
+    )
+
+    if hypershift_clusters:
+        is_region_support_hypershift(
+            ocm_token=ocm_token,
+            ocm_env=ocm_env,
+            hypershift_clusters=hypershift_clusters,
+        )
+
+    aws_managed_clusters = rosa_clusters + hypershift_clusters
     if aws_ipi_clusters or aws_managed_clusters:
         for _cluster in aws_ipi_clusters + aws_managed_clusters:
             set_and_verify_aws_credentials(region_name=_cluster["region"])
