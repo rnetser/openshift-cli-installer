@@ -38,9 +38,8 @@ def is_platform_supported(clusters):
     for _cluster in clusters:
         _platform = _cluster["platform"]
         if _platform not in supported_platform:
-            raise ValueError(
-                f"Cluster platform '{_platform}' is not supported.\n{_cluster}"
-            )
+            click.echo(f"Cluster platform '{_platform}' is not supported.\n{_cluster}")
+            raise click.Abort()
 
 
 def rosa_regions(ocm_client):
@@ -66,11 +65,12 @@ def is_region_support_hypershift(ocm_token, ocm_env, hypershift_clusters):
     for _cluster in hypershift_clusters:
         _region = _cluster["region"]
         if _region not in _hypershift_regions:
-            raise ValueError(
+            click.echo(
                 f"region '{_region}' does not supported {HYPERSHIFT_STR}."
                 f"\nSupported hypershift regions are: {_hypershift_regions}"
                 f"\n{_cluster}"
             )
+            raise click.Abort()
 
 
 def generate_cluster_dirs_path(clusters, base_directory):

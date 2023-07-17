@@ -4,6 +4,7 @@ import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import click
 import rosa.cli
 import yaml
 from ocm_python_wrapper.cluster import Cluster
@@ -308,4 +309,5 @@ def rosa_delete_cluster(cluster_data):
         destroy_hypershift_vpc(cluster_data=_cluster_data)
 
     if should_raise:
-        raise should_raise
+        click.echo(f"Failed to run cluster uninstall\n{should_raise}")
+        raise click.Abort()

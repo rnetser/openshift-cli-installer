@@ -9,7 +9,6 @@ import yaml
 from clouds.aws.session_clients import s3_client
 from jinja2 import DebugUndefined, Environment, FileSystemLoader, meta
 from ocp_utilities.utils import run_command
-from utils.helpers import RunInstallUninstallCommandError
 
 # TODO: enable spot
 """
@@ -145,4 +144,5 @@ def create_or_destroy_aws_ipi_cluster(
             Key=os.path.join(s3_bucket_path or "", os.path.split(zip_file)[-1]),
         )
     if not res:
-        raise RunInstallUninstallCommandError(action=action, out=out, err=err)
+        click.echo(f"Failed to run cluster {action}\nERR: {err}\nOUT: {out}")
+        raise click.Abort()
