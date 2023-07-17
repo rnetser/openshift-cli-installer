@@ -18,14 +18,14 @@ To pull the image: `podman pull quay.io/openshift-cli-installer`
     * `<cluster directory>/auth` contains `kubeconfig` and `kubeadmin-password` files
 * `--parallel`: To create / destroy clusters in parallel
 
-* AWS IPI clusters: 
+* AWS IPI clusters:
   * The installer output is saved in the <cluster directory>.
   * The data is used for cluster destroy.
   * Pass `--s3-bucket-name` (and optionally `--s3-bucket-path`) to backup <cluster directory> in an S3 bucket.  
   * `base_domain` cluster parameter is mandatory
   * `--registry-config-file`: registry-config json file path, can be obtained from [openshift local cluster](https://console.redhat.com/openshift/create/local)
 
-* ROSA / Hypershift clusters: 
+* ROSA / Hypershift clusters:
   * `--ocm-token`: OCM token, defaults to `OCM_TOKEN` environment variable.
   * `--ocm-env`: OCM environment to deploy the cluster; available options: `stage` or `production` (defaults to `stage`)
 
@@ -123,7 +123,7 @@ podman run quay.io/redhat_msi/openshift-cli-installer \
     --registry-config-file=registry-config.json \
     --clusters-install-data-directory=/tmp/ocp-clusters \
     --s3-bucket-name=openshift-cli-installer \
-    --s3-bucket-path=install-folders \    
+    --s3-bucket-path=install-folders \  
     --ocm-token=$OCM_TOKEN \
     --ocm-env=stage \
     --cluster 'name=hyper1;platform=hypershift;region=us-west-2;version=4.13.4;compute-machine-type=m5.4xlarge;replicas=6;channel-group=candidate;expiration-time=2h;timeout=1h' \
@@ -142,7 +142,7 @@ podman run quay.io/redhat_msi/openshift-cli-installer \
     --ocm-token=$OCM_TOKEN \
     --ocm-env=stage \
     --clusters-install-data-directory=/tmp/ocp-clusters \
-    --cluster 'name=ipi1;region=us-east-2;version=4.14.0-ec.2;timeout=1h' 
+    --cluster 'name=ipi1;region=us-east-2;version=4.14.0-ec.2;timeout=1h'
 ```
 
 ##### ROSA cluster
@@ -153,7 +153,7 @@ podman run quay.io/redhat_msi/openshift-cli-installer \
     --ocm-token=$OCM_TOKEN \
     --ocm-env=stage \
     --clusters-install-data-directory=/tmp/ocp-clusters \
-    --cluster 'name=rosa1;platform=rosa;region=us-east-2;version=4.13.4;timeout=1h' 
+    --cluster 'name=rosa1;platform=rosa;region=us-east-2;version=4.13.4;timeout=1h'
 ```
 
 
@@ -165,7 +165,7 @@ podman run quay.io/redhat_msi/openshift-cli-installer \
     --ocm-token=$OCM_TOKEN \
     --ocm-env=stage \
     --clusters-install-data-directory=/tmp/ocp-clusters \
-    --cluster 'name=hyper1;platform=rosa;region=us-east-2;version=4.13.4;timeout=1h' 
+    --cluster 'name=hyper1;platform=rosa;region=us-east-2;version=4.13.4;timeout=1h'
 ```
 
 ##### Multiple clusters
