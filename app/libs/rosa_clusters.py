@@ -48,6 +48,17 @@ def tts(ts):
         return int(ts)
 
 
+def set_cluster_auth(cluster_data, cluster_object):
+    auth_path = os.path.join(cluster_data["install-dir"], "auth")
+    Path(auth_path).mkdir(parents=True, exist_ok=True)
+
+    with open(os.path.join(auth_path, "kubeconfig"), "w") as fd:
+        fd.write(yaml.dump(cluster_object.kubeconfig))
+
+    with open(os.path.join(auth_path, "kubeadmin-password"), "w") as fd:
+        fd.write(cluster_object.kubeadmin_password)
+
+
 def wait_for_osd_cluster_ready_job(ocp_client):
     job = Job(
         client=ocp_client,
@@ -237,15 +248,7 @@ def rosa_create_cluster(cluster_data):
         ocm_token=ocm_token, ocm_env=ocm_env, cluster_data=cluster_data
     )
     cluster_object.wait_for_cluster_ready(wait_timeout=cluster_data["timeout"])
-
-    auth_path = os.path.join(cluster_data["install-dir"], "auth")
-    Path(auth_path).mkdir(parents=True, exist_ok=True)
-
-    with open(os.path.join(auth_path, "kubeconfig"), "w") as fd:
-        fd.write(yaml.dump(cluster_object.kubeconfig))
-
-    with open(os.path.join(auth_path, "kubeadmin-password"), "w") as fd:
-        fd.write(cluster_object.kubeadmin_password)
+    set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
 
     if _platform == ROSA_STR:
         wait_for_osd_cluster_ready_job(ocp_client=cluster_object.ocp_client)
