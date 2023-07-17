@@ -49,6 +49,29 @@ def tts(ts):
         return int(ts)
 
 
+def remove_leftovers(res, ocm_env_url, ocm_token, aws_region):
+    leftovers = re.search(
+        r"INFO: Once the cluster is uninstalled use the following commands to remove the above "
+        r"aws resources(.*?)INFO:",
+        res.get("out", ""),
+        re.DOTALL,
+    )
+    if leftovers:
+        for line in leftovers.group(1).splitlines():
+            _line = line.strip()
+            if _line.startswith("rosa"):
+                base_command = _line.split(maxsplit=1)[-1]
+                command = base_command.replace("-c ", "--cluster=")
+                command = command.replace("--prefix ", "--prefix=")
+                command = command.replace("--oidc-config-id ", "--oidc-config-id=")
+                rosa.cli.execute(
+                    command=command,
+                    ocm_env=ocm_env_url,
+                    token=ocm_token,
+                    aws_region=aws_region,
+                )
+
+
 def set_cluster_auth(cluster_data, cluster_object):
     auth_path = os.path.join(cluster_data["install-dir"], "auth")
     Path(auth_path).mkdir(parents=True, exist_ok=True)
@@ -282,26 +305,10 @@ def rosa_delete_cluster(cluster_data):
             ocm_token=ocm_token, ocm_env=ocm_env, cluster_data=_cluster_data
         )
         cluster_object.wait_for_cluster_deletion(wait_timeout=_cluster_data["timeout"])
-        leftovers = re.search(
-            r"INFO: Once the cluster is uninstalled use the following commands to remove the above "
-            r"aws resources(.*?)INFO:",
-            res.get("out", ""),
-            re.DOTALL,
+        remove_leftovers(
+            res=res, ocm_env_url=ocm_env_url, ocm_token=ocm_token, aws_region=aws_region
         )
-        if leftovers:
-            for line in leftovers.group(1).splitlines():
-                _line = line.strip()
-                if _line.startswith("rosa"):
-                    base_command = _line.split(maxsplit=1)[-1]
-                    command = base_command.replace("-c ", "--cluster=")
-                    command = command.replace("--prefix ", "--prefix=")
-                    command = command.replace("--oidc-config-id ", "--oidc-config-id=")
-                    rosa.cli.execute(
-                        command=command,
-                        ocm_env=ocm_env_url,
-                        token=ocm_token,
-                        aws_region=aws_region,
-                    )
+
     except rosa.cli.CommandExecuteError as ex:
         should_raise = ex
 

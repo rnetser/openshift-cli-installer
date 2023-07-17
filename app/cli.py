@@ -204,7 +204,7 @@ Format to pass is:
 Required parameters:
     name: Cluster name.
     base_domain: Base domain for the cluster.
-    platform: Cloud platform to install the cluster on (aws, rosa or hypershift).
+    platform: Cloud platform to install the cluster on, supported platforms are: aws, rosa and hypershift.
     region: Region to use for the cloud platform.
     version: Openshift cluster version to install
 
