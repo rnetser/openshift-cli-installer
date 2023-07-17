@@ -221,9 +221,10 @@ def prepare_managed_clusters_data(clusters, ocm_token, ocm_env):
 
         expiration_time = _cluster.get("expiration-time")
         if expiration_time:
+            _expiration_time = tts(ts=expiration_time)
             _cluster[
                 "expiration-time"
-            ] = f"{(datetime.now() + timedelta(hours=expiration_time)).isoformat()}Z"
+            ] = f"{(datetime.now() + timedelta(seconds=_expiration_time)).isoformat()}Z"
 
     return clusters
 
