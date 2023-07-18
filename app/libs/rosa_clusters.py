@@ -146,6 +146,16 @@ def terraform_init(cluster_data):
         "az_ids": [f"{az_id_prefix}-az1", f"{az_id_prefix}-az2"],
         "cluster_name": cluster_data["cluster-name"],
     }
+    cidr = cluster_data.get("cidr")
+    private_subnets = cluster_data.get("private_subnets")
+    public_subnets = cluster_data.get("public_subnets")
+
+    if cidr:
+        cluster_parameters["cidr"] = cidr
+    if private_subnets:
+        cluster_parameters["private_subnets"] = private_subnets
+    if public_subnets:
+        cluster_parameters["public_subnets"] = public_subnets
 
     terraform = Terraform(
         working_dir=cluster_data["install-dir"], variables=cluster_parameters
@@ -240,6 +250,9 @@ def rosa_create_cluster(cluster_data):
         "install-dir",
         "timeout",
         "auth-dir",
+        "cidr",
+        "private_subnets",
+        "public_subnets",
     )
     ocm_token, ocm_env, ocm_env_url = extract_ocm_data_from_cluster_data(cluster_data)
     command = "create cluster --sts "
