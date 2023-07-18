@@ -1,6 +1,5 @@
 FROM python:3.11
 
-ENV PATH="/root/.local/bin:$PATH"
 
 RUN apt-get update \
     && apt-get install -y ssh gnupg software-properties-common curl gpg
@@ -30,11 +29,16 @@ COPY app /openshift-cli-installer/app/
 WORKDIR /openshift-cli-installer
 RUN mkdir clusters-install-data
 
+ENV POETRY_HOME=/openshift-cli-installer
+ENV PATH="/openshift-cli-installer/bin:$PATH"
+
 RUN python3 -m pip install pip --upgrade \
     && curl -sSL https://install.python-poetry.org | python3 - \
     && poetry config cache-dir /openshift-cli-installer \
     && poetry config virtualenvs.in-project true \
     && poetry config installer.max-workers 10 \
     && poetry install
+
+
 
 ENTRYPOINT ["poetry", "run", "python", "app/cli.py"]
