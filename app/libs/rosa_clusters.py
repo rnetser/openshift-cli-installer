@@ -227,7 +227,7 @@ def prepare_managed_clusters_data(clusters, ocm_token, ocm_env):
         if _cluster["platform"] == HYPERSHIFT_STR:
             _cluster["hosted-cp"] = "true"
             _cluster["tags"] = "dns:external"
-            _cluster["machine-cidr"] = "10.0.0.0/16"
+            _cluster["machine-cidr"] = _cluster.get("cidr", "10.0.0.0/16")
 
         expiration_time = _cluster.get("expiration-time")
         if expiration_time:
