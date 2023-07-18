@@ -207,7 +207,7 @@ Required parameters:
     platform: Cloud platform to install the cluster on, supported platforms are: aws, rosa and hypershift.
     region: Region to use for the cloud platform.
     version: Openshift cluster version to install
-
+\b
 Check install-config-template.j2 for variables that can be overwritten by the user.
 For example:
     fips=true
