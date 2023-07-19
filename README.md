@@ -17,11 +17,12 @@ To pull the image: `podman pull quay.io/openshift-cli-installer`
 * `--clusters-install-data-directory`: Clusters configurations are written to `<clusters-install-data-directory><platform><cluster name>`; write permissions are needed.
     * `<cluster directory>/auth` contains `kubeconfig` and `kubeadmin-password` files
 * `--parallel`: To create / destroy clusters in parallel
+* Pass `--s3-bucket-name` (and optionally `--s3-bucket-path`) to backup <cluster directory> in an S3 bucket.  
+
 
 * AWS IPI clusters:
   * The installer output is saved in the <cluster directory>.
   * The data is used for cluster destroy.
-  * Pass `--s3-bucket-name` (and optionally `--s3-bucket-path`) to backup <cluster directory> in an S3 bucket.  
   * `base_domain` cluster parameter is mandatory
   * `--registry-config-file`: registry-config json file path, can be obtained from [openshift local cluster](https://console.redhat.com/openshift/create/local)
 

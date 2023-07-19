@@ -1,14 +1,12 @@
 import json
 import os
 import shlex
-import shutil
 
 import click
-import shortuuid
 import yaml
-from clouds.aws.session_clients import s3_client
 from jinja2 import DebugUndefined, Environment, FileSystemLoader, meta
 from ocp_utilities.utils import run_command
+from utils.helpers import zip_and_upload_to_s3
 
 # TODO: enable spot
 """
@@ -133,16 +131,12 @@ def create_or_destroy_aws_ipi_cluster(
         check=False,
     )
     if action == "create" and s3_bucket_name:
-        zip_file = shutil.make_archive(
-            base_name=f"{install_dir}-{shortuuid.uuid()}",
-            format="zip",
-            root_dir=install_dir,
+        zip_and_upload_to_s3(
+            install_dir=install_dir,
+            s3_bucket_name=s3_bucket_name,
+            s3_bucket_path=s3_bucket_path,
         )
-        s3_client().upload_file(
-            Filename=zip_file,
-            Bucket=s3_bucket_name,
-            Key=os.path.join(s3_bucket_path or "", os.path.split(zip_file)[-1]),
-        )
+
     if not res:
         click.echo(f"Failed to run cluster {action}\nERR: {err}\nOUT: {out}")
         raise click.Abort()
