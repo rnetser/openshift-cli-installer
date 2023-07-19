@@ -131,6 +131,19 @@ def destroy_openshift_cluster(cluster_data):
         rosa_delete_cluster(cluster_data=cluster_data)
 
 
+def check_existing_clusters(clusters):
+    deployed_clusters_names = {
+        cluster["name"] for cluster in rosa.cli.execute("list clusters")["out"]
+    }
+    requested_clusters_name = {cluster["name"] for cluster in clusters}
+    duplicate_cluster_names = deployed_clusters_names.intersection(
+        requested_clusters_name
+    )
+    if duplicate_cluster_names:
+        click.echo(f"At least one cluster name duplication: {duplicate_cluster_names}")
+        raise click.Abort()
+
+
 @click.command()
 @click.option(
     "-a",
@@ -236,6 +249,7 @@ def main(
     Create/Destroy Openshift cluster/s
     """
     is_platform_supported(clusters=cluster)
+    check_existing_clusters(clusters=cluster)
     clusters = []
     kwargs = {}
     create = action == "create"
