@@ -58,10 +58,8 @@ def hypershift_regions(ocm_client):
     ]
 
 
-def is_region_support_hypershift(ocm_token, ocm_env, hypershift_clusters):
-    _hypershift_regions = hypershift_regions(
-        ocm_client=get_ocm_client(ocm_token=ocm_token, ocm_env=ocm_env)
-    )
+def is_region_support_hypershift(ocm_client, hypershift_clusters):
+    _hypershift_regions = hypershift_regions(ocm_client=ocm_client)
     for _cluster in hypershift_clusters:
         _region = _cluster["region"]
         if _region not in _hypershift_regions:
@@ -131,9 +129,12 @@ def destroy_openshift_cluster(cluster_data):
         rosa_delete_cluster(cluster_data=cluster_data)
 
 
-def check_existing_clusters(clusters):
+def check_existing_clusters(clusters, ocm_client):
     deployed_clusters_names = {
-        cluster["name"] for cluster in rosa.cli.execute("list clusters")["out"]
+        cluster["name"]
+        for cluster in rosa.cli.execute(
+            command="list clusters", aws_region="us-west-2", ocm_client=ocm_client
+        )["out"]
     }
     requested_clusters_name = {cluster["name"] for cluster in clusters}
     duplicate_cluster_names = deployed_clusters_names.intersection(
@@ -249,7 +250,8 @@ def main(
     Create/Destroy Openshift cluster/s
     """
     is_platform_supported(clusters=cluster)
-    check_existing_clusters(clusters=cluster)
+    ocm_client = get_ocm_client(ocm_token=ocm_token, ocm_env=ocm_env)
+    check_existing_clusters(clusters=cluster, ocm_client=ocm_client)
     clusters = []
     kwargs = {}
     create = action == "create"
@@ -260,8 +262,7 @@ def main(
 
     if hypershift_clusters:
         is_region_support_hypershift(
-            ocm_token=ocm_token,
-            ocm_env=ocm_env,
+            ocm_client=ocm_client,
             hypershift_clusters=hypershift_clusters,
         )
 
