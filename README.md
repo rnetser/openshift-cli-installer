@@ -39,6 +39,7 @@ Every call to the openshift installer cli must have at least one `--cluster` opt
   * platform: The platform to deploy the cluster on (supported platforms are: aws, rosa and hypershift)
   * region: The region to deploy the cluster
 * Optional parameters:
+  * Parameter names should be separated by semicolons (`;`)
   * To set cluster create / destroy timeout, pass `--cluster ...timeout=1h'`; default is 30 minutes.
   * `timeout` and `expiration-time` format examples: `1h`, `30m`, `3600s`
   * AWS IPI:
@@ -50,6 +51,11 @@ Every call to the openshift installer cli must have at least one `--cluster` opt
     * For example:
       * Pass `--cluster ...fips=true'` to enable FIPS
       * Pass `--cluster ...expiration-time=2h'` to have the cluster expiration time set to 2 hours
+  * Hypershift:
+    * Cluster VPC CIDR, public and private subnets can be configured from the CLI. Otherwise, values in [setup-vpc.tf](app/manifests/setup-vpc.tf) will be used.
+      * To set `cidr`, pass `--cluster ...cidr=1.1.0.0/16'`
+      * To set `private_subnets`, pass `--cluster ...private_subnets=10.1.1.0/24,10.1.2.0/24'`
+      * To set `public_subnets`, pass `--cluster ...public_subnets=10.1.10.0/24,10.1.20.0/24'`
 
 ### Usages
 

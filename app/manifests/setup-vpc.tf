@@ -13,6 +13,24 @@ variable "cluster_name" {
   description = "The name of the ROSA cluster to create"
 }
 
+variable "cidr" {
+  type        = string
+  description = "VPC cidr"
+  default     = "10.0.0.0/16"
+}
+
+variable "private_subnets" {
+  type = list
+  description = "VPC private subnets"
+  default = ["10.0.1.0/24", "10.0.2.0/24"]
+}
+
+variable "public_subnets" {
+  type = list
+  description = "VPC public subnets"
+  default = ["10.0.101.0/24", "10.0.102.0/24"]
+}
+
 provider "aws" {
   region = var.aws_region
 }
@@ -22,11 +40,11 @@ module "vpc" {
   version = "< 6.0.0"
 
   name = "${var.cluster_name}-vpc"
-  cidr = "10.0.0.0/16"
+  cidr = "${var.cidr}"
 
   azs             = var.az_ids
-  private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
-  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24"]
+  private_subnets = var.private_subnets
+  public_subnets  = var.public_subnets
 
   enable_nat_gateway   = true
   single_nat_gateway   = true
