@@ -115,7 +115,11 @@ def create_openshift_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=N
         )
 
     elif cluster_platform in (ROSA_STR, HYPERSHIFT_STR):
-        rosa_create_cluster(cluster_data=cluster_data)
+        rosa_create_cluster(
+            cluster_data=cluster_data,
+            s3_bucket_name=s3_bucket_name,
+            s3_bucket_path=s3_bucket_path,
+        )
 
 
 def destroy_openshift_cluster(cluster_data):
@@ -265,9 +269,6 @@ def main(
             clusters=clusters, registry_config_file=registry_config_file
         )
         if create:
-            kwargs.update(
-                {"s3_bucket_name": s3_bucket_name, "s3_bucket_path": s3_bucket_path}
-            )
             clusters = create_install_config_file(
                 clusters=cluster, registry_config_file=registry_config_file
             )
@@ -282,6 +283,11 @@ def main(
             clusters=clusters,
             ocm_token=ocm_token,
             ocm_env=ocm_env,
+        )
+
+    if create:
+        kwargs.update(
+            {"s3_bucket_name": s3_bucket_name, "s3_bucket_path": s3_bucket_path}
         )
 
     processes = []

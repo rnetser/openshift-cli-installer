@@ -12,7 +12,7 @@ from ocp_resources.job import Job
 from ocp_resources.utils import TimeoutSampler
 from python_terraform import IsNotFlagged, Terraform, TerraformCommandError
 from utils.const import HYPERSHIFT_STR, ROSA_STR
-from utils.helpers import get_ocm_client
+from utils.helpers import get_ocm_client, zip_and_upload_to_s3
 
 
 def tts(ts):
@@ -239,7 +239,7 @@ def prepare_managed_clusters_data(clusters, ocm_token, ocm_env):
     return clusters
 
 
-def rosa_create_cluster(cluster_data):
+def rosa_create_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
     hosted_cp_arg = "--hosted-cp"
     _platform = cluster_data["platform"]
     ignore_keys = (
@@ -275,6 +275,14 @@ def rosa_create_cluster(cluster_data):
 
     dump_cluster_data_to_file(cluster_data=cluster_data)
 
+    zip_base_name = None
+    if s3_bucket_name:
+        zip_base_name = zip_and_upload_to_s3(
+            install_dir=cluster_data["install-dir"],
+            s3_bucket_name=s3_bucket_name,
+            s3_bucket_path=s3_bucket_path,
+        )
+
     rosa.cli.execute(
         command=command,
         ocm_env=ocm_env_url,
@@ -287,6 +295,14 @@ def rosa_create_cluster(cluster_data):
     )
     cluster_object.wait_for_cluster_ready(wait_timeout=cluster_data["timeout"])
     set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
+
+    if s3_bucket_name:
+        zip_and_upload_to_s3(
+            install_dir=cluster_data["install-dir"],
+            s3_bucket_name=s3_bucket_name,
+            s3_bucket_path=s3_bucket_path,
+            base_name=zip_base_name,
+        )
 
     if _platform == ROSA_STR:
         wait_for_osd_cluster_ready_job(ocp_client=cluster_object.ocp_client)
