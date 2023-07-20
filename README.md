@@ -85,6 +85,10 @@ poetry run python app/cli.py --help
 ### Create Clusters
 
 Each command can be run via container `podman run quay.io/redhat_msi/openshift-cli-installer` or via poetry command `poetry run python app/cli.py`
+When using the container pass:
+`-e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID`
+`-e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY`
+`-v registry-config.json:/registry-config.json`
 
 #### One cluster
 ##### AWS IPI cluster
