@@ -21,13 +21,15 @@ RUN wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/shar
 RUN apt-get update \
     && apt-get install -y terraform
 
-RUN ssh-keygen -t rsa -N '' -f /root/.ssh/id_rsa
 
 COPY pyproject.toml poetry.lock /openshift-cli-installer/
 COPY app /openshift-cli-installer/app/
 
 WORKDIR /openshift-cli-installer
 RUN mkdir clusters-install-data
+RUN mkdir ssh-key
+RUN ssh-keygen -t rsa -N '' -f /openshift-cli-installer/ssh-key/id_rsa
+
 
 ENV POETRY_HOME=/openshift-cli-installer
 ENV PATH="/openshift-cli-installer/bin:$PATH"
