@@ -58,10 +58,8 @@ def hypershift_regions(ocm_client):
     ]
 
 
-def is_region_support_hypershift(ocm_token, ocm_env, hypershift_clusters):
-    _hypershift_regions = hypershift_regions(
-        ocm_client=get_ocm_client(ocm_token=ocm_token, ocm_env=ocm_env)
-    )
+def is_region_support_hypershift(ocm_client, hypershift_clusters):
+    _hypershift_regions = hypershift_regions(ocm_client=ocm_client)
     for _cluster in hypershift_clusters:
         _region = _cluster["region"]
         if _region not in _hypershift_regions:
@@ -129,6 +127,22 @@ def destroy_openshift_cluster(cluster_data):
 
     elif cluster_platform in (ROSA_STR, HYPERSHIFT_STR):
         rosa_delete_cluster(cluster_data=cluster_data)
+
+
+def check_existing_clusters(clusters, ocm_client):
+    deployed_clusters_names = {
+        cluster["name"]
+        for cluster in rosa.cli.execute(
+            command="list clusters", aws_region="us-west-2", ocm_client=ocm_client
+        )["out"]
+    }
+    requested_clusters_name = {cluster["name"] for cluster in clusters}
+    duplicate_cluster_names = deployed_clusters_names.intersection(
+        requested_clusters_name
+    )
+    if duplicate_cluster_names:
+        click.echo(f"At least one cluster name duplication: {duplicate_cluster_names}")
+        raise click.Abort()
 
 
 @click.command()
@@ -243,9 +257,13 @@ def main(
     Create/Destroy Openshift cluster/s
     """
     is_platform_supported(clusters=cluster)
+    ocm_client = get_ocm_client(ocm_token=ocm_token, ocm_env=ocm_env)
+    create = action == "create"
+    if create:
+        check_existing_clusters(clusters=cluster, ocm_client=ocm_client)
+
     clusters = []
     kwargs = {}
-    create = action == "create"
 
     aws_ipi_clusters, rosa_clusters, hypershift_clusters = get_clusters_by_type(
         clusters=cluster
@@ -253,8 +271,7 @@ def main(
 
     if hypershift_clusters:
         is_region_support_hypershift(
-            ocm_token=ocm_token,
-            ocm_env=ocm_env,
+            ocm_client=ocm_client,
             hypershift_clusters=hypershift_clusters,
         )
 
