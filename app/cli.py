@@ -251,10 +251,12 @@ def main(
     """
     is_platform_supported(clusters=cluster)
     ocm_client = get_ocm_client(ocm_token=ocm_token, ocm_env=ocm_env)
-    check_existing_clusters(clusters=cluster, ocm_client=ocm_client)
+    create = action == "create"
+    if create:
+        check_existing_clusters(clusters=cluster, ocm_client=ocm_client)
+
     clusters = []
     kwargs = {}
-    create = action == "create"
 
     aws_ipi_clusters, rosa_clusters, hypershift_clusters = get_clusters_by_type(
         clusters=cluster
