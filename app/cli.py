@@ -163,7 +163,7 @@ def check_existing_clusters(clusters, ocm_client):
 @click.option(
     "--ssh-key-file",
     help="id_rsa.pub file path for AWS IPI clusters",
-    defult="/openshift-cli-installer/ssh-key/id_rsa",
+    default="/openshift-cli-installer/ssh-key/id_rsa",
     show_default=True,
 )
 @click.option(
