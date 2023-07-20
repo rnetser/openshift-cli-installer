@@ -47,14 +47,13 @@ def prepare_pull_secret(clusters, pull_secret):
         cluster["pull-secret-file"] = pull_secret_file
 
 
-def create_install_config_file(clusters, registry_config_file):
-    ssh_key = get_local_ssh_key()
+def create_install_config_file(clusters, registry_config_file, ssh_key_path):
     pull_secret = json.dumps(
         get_pull_secret_data(registry_config_file=registry_config_file)
     )
     for _cluster in clusters:
         install_dir = _cluster["install-dir"]
-        _cluster["ssh_key"] = ssh_key
+        _cluster["ssh_key"] = get_local_ssh_key(ssh_key_path=ssh_key_path)
         _cluster["pull_secret"] = pull_secret
         cluster_install_config = get_install_config_j2_template(cluster_dict=_cluster)
 
@@ -69,8 +68,8 @@ def get_pull_secret_data(registry_config_file):
         return json.load(fd)
 
 
-def get_local_ssh_key():
-    with open(os.path.expanduser("~/.ssh/id_rsa.pub")) as fd:
+def get_local_ssh_key(ssh_key_path):
+    with open(ssh_key_path) as fd:
         return fd.read().strip()
 
 

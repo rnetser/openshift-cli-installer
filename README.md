@@ -25,6 +25,7 @@ To pull the image: `podman pull quay.io/openshift-cli-installer`
   * The data is used for cluster destroy.
   * `base_domain` cluster parameter is mandatory
   * `--registry-config-file`: registry-config json file path, can be obtained from [openshift local cluster](https://console.redhat.com/openshift/create/local)
+  * `--ssh-key-file`: id_rsa file path
 
 * ROSA / Hypershift clusters:
   * `--ocm-token`: OCM token, defaults to `OCM_TOKEN` environment variable.

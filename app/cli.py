@@ -147,6 +147,12 @@ def destroy_openshift_cluster(cluster_data):
     show_default=True,
 )
 @click.option(
+    "--ssh-key-file",
+    help="id_rsa.pub file path for AWS IPI clusters",
+    defult="/openshift-cli-installer/ssh-key/id_rsa",
+    show_default=True,
+)
+@click.option(
     "--clusters-install-data-directory",
     help="""
 \b
@@ -231,6 +237,7 @@ def main(
     s3_bucket_path,
     ocm_token,
     ocm_env,
+    ssh_key_file,
 ):
     """
     Create/Destroy Openshift cluster/s
@@ -270,7 +277,9 @@ def main(
         )
         if create:
             clusters = create_install_config_file(
-                clusters=cluster, registry_config_file=registry_config_file
+                clusters=cluster,
+                registry_config_file=registry_config_file,
+                ssh_key_path=ssh_key_file,
             )
 
     if aws_managed_clusters:
