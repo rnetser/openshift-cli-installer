@@ -163,7 +163,8 @@ def check_existing_clusters(clusters, ocm_client):
 @click.option(
     "--ssh-key-file",
     help="id_rsa.pub file path for AWS IPI clusters",
-    default="/openshift-cli-installer/ssh-key/id_rsa",
+    default="/openshift-cli-installer/ssh-key/id_rsa.pub",
+    type=click.Path(exists=True),
     show_default=True,
 )
 @click.option(
@@ -257,17 +258,18 @@ def main(
     Create/Destroy Openshift cluster/s
     """
     is_platform_supported(clusters=cluster)
-    ocm_client = get_ocm_client(ocm_token=ocm_token, ocm_env=ocm_env)
     create = action == "create"
-    if create:
-        check_existing_clusters(clusters=cluster, ocm_client=ocm_client)
-
+    ocm_client = None
     clusters = []
     kwargs = {}
 
     aws_ipi_clusters, rosa_clusters, hypershift_clusters = get_clusters_by_type(
         clusters=cluster
     )
+    if hypershift_clusters or rosa_clusters:
+        ocm_client = get_ocm_client(ocm_token=ocm_token, ocm_env=ocm_env)
+        if create:
+            check_existing_clusters(clusters=cluster, ocm_client=ocm_client)
 
     if hypershift_clusters:
         is_region_support_hypershift(
@@ -296,7 +298,7 @@ def main(
             clusters = create_install_config_file(
                 clusters=cluster,
                 registry_config_file=registry_config_file,
-                ssh_key_path=ssh_key_file,
+                ssh_key_file=ssh_key_file,
             )
 
     if aws_managed_clusters:
