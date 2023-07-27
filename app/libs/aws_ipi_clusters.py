@@ -107,7 +107,7 @@ def download_openshift_install_binary(clusters, registry_config_file):
                 binary_dir, openshift_install_str
             )
 
-        run_command(
+        rc, _, err = run_command(
             command=shlex.split(
                 "oc adm release extract "
                 f"quay.io/openshift-release-dev/ocp-release:{version}-x86_64 "
@@ -115,6 +115,11 @@ def download_openshift_install_binary(clusters, registry_config_file):
             ),
             check=False,
         )
+        if not rc:
+            click.echo(
+                f"Failed to get {openshift_install_str} for version {version}, error: {err}"
+            )
+            raise click.Abort()
 
     return clusters
 
