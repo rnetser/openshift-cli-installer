@@ -37,6 +37,7 @@ def get_clusters_data_dict(cluster_dirs, extracted_target_dir):
             ).group(1)
             clusters_dict[data["platform"]].append(data)
         except FileNotFoundError:
+            # TODO: fix
             clusters_dict["aws"].append(cluster_dir)
 
     return clusters_dict
@@ -61,6 +62,14 @@ def destroy_all_clusters_from_s3_bucket(s3_bucket_name, s3_bucket_path=None):
         cluster_dirs=cluster_dirs, extracted_target_dir=extracted_target_dir
     )
 
+    delete_all_clusters(
+        cluster_data_dict=cluster_data_dict, s3_bucket_name=s3_bucket_name
+    )
+
+    shutil.rmtree(path=target_dir, ignore_errors=True)
+
+
+def delete_all_clusters(cluster_data_dict, s3_bucket_name=None):
     processes = []
     for cluster_type, cluster_data in cluster_data_dict.items():
         if cluster_type == AWS_STR:
@@ -70,29 +79,28 @@ def destroy_all_clusters_from_s3_bucket(s3_bucket_name, s3_bucket_path=None):
             )
         else:
             proc = multiprocessing.Process(
-                target=_destroy_cluster,
+                target=_destroy_rosa_cluster,
                 kwargs={"cluster_data": cluster_data, "s3_bucket_name": s3_bucket_name},
             )
 
         processes.append(proc)
         proc.start()
-
     for proc in processes:
         proc.join()
 
-    shutil.rmtree(path=target_dir, ignore_errors=True)
 
-
-def _destroy_cluster(cluster_data, s3_bucket_name):
+def _destroy_rosa_cluster(cluster_data, s3_bucket_name):
     try:
         rosa_delete_cluster(cluster_data=cluster_data)
-        s3_client().delete_object(
-            Bucket=s3_bucket_name, Key=cluster_data["bucket_filepath"]
-        )
+        if s3_bucket_name:
+            s3_client().delete_object(
+                Bucket=s3_bucket_name, Key=cluster_data["bucket_filepath"]
+            )
     except click.exceptions.Abort:
         click.echo(f"Cannot delete cluster {cluster_data['cluster-name']}")
         # TODO: Delete S3 file is a cluster is not found; need to add more exception logic to know when to delete.
-        # s3_client().delete_object(Bucket=s3_bucket_name, Key=cluster_data["bucket_filepath"])
+        # if s3_bucket_name:
+        #   s3_client().delete_object(Bucket=s3_bucket_name, Key=cluster_data["bucket_filepath"])
 
 
 def get_extracted_clusters_dir_paths(extracted_target_dir):
@@ -144,12 +152,25 @@ def prepare_cluster_directories(s3_bucket_path):
     return extracted_target_dir, target_dir
 
 
+def destroy_all_clusters_from_local_directory(clusters_install_data_directory):
+    clusters_dict = {"aws": [], "rosa": [], "hypershift": []}
+    for root, dirs, files in os.walk(clusters_install_data_directory):
+        for _file in files:
+            if _file == "cluster_data.yam":
+                with open(os.path.join(root, _file)) as fd:
+                    data = yaml.safe_load(fd.read())
+                    clusters_dict[data["platform"]].append(data)
+
+    delete_all_clusters(cluster_data_dict=clusters_dict)
+
+
 def _destroy_all_clusters(
     s3_bucket_name=None, s3_bucket_path=None, clusters_install_data_directory=None
 ):
     if clusters_install_data_directory:
-        pass
-        # destroy_all_clusters_from_local_diretroy(clusters_install_data_directory=clusters_install_data_directory)
+        destroy_all_clusters_from_local_directory(
+            clusters_install_data_directory=clusters_install_data_directory
+        )
 
     if s3_bucket_name:
         destroy_all_clusters_from_s3_bucket(
