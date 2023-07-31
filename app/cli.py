@@ -10,6 +10,7 @@ from libs.aws_ipi_clusters import (
     create_or_destroy_aws_ipi_cluster,
     download_openshift_install_binary,
 )
+from libs.destroy_all_clusters import _destroy_all_clusters
 from libs.rosa_clusters import (
     prepare_managed_clusters_data,
     rosa_create_cluster,
@@ -151,7 +152,6 @@ def check_existing_clusters(clusters, ocm_client):
     "--action",
     type=click.Choice(["create", "destroy"]),
     help="Action to perform Openshift cluster/s",
-    required=True,
 )
 @click.option(
     "-p",
@@ -164,7 +164,7 @@ def check_existing_clusters(clusters, ocm_client):
     "--ssh-key-file",
     help="id_rsa.pub file path for AWS IPI clusters",
     default="/openshift-cli-installer/ssh-key/id_rsa.pub",
-    type=click.Path(exists=True),
+    type=click.Path(),
     show_default=True,
 )
 @click.option(
@@ -182,7 +182,6 @@ Path to cluster install data.
     ),
     type=click.Path(),
     show_default=True,
-    required=True,
 )
 @click.option(
     "--registry-config-file",
@@ -239,8 +238,17 @@ For example:
     worker_flavor=m5.xlarge
     worker_replicas=6
     """,
-    required=True,
     multiple=True,
+)
+@click.option(
+    "--destroy-all-clusters",
+    help="""
+\b
+Destroy all clusters under `--clusters-install-data-directory` and/or
+saved in S3 bucket (`--s3-bucket-path` `--s3-bucket-name`)
+    """,
+    is_flag=True,
+    show_default=True,
 )
 def main(
     action,
@@ -253,10 +261,27 @@ def main(
     ocm_token,
     ocm_env,
     ssh_key_file,
+    destroy_all_clusters,
 ):
     """
     Create/Destroy Openshift cluster/s
     """
+    if destroy_all_clusters:
+        _destroy_all_clusters(
+            s3_bucket_name=s3_bucket_name,
+            s3_bucket_path=s3_bucket_path,
+            clusters_install_data_directory=clusters_install_data_directory,
+        )
+        return
+    if not action:
+        click.echo("'action' must be provided, supported actions: `create`, `destroy`")
+        raise click.Abort()
+    if not cluster:
+        click.echo("At least one 'cluster' option must be provided.")
+        raise click.Abort()
+    if not os.path.exists(ssh_key_file):
+        click.echo(f"ssh file {ssh_key_file} does not exist.")
+        raise click.Abort()
     is_platform_supported(clusters=cluster)
     create = action == "create"
     ocm_client = None
