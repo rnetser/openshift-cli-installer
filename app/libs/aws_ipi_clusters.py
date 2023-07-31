@@ -142,12 +142,12 @@ def create_or_destroy_aws_ipi_cluster(
         )
 
     if not res and not cleanup:
-        click.echo(
-            f"Failed to run cluster {action}\n\tERR: {err}\n\tOUT: {out}.\n\tCleaning leftovers."
-        )
-        create_or_destroy_aws_ipi_cluster(
-            cluster_data=cluster_data, action="destroy", cleanup=True
-        )
+        click.echo(f"Failed to run cluster {action}\n\tERR: {err}\n\tOUT: {out}.")
+        if action == "create":
+            click.echo("Cleaning leftovers.")
+            create_or_destroy_aws_ipi_cluster(
+                cluster_data=cluster_data, action="destroy", cleanup=True
+            )
 
     if not res:
         raise click.Abort()
