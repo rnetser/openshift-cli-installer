@@ -7,7 +7,10 @@ from pathlib import Path
 import click
 import yaml
 from clouds.aws.session_clients import s3_client
-from libs.aws_ipi_clusters import create_or_destroy_aws_ipi_cluster
+from libs.aws_ipi_clusters import (
+    create_or_destroy_aws_ipi_cluster,
+    download_openshift_install_binary,
+)
 from libs.rosa_clusters import rosa_delete_cluster
 from utils.const import AWS_STR
 
@@ -42,7 +45,9 @@ def get_clusters_data_dict(cluster_dirs, extracted_target_dir):
     return clusters_dict
 
 
-def destroy_all_clusters_from_s3_bucket(s3_bucket_name, s3_bucket_path=None):
+def destroy_all_clusters_from_s3_bucket(
+    s3_bucket_name, s3_bucket_path=None, registry_config_file=None
+):
     extracted_target_dir, target_dir = prepare_cluster_directories(
         s3_bucket_path=s3_bucket_path
     )
@@ -61,11 +66,23 @@ def destroy_all_clusters_from_s3_bucket(s3_bucket_name, s3_bucket_path=None):
         cluster_dirs=cluster_dirs, extracted_target_dir=extracted_target_dir
     )
 
+    _destroy_all_download_installer_binary(
+        cluster_data_dict=cluster_data_dict, registry_config_file=registry_config_file
+    )
+
     delete_all_clusters(
         cluster_data_dict=cluster_data_dict, s3_bucket_name=s3_bucket_name
     )
 
     shutil.rmtree(path=target_dir, ignore_errors=True)
+
+
+def _destroy_all_download_installer_binary(cluster_data_dict, registry_config_file):
+    aws_clusters = cluster_data_dict["aws"]
+    if aws_clusters:
+        download_openshift_install_binary(
+            clusters=aws_clusters, registry_config_file=registry_config_file
+        )
 
 
 def delete_all_clusters(cluster_data_dict, s3_bucket_name=None):
@@ -171,7 +188,9 @@ def prepare_cluster_directories(s3_bucket_path):
     return extracted_target_dir, target_dir
 
 
-def destroy_all_clusters_from_local_directory(clusters_install_data_directory):
+def destroy_all_clusters_from_local_directory(
+    clusters_install_data_directory, registry_config_file
+):
     clusters_dict = {"aws": [], "rosa": [], "hypershift": []}
     for root, dirs, files in os.walk(clusters_install_data_directory):
         for _file in files:
@@ -180,18 +199,27 @@ def destroy_all_clusters_from_local_directory(clusters_install_data_directory):
                     data = yaml.safe_load(fd.read())
                     clusters_dict[data["platform"]].append(data)
 
+    _destroy_all_download_installer_binary(
+        cluster_data_dict=clusters_dict, registry_config_file=registry_config_file
+    )
     delete_all_clusters(cluster_data_dict=clusters_dict)
 
 
 def _destroy_all_clusters(
-    s3_bucket_name=None, s3_bucket_path=None, clusters_install_data_directory=None
+    s3_bucket_name=None,
+    s3_bucket_path=None,
+    clusters_install_data_directory=None,
+    registry_config_file=None,
 ):
     if clusters_install_data_directory:
         destroy_all_clusters_from_local_directory(
-            clusters_install_data_directory=clusters_install_data_directory
+            clusters_install_data_directory=clusters_install_data_directory,
+            registry_config_file=registry_config_file,
         )
 
     if s3_bucket_name:
         destroy_all_clusters_from_s3_bucket(
-            s3_bucket_name=s3_bucket_name, s3_bucket_path=s3_bucket_path
+            s3_bucket_name=s3_bucket_name,
+            s3_bucket_path=s3_bucket_path,
+            registry_config_file=registry_config_file,
         )

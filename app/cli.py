@@ -271,6 +271,7 @@ def main(
             s3_bucket_name=s3_bucket_name,
             s3_bucket_path=s3_bucket_path,
             clusters_install_data_directory=clusters_install_data_directory,
+            registry_config_file=registry_config_file,
         )
         return
 
