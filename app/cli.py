@@ -174,11 +174,11 @@ def check_existing_clusters(clusters, ocm_client):
 Path to cluster install data.
     For install this will be used to store the install data.
     For uninstall this will be used to uninstall the cluster.
-    Also used to store clusters kubeconfig
+    Also used to store clusters kubeconfig.
+    Default: "/openshift-cli-installer/clusters-install-data"
 """,
     default=os.environ.get(
         "CLUSTER_INSTALL_DATA_DIRECTORY",
-        "/openshift-cli-installer/clusters-install-data",
     ),
     type=click.Path(),
     show_default=True,
@@ -273,16 +273,13 @@ def main(
             clusters_install_data_directory=clusters_install_data_directory,
         )
         return
-    if not action:
-        click.echo("'action' must be provided, supported actions: `create`, `destroy`")
-        raise click.Abort()
-    if not cluster:
-        click.echo("At least one 'cluster' option must be provided.")
-        raise click.Abort()
-    if not os.path.exists(ssh_key_file):
-        click.echo(f"ssh file {ssh_key_file} does not exist.")
-        raise click.Abort()
-    is_platform_supported(clusters=cluster)
+
+    verify_user_input(action=action, cluster=cluster, ssh_key_file=ssh_key_file)
+
+    clusters_install_data_directory = (
+        clusters_install_data_directory
+        or "/openshift-cli-installer/clusters-install-data"
+    )
     create = action == "create"
     ocm_client = None
     kwargs = {}
@@ -361,6 +358,22 @@ def main(
 
     if processes:
         verify_processes_passed(processes=processes, action=action)
+
+
+def verify_user_input(action, cluster, ssh_key_file):
+    if not action:
+        click.echo("'action' must be provided, supported actions: `create`, `destroy`")
+        raise click.Abort()
+
+    if not cluster:
+        click.echo("At least one 'cluster' option must be provided.")
+        raise click.Abort()
+
+    if not os.path.exists(ssh_key_file):
+        click.echo(f"ssh file {ssh_key_file} does not exist.")
+        raise click.Abort()
+
+    is_platform_supported(clusters=cluster)
 
 
 if __name__ == "__main__":

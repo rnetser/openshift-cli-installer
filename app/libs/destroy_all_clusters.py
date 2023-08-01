@@ -37,8 +37,7 @@ def get_clusters_data_dict(cluster_dirs, extracted_target_dir):
             ).group(1)
             clusters_dict[data["platform"]].append(data)
         except FileNotFoundError:
-            # TODO: fix
-            clusters_dict["aws"].append(cluster_dir)
+            click.echo(f"No yaml file under {cluster_dir}")
 
     return clusters_dict
 
@@ -71,36 +70,56 @@ def destroy_all_clusters_from_s3_bucket(s3_bucket_name, s3_bucket_path=None):
 
 def delete_all_clusters(cluster_data_dict, s3_bucket_name=None):
     processes = []
-    for cluster_type, cluster_data in cluster_data_dict.items():
-        if cluster_type == AWS_STR:
-            proc = multiprocessing.Process(
-                target=create_or_destroy_aws_ipi_cluster,
-                kwargs={"cluster_data": cluster_data, "action": "destroy"},
-            )
-        else:
-            proc = multiprocessing.Process(
-                target=_destroy_rosa_cluster,
-                kwargs={"cluster_data": cluster_data, "s3_bucket_name": s3_bucket_name},
-            )
+    for cluster_type in cluster_data_dict:
+        for cluster_data in cluster_data_dict[cluster_type]:
+            if cluster_type == AWS_STR:
+                proc = multiprocessing.Process(
+                    target=_destroy_aws_cluster,
+                    kwargs={"cluster_data": cluster_data},
+                )
+            else:
+                proc = multiprocessing.Process(
+                    target=_destroy_rosa_cluster,
+                    kwargs={
+                        "cluster_data": cluster_data,
+                        "s3_bucket_name": s3_bucket_name,
+                    },
+                )
 
-        processes.append(proc)
-        proc.start()
+            processes.append(proc)
+            proc.start()
     for proc in processes:
         proc.join()
 
 
-def _destroy_rosa_cluster(cluster_data, s3_bucket_name):
+def _destroy_rosa_cluster(cluster_data, s3_bucket_name=None):
     try:
         rosa_delete_cluster(cluster_data=cluster_data)
         if s3_bucket_name:
-            s3_client().delete_object(
-                Bucket=s3_bucket_name, Key=cluster_data["bucket_filepath"]
-            )
+            delete_s3_object(cluster_data=cluster_data, s3_bucket_name=s3_bucket_name)
     except click.exceptions.Abort:
-        click.echo(f"Cannot delete cluster {cluster_data['cluster-name']}")
+        click.echo(f"Cannot delete cluster {cluster_data['name']}")
         # TODO: Delete S3 file is a cluster is not found; need to add more exception logic to know when to delete.
         # if s3_bucket_name:
-        #   s3_client().delete_object(Bucket=s3_bucket_name, Key=cluster_data["bucket_filepath"])
+        #   delete_s3_object(cluster_data=cluster_data, s3_bucket_name=s3_bucket_name)
+
+
+def _destroy_aws_cluster(cluster_data, s3_bucket_name=None):
+    try:
+        create_or_destroy_aws_ipi_cluster(cluster_data=cluster_data, action="destroy")
+        if s3_bucket_name:
+            delete_s3_object(cluster_data=cluster_data, s3_bucket_name=s3_bucket_name)
+    except click.exceptions.Abort:
+        click.echo(f"Cannot delete cluster {cluster_data['name']}")
+        # TODO: Delete S3 file is a cluster is not found; need to add more exception logic to know when to delete.
+        # if s3_bucket_name:
+        #   delete_s3_object(cluster_data=cluster_data, s3_bucket_name=s3_bucket_name)
+
+
+def delete_s3_object(cluster_data, s3_bucket_name):
+    bucket_key = cluster_data["bucket_filepath"]
+    click.echo(f"Delete {bucket_key} from bucket {s3_bucket_name}")
+    s3_client().delete_object(Bucket=s3_bucket_name, Key=bucket_key)
 
 
 def get_extracted_clusters_dir_paths(extracted_target_dir):
@@ -156,7 +175,7 @@ def destroy_all_clusters_from_local_directory(clusters_install_data_directory):
     clusters_dict = {"aws": [], "rosa": [], "hypershift": []}
     for root, dirs, files in os.walk(clusters_install_data_directory):
         for _file in files:
-            if _file == "cluster_data.yam":
+            if _file == "cluster_data.yaml":
                 with open(os.path.join(root, _file)) as fd:
                     data = yaml.safe_load(fd.read())
                     clusters_dict[data["platform"]].append(data)
