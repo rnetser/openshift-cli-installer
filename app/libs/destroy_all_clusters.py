@@ -57,22 +57,14 @@ def delete_all_clusters(cluster_data_dict, s3_bucket_name=None):
     processes = []
     for cluster_type in cluster_data_dict:
         for cluster_data in cluster_data_dict[cluster_type]:
-            if cluster_type == AWS_STR:
-                proc = multiprocessing.Process(
-                    target=_destroy_aws_cluster,
-                    kwargs={
-                        "cluster_data": cluster_data,
-                        "s3_bucket_name": s3_bucket_name,
-                    },
-                )
-            else:
-                proc = multiprocessing.Process(
-                    target=_destroy_rosa_cluster,
-                    kwargs={
-                        "cluster_data": cluster_data,
-                        "s3_bucket_name": s3_bucket_name,
-                    },
-                )
+            proc = multiprocessing.Process(
+                target=_destroy_cluster,
+                kwargs={
+                    "cluster_data": cluster_data,
+                    "cluster_type": cluster_type,
+                    "s3_bucket_name": s3_bucket_name,
+                },
+            )
 
             processes.append(proc)
             proc.start()
@@ -80,21 +72,15 @@ def delete_all_clusters(cluster_data_dict, s3_bucket_name=None):
         proc.join()
 
 
-def _destroy_rosa_cluster(cluster_data, s3_bucket_name=None):
+def _destroy_cluster(cluster_data, cluster_type, s3_bucket_name=None):
     try:
-        rosa_delete_cluster(cluster_data=cluster_data)
-        if s3_bucket_name:
-            delete_s3_object(cluster_data=cluster_data, s3_bucket_name=s3_bucket_name)
-    except click.exceptions.Abort:
-        click.echo(f"Cannot delete cluster {cluster_data['name']}")
-        # TODO: Delete S3 file is a cluster is not found; need to add more exception logic to know when to delete.
-        # if s3_bucket_name:
-        #   delete_s3_object(cluster_data=cluster_data, s3_bucket_name=s3_bucket_name)
+        if cluster_type == AWS_STR:
+            create_or_destroy_aws_ipi_cluster(
+                cluster_data=cluster_data, action="destroy"
+            )
+        else:
+            rosa_delete_cluster(cluster_data=cluster_data)
 
-
-def _destroy_aws_cluster(cluster_data, s3_bucket_name=None):
-    try:
-        create_or_destroy_aws_ipi_cluster(cluster_data=cluster_data, action="destroy")
         if s3_bucket_name:
             delete_s3_object(cluster_data=cluster_data, s3_bucket_name=s3_bucket_name)
     except click.exceptions.Abort:

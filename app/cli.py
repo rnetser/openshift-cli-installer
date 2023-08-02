@@ -146,6 +146,22 @@ def check_existing_clusters(clusters, ocm_client):
         raise click.Abort()
 
 
+def verify_user_input(action, cluster, ssh_key_file):
+    if not action:
+        click.echo("'action' must be provided, supported actions: `create`, `destroy`")
+        raise click.Abort()
+
+    if not cluster:
+        click.echo("At least one 'cluster' option must be provided.")
+        raise click.Abort()
+
+    if not os.path.exists(ssh_key_file):
+        click.echo(f"ssh file {ssh_key_file} does not exist.")
+        raise click.Abort()
+
+    is_platform_supported(clusters=cluster)
+
+
 @click.command()
 @click.option(
     "-a",
@@ -359,22 +375,6 @@ def main(
 
     if processes:
         verify_processes_passed(processes=processes, action=action)
-
-
-def verify_user_input(action, cluster, ssh_key_file):
-    if not action:
-        click.echo("'action' must be provided, supported actions: `create`, `destroy`")
-        raise click.Abort()
-
-    if not cluster:
-        click.echo("At least one 'cluster' option must be provided.")
-        raise click.Abort()
-
-    if not os.path.exists(ssh_key_file):
-        click.echo(f"ssh file {ssh_key_file} does not exist.")
-        raise click.Abort()
-
-    is_platform_supported(clusters=cluster)
 
 
 if __name__ == "__main__":
