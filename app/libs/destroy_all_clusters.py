@@ -241,6 +241,7 @@ def _destroy_all_clusters(
     _destroy_all_download_installer_binary(
         cluster_data_dict=clusters_data_dict, registry_config_file=registry_config_file
     )
+
     delete_all_clusters(
         cluster_data_dict=clusters_data_dict, s3_bucket_name=s3_bucket_name
     )
