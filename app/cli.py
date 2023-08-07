@@ -266,6 +266,16 @@ saved in S3 bucket (`--s3-bucket-path` `--s3-bucket-name`)
     is_flag=True,
     show_default=True,
 )
+@click.option(
+    "--destroy-clusters-from-config-files",
+    help="""
+\b
+Destroy clusters from a list of paths to `cluster_data.yaml` files.
+For example:
+    '/tmp/cluster1/cluster_data.yaml,/tmp/cluster2/cluster_data.yaml'
+    """,
+    show_default=True,
+)
 def main(
     action,
     registry_config_file,
@@ -278,16 +288,19 @@ def main(
     ocm_env,
     ssh_key_file,
     destroy_all_clusters,
+    destroy_clusters_from_config_files,
 ):
     """
     Create/Destroy Openshift cluster/s
     """
-    if destroy_all_clusters:
+    if destroy_all_clusters or destroy_clusters_from_config_files:
         _destroy_all_clusters(
             s3_bucket_name=s3_bucket_name,
             s3_bucket_path=s3_bucket_path,
             clusters_install_data_directory=clusters_install_data_directory,
             registry_config_file=registry_config_file,
+            clusters_yaml_files=destroy_clusters_from_config_files,
+            destroy_all_clusters=destroy_all_clusters,
         )
         return
 
