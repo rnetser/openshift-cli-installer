@@ -21,11 +21,13 @@ def download_and_extract_s3_file(
     client, bucket, bucket_filepath, target_dir, target_filename, extracted_target_dir
 ):
     target_file_path = os.path.join(target_dir, target_filename)
-    click.echo(f"Download {target_filename} from {bucket} bucket to {target_file_path}")
+    click.echo(f"Download {bucket_filepath} from {bucket} bucket to {target_file_path}")
     client.download_file(Bucket=bucket, Key=bucket_filepath, Filename=target_file_path)
 
     target_extract_dir = os.path.join(extracted_target_dir, target_filename)
-    click.echo(f"Extract {target_file_path} to {target_extract_dir}")
+    click.echo(
+        f"Extract {target_filename} from {target_file_path} to {target_extract_dir}"
+    )
     shutil.unpack_archive(
         filename=target_file_path,
         extract_dir=target_extract_dir,
@@ -94,7 +96,7 @@ def _destroy_cluster(cluster_data, cluster_type, s3_bucket_name=None):
 
 
 def delete_s3_object(cluster_data, s3_bucket_name):
-    bucket_key = cluster_data["bucket_filepath"]
+    bucket_key = cluster_data["bucket_filename"]
     click.echo(f"Delete {bucket_key} from bucket {s3_bucket_name}")
     s3_client().delete_object(Bucket=s3_bucket_name, Key=bucket_key)
 
@@ -152,7 +154,7 @@ def get_clusters_data(cluster_dirs, clusters_dict):
         if S3_EXTRACTED_DATA_FILES_DIR_NAME in root and not _data.get(
             "bucket_filename"
         ):
-            _data["bucket_filepath"] = re.match(
+            _data["bucket_filename"] = re.match(
                 rf".*{S3_EXTRACTED_DATA_FILES_DIR_NAME}/(.*)", root
             ).group(1)
         return _data
@@ -186,7 +188,7 @@ def prepare_data_from_yaml_files(s3_bucket_path, s3_bucket_name, clusters_data_d
             kwargs={
                 "client": client,
                 "bucket": s3_bucket_name,
-                "bucket_filepath": f"{f'{s3_bucket_path}/' if s3_bucket_path else ''}{cluster_file}",
+                "bucket_filepath": cluster_file,
                 "target_dir": target_dir,
                 "target_filename": cluster_file,
                 "extracted_target_dir": extracted_target_dir,
