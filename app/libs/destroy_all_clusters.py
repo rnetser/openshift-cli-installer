@@ -2,6 +2,7 @@ import multiprocessing
 import os
 import re
 import shutil
+from http import HTTPStatus
 from pathlib import Path
 
 import click
@@ -14,6 +15,8 @@ from libs.aws_ipi_clusters import (
 from libs.rosa_clusters import rosa_delete_cluster
 from utils.const import AWS_STR
 
+# from botocore.exceptions import ClientError
+
 S3_EXTRACTED_DATA_FILES_DIR_NAME = "extracted_clusters_files"
 
 
@@ -22,17 +25,23 @@ def download_and_extract_s3_file(
 ):
     target_file_path = os.path.join(target_dir, target_filename)
     click.echo(f"Download {bucket_filepath} from {bucket} bucket to {target_file_path}")
-    client.download_file(Bucket=bucket, Key=bucket_filepath, Filename=target_file_path)
+    try:
+        client.download_file(
+            Bucket=bucket, Key=bucket_filepath, Filename=target_file_path
+        )
 
-    target_extract_dir = os.path.join(extracted_target_dir, target_filename)
-    click.echo(
-        f"Extract {target_filename} from {target_file_path} to {target_extract_dir}"
-    )
-    shutil.unpack_archive(
-        filename=target_file_path,
-        extract_dir=target_extract_dir,
-        format="zip",
-    )
+        target_extract_dir = os.path.join(extracted_target_dir, target_filename)
+        click.echo(
+            f"Extract {target_filename} from {target_file_path} to {target_extract_dir}"
+        )
+        shutil.unpack_archive(
+            filename=target_file_path,
+            extract_dir=target_extract_dir,
+            format="zip",
+        )
+    except client.exceptions.ClientError as ex:
+        if ex.response["Error"]["Code"] == str(HTTPStatus.NOT_FOUND):
+            click.echo(f"{bucket_filepath} not found in {bucket}")
 
 
 def prepare_data_from_s3_bucket(s3_bucket_name, s3_bucket_path=None):
