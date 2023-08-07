@@ -63,11 +63,16 @@ def cluster_shortuuid():
 
 @ignore_exceptions()
 def zip_and_upload_to_s3(
-    install_dir, s3_bucket_name, s3_bucket_path, base_name=None, uuid=None
+    install_dir, s3_bucket_name, s3_bucket_path=None, base_name=None, uuid=None
 ):
     remove_terraform_folder_from_install_dir(install_dir=install_dir)
 
-    _base_name = base_name or f"{install_dir}-{uuid}"
+    _base_name = (
+        f"{install_dir}-{uuid}"
+        if uuid
+        else base_name or f"{install_dir}-{cluster_shortuuid()}"
+    )
+
     zip_file = shutil.make_archive(
         base_name=_base_name,
         format="zip",
