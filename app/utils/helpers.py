@@ -79,7 +79,6 @@ def zip_and_upload_to_s3(
     )
     bucket_key = os.path.join(s3_bucket_path or "", os.path.split(zip_file)[-1])
     click.echo(f"Upload {zip_file} file to S3 {s3_bucket_name}, path {bucket_key}")
-    click.secho(f"Upload {zip_file} file to S3 {s3_bucket_name}, path {bucket_key}")
     s3_client().upload_file(
         Filename=zip_file,
         Bucket=s3_bucket_name,
