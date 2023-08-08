@@ -44,21 +44,6 @@ def download_and_extract_s3_file(
             click.echo(f"{bucket_filepath} not found in {bucket}")
 
 
-def prepare_data_from_s3_bucket(s3_bucket_name, s3_bucket_path=None):
-    extracted_target_dir, target_dir = prepare_cluster_directories(
-        s3_bucket_path=s3_bucket_path, dir_prefix="destroy-all-clusters-from-s3-bucket"
-    )
-
-    get_all_files_from_s3_bucket(
-        extracted_target_dir=extracted_target_dir,
-        s3_bucket_name=s3_bucket_name,
-        s3_bucket_path=s3_bucket_path,
-        target_dir=target_dir,
-    )
-
-    return extracted_target_dir, target_dir
-
-
 def _destroy_all_download_installer_binary(cluster_data_dict, registry_config_file):
     aws_clusters = cluster_data_dict["aws"]
     if aws_clusters:
@@ -110,37 +95,6 @@ def delete_s3_object(cluster_data, s3_bucket_name):
     s3_client().delete_object(Bucket=s3_bucket_name, Key=bucket_key)
 
 
-def get_all_files_from_s3_bucket(
-    extracted_target_dir,
-    s3_bucket_name,
-    s3_bucket_path,
-    target_dir,
-):
-    client = s3_client()
-    kwargs = {"Bucket": s3_bucket_name}
-    if s3_bucket_path:
-        kwargs["Prefix"] = s3_bucket_path
-
-    processes = []
-    for cluster_file in client.list_objects(**kwargs):
-        name = cluster_file["Key"]
-        proc = multiprocessing.Process(
-            target=download_and_extract_s3_file,
-            kwargs={
-                "client": client,
-                "bucket": s3_bucket_name,
-                "bucket_filepath": name,
-                "target_dir": target_dir,
-                "target_filename": name,
-                "extracted_target_dir": extracted_target_dir,
-            },
-        )
-        processes.append(proc)
-        proc.start()
-    for proc in processes:
-        proc.join()
-
-
 def prepare_cluster_directories(s3_bucket_path, dir_prefix):
     target_dir = os.path.join("/tmp", dir_prefix)
     click.echo(f"Prepare target directory {target_dir}.")
@@ -180,35 +134,77 @@ def get_clusters_data(cluster_dirs, clusters_dict):
     return clusters_dict
 
 
+def prepare_data_from_s3_bucket(s3_bucket_name, s3_bucket_path=None):
+    extracted_target_dir, target_dir = prepare_cluster_directories(
+        s3_bucket_path=s3_bucket_path, dir_prefix="destroy-all-clusters-from-s3-bucket"
+    )
+
+    client = s3_client()
+    kwargs = {"Bucket": s3_bucket_name}
+    if s3_bucket_path:
+        kwargs["Prefix"] = s3_bucket_path
+
+    get_files_from_s3_bucket(
+        client=client,
+        files_list=[
+            cluster_file["Key"] for cluster_file in client.list_objects(**kwargs)
+        ],
+        extracted_target_dir=extracted_target_dir,
+        s3_bucket_name=s3_bucket_name,
+        target_dir=target_dir,
+    )
+
+    return extracted_target_dir, target_dir
+
+
 def prepare_data_from_yaml_files(s3_bucket_path, s3_bucket_name, clusters_data_dict):
     extracted_target_dir, target_dir = prepare_cluster_directories(
         s3_bucket_path=s3_bucket_path, dir_prefix="destroy-clusters-from-yaml-files"
     )
-    client = s3_client()
-    processes = []
 
-    for cluster_file in [
+    files_list = [
         cluster_data["bucket_filename"]
         for data_list in clusters_data_dict.values()
         for cluster_data in data_list
-    ]:
+    ]
+
+    get_files_from_s3_bucket(
+        client=s3_client(),
+        files_list=files_list,
+        extracted_target_dir=extracted_target_dir,
+        s3_bucket_name=s3_bucket_name,
+        target_dir=target_dir,
+    )
+
+    return extracted_target_dir, target_dir
+
+
+def get_files_from_s3_bucket(
+    client,
+    extracted_target_dir,
+    s3_bucket_name,
+    target_dir,
+    files_list,
+):
+    processes = []
+
+    for _file in files_list:
         proc = multiprocessing.Process(
             target=download_and_extract_s3_file,
             kwargs={
                 "client": client,
                 "bucket": s3_bucket_name,
-                "bucket_filepath": cluster_file,
+                "bucket_filepath": _file,
                 "target_dir": target_dir,
-                "target_filename": cluster_file,
+                "target_filename": _file,
                 "extracted_target_dir": extracted_target_dir,
             },
         )
         processes.append(proc)
         proc.start()
+
     for proc in processes:
         proc.join()
-
-    return target_dir
 
 
 def _destroy_all_clusters(
