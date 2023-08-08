@@ -90,7 +90,7 @@ def _destroy_cluster(cluster_data, cluster_type, s3_bucket_name=None):
 
 
 def delete_s3_object(cluster_data, s3_bucket_name):
-    bucket_key = cluster_data["bucket_filename"]
+    bucket_key = cluster_data["s3_object_name"]
     click.echo(f"Delete {bucket_key} from bucket {s3_bucket_name}")
     s3_client().delete_object(Bucket=s3_bucket_name, Key=bucket_key)
 
@@ -114,10 +114,8 @@ def get_clusters_data(cluster_dirs, clusters_dict):
         with open(_cluster_filepath) as fd:
             _data = yaml.safe_load(fd.read())
         _data["install-dir"] = root
-        if S3_EXTRACTED_DATA_FILES_DIR_NAME in root and not _data.get(
-            "bucket_filename"
-        ):
-            _data["bucket_filename"] = re.match(
+        if S3_EXTRACTED_DATA_FILES_DIR_NAME in root and not _data.get("s3_object_name"):
+            _data["s3_object_name"] = re.match(
                 rf".*{S3_EXTRACTED_DATA_FILES_DIR_NAME}/(.*)", root
             ).group(1)
         return _data
@@ -163,7 +161,7 @@ def prepare_data_from_yaml_files(s3_bucket_path, s3_bucket_name, clusters_data_d
     )
 
     files_list = [
-        cluster_data["bucket_filename"]
+        cluster_data["s3_object_name"]
         for data_list in clusters_data_dict.values()
         for cluster_data in data_list
     ]
@@ -180,7 +178,7 @@ def prepare_data_from_yaml_files(s3_bucket_path, s3_bucket_name, clusters_data_d
     for _data_list in clusters_data_dict.values():
         for _cluster_data in _data_list:
             _cluster_data["install_dir"] = os.path.join(
-                extracted_target_dir, _cluster_data["bucket_filename"]
+                extracted_target_dir, _cluster_data["s3_object_name"]
             )
 
     return target_dir, clusters_data_dict
