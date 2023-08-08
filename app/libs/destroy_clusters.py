@@ -43,7 +43,9 @@ def download_and_extract_s3_file(
             raise click.Abort()
 
 
-def _destroy_all_download_installer_binary(cluster_data_dict, registry_config_file):
+def _destroy_clusters_download_installer_binary(
+    cluster_data_dict, registry_config_file
+):
     aws_clusters = cluster_data_dict["aws"]
     if aws_clusters:
         download_openshift_install_binary(
@@ -51,8 +53,9 @@ def _destroy_all_download_installer_binary(cluster_data_dict, registry_config_fi
         )
 
 
-def delete_all_clusters(cluster_data_dict, s3_bucket_name=None):
+def destroy_clusters_from_data_dict(cluster_data_dict, s3_bucket_name=None):
     processes = []
+
     for cluster_type in cluster_data_dict:
         for cluster_data in cluster_data_dict[cluster_type]:
             proc = multiprocessing.Process(
@@ -66,6 +69,7 @@ def delete_all_clusters(cluster_data_dict, s3_bucket_name=None):
 
             processes.append(proc)
             proc.start()
+
     for proc in processes:
         proc.join()
 
@@ -81,6 +85,7 @@ def _destroy_cluster(cluster_data, cluster_type, s3_bucket_name=None):
 
         if s3_bucket_name:
             delete_s3_object(cluster_data=cluster_data, s3_bucket_name=s3_bucket_name)
+
     except click.exceptions.Abort:
         click.secho(f"Cannot delete cluster {cluster_data['name']}", fg="red")
 
@@ -250,11 +255,11 @@ def destroy_clusters(
         )
         s3_target_dirs.append(target_dir)
 
-    _destroy_all_download_installer_binary(
+    _destroy_clusters_download_installer_binary(
         cluster_data_dict=clusters_data_dict, registry_config_file=registry_config_file
     )
 
-    delete_all_clusters(
+    destroy_clusters_from_data_dict(
         cluster_data_dict=clusters_data_dict, s3_bucket_name=s3_bucket_name
     )
 
