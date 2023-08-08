@@ -10,14 +10,14 @@ from libs.aws_ipi_clusters import (
     create_or_destroy_aws_ipi_cluster,
     download_openshift_install_binary,
 )
-from libs.destroy_all_clusters import _destroy_all_clusters
+from libs.destroy_all_clusters import _destroy_clusters
 from libs.rosa_clusters import (
     prepare_managed_clusters_data,
     rosa_create_cluster,
     rosa_delete_cluster,
 )
 from utils.click_dict_type import DictParamType
-from utils.const import AWS_STR, HYPERSHIFT_STR, ROSA_STR
+from utils.const import AWS_STR, CLUSTER_DATA_YAML_FILENAME, HYPERSHIFT_STR, ROSA_STR
 from utils.helpers import get_ocm_client
 
 
@@ -261,18 +261,22 @@ For example:
     help="""
 \b
 Destroy all clusters under `--clusters-install-data-directory` and/or
-saved in S3 bucket (`--s3-bucket-path` `--s3-bucket-name`)
+saved in S3 bucket (`--s3-bucket-path` `--s3-bucket-name`).
+S3 objects will be deleted upon successful deletion.
     """,
     is_flag=True,
     show_default=True,
 )
 @click.option(
     "--destroy-clusters-from-config-files",
-    help="""
+    help=f"""
 \b
-Destroy clusters from a list of paths to `cluster_data.yaml` files.
+Destroy clusters from a list of paths to `{CLUSTER_DATA_YAML_FILENAME}` files.
+The yaml file must include `s3_object_name` with s3 objet name.
+`--s3-bucket-name` and optionally `--s3-bucket-path` must be provided.
+S3 objects will be deleted upon successful deletion.
 For example:
-    '/tmp/cluster1/cluster_data.yaml,/tmp/cluster2/cluster_data.yaml'
+    '/tmp/cluster1/{CLUSTER_DATA_YAML_FILENAME},/tmp/cluster2/{CLUSTER_DATA_YAML_FILENAME}'
     """,
     show_default=True,
 )
@@ -293,8 +297,14 @@ def main(
     """
     Create/Destroy Openshift cluster/s
     """
+    if destroy_clusters_from_config_files and not s3_bucket_name:
+        click.echo(
+            "`--s3-bucket-name` must be provided when running with `--destroy-clusters-from-config-files`"
+        )
+        raise click.Abort()
+
     if destroy_all_clusters or destroy_clusters_from_config_files:
-        _destroy_all_clusters(
+        _destroy_clusters(
             s3_bucket_name=s3_bucket_name,
             s3_bucket_path=s3_bucket_path,
             clusters_install_data_directory=clusters_install_data_directory,

@@ -9,6 +9,8 @@ import yaml
 from clouds.aws.session_clients import s3_client
 from ocm_python_wrapper.ocm_client import OCMPythonClient
 
+from app.utils.const import CLUSTER_DATA_YAML_FILENAME
+
 
 # TODO: Move to own repository.
 def ignore_exceptions(logger=None, retry=None):
@@ -90,7 +92,7 @@ def zip_and_upload_to_s3(
 
 def dump_cluster_data_to_file(cluster_data):
     with open(
-        os.path.join(cluster_data["install-dir"], "cluster_data.yaml"), "w"
+        os.path.join(cluster_data["install-dir"], CLUSTER_DATA_YAML_FILENAME), "w"
     ) as fd:
         fd.write(yaml.dump(cluster_data))
 

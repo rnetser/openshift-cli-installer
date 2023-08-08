@@ -15,7 +15,7 @@ from libs.aws_ipi_clusters import (
 from libs.rosa_clusters import rosa_delete_cluster
 from utils.const import AWS_STR
 
-# from botocore.exceptions import ClientError
+from app.utils.const import CLUSTER_DATA_YAML_FILENAME
 
 S3_EXTRACTED_DATA_FILES_DIR_NAME = "extracted_clusters_files"
 
@@ -84,9 +84,6 @@ def _destroy_cluster(cluster_data, cluster_type, s3_bucket_name=None):
             delete_s3_object(cluster_data=cluster_data, s3_bucket_name=s3_bucket_name)
     except click.exceptions.Abort:
         click.echo(f"Cannot delete cluster {cluster_data['name']}")
-        # TODO: Delete S3 file is a cluster is not found; need to add more exception logic to know when to delete.
-        # if s3_bucket_name:
-        #   delete_s3_object(cluster_data=cluster_data, s3_bucket_name=s3_bucket_name)
 
 
 def delete_s3_object(cluster_data, s3_bucket_name):
@@ -123,7 +120,7 @@ def get_clusters_data(cluster_dirs, clusters_dict):
     for cluster_dir in cluster_dirs:
         for root, dirs, files in os.walk(cluster_dir):
             for _file in files:
-                if _file == "cluster_data.yaml":
+                if _file == CLUSTER_DATA_YAML_FILENAME:
                     data = _get_cluster_dict_from_yaml(
                         _cluster_filepath=os.path.join(root, _file)
                     )
@@ -155,7 +152,11 @@ def prepare_data_from_s3_bucket(s3_bucket_name, s3_bucket_path=None):
     return extracted_target_dir, target_dir
 
 
-def prepare_data_from_yaml_files(s3_bucket_path, s3_bucket_name, clusters_data_dict):
+def prepare_data_from_yaml_files(
+    s3_bucket_name,
+    clusters_data_dict,
+    s3_bucket_path=None,
+):
     extracted_target_dir, target_dir = prepare_cluster_directories(
         s3_bucket_path=s3_bucket_path, dir_prefix="destroy-clusters-from-yaml-files"
     )
@@ -212,7 +213,7 @@ def get_files_from_s3_bucket(
         proc.join()
 
 
-def _destroy_all_clusters(
+def _destroy_clusters(
     s3_bucket_name=None,
     s3_bucket_path=None,
     clusters_install_data_directory=None,
@@ -221,11 +222,11 @@ def _destroy_all_clusters(
     destroy_all_clusters=False,
 ):
     clusters_data_dict = {"aws": [], "rosa": [], "hypershift": []}
+    cluster_dirs = []
     s3_target_dirs = []
     if destroy_all_clusters:
-        cluster_dirs = (
-            [clusters_install_data_directory] if clusters_install_data_directory else []
-        )
+        if clusters_install_data_directory:
+            cluster_dirs.append(clusters_install_data_directory)
 
         if s3_bucket_name:
             s3_data_directory, s3_target_dir = prepare_data_from_s3_bucket(

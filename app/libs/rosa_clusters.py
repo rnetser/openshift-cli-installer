@@ -20,6 +20,8 @@ from utils.helpers import (
     zip_and_upload_to_s3,
 )
 
+from app.utils.const import CLUSTER_DATA_YAML_FILENAME
+
 
 def tts(ts):
     """
@@ -309,7 +311,7 @@ def rosa_delete_cluster(cluster_data):
     base_cluster_data = None
     should_raise = False
     base_cluster_data_path = os.path.join(
-        cluster_data["install-dir"], "cluster_data.yaml"
+        cluster_data["install-dir"], CLUSTER_DATA_YAML_FILENAME
     )
     if os.path.exists(base_cluster_data_path):
         with open(base_cluster_data_path) as fd:
