@@ -176,7 +176,14 @@ def prepare_data_from_yaml_files(s3_bucket_path, s3_bucket_name, clusters_data_d
         target_dir=target_dir,
     )
 
-    return extracted_target_dir, target_dir
+    # Update clusters_data_dict with path to new install-dir
+    for _data_list in clusters_data_dict.values():
+        for _cluster_data in _data_list:
+            _cluster_data["install_dir"] = os.path.join(
+                extracted_target_dir, _cluster_data["bucket_filename"]
+            )
+
+    return target_dir, clusters_data_dict
 
 
 def get_files_from_s3_bucket(
@@ -238,7 +245,7 @@ def _destroy_all_clusters(
         clusters_data_dict = get_clusters_data(
             cluster_dirs=dir_paths, clusters_dict=clusters_data_dict
         )
-        target_dir = prepare_data_from_yaml_files(
+        target_dir, clusters_data_dict = prepare_data_from_yaml_files(
             s3_bucket_name=s3_bucket_name,
             s3_bucket_path=s3_bucket_path,
             clusters_data_dict=clusters_data_dict,
