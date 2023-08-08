@@ -83,7 +83,7 @@ def _destroy_cluster(cluster_data, cluster_type, s3_bucket_name=None):
         if s3_bucket_name:
             delete_s3_object(cluster_data=cluster_data, s3_bucket_name=s3_bucket_name)
     except click.exceptions.Abort:
-        click.echo(f"Cannot delete cluster {cluster_data['name']}")
+        click.secho(f"Cannot delete cluster {cluster_data['name']}", fg="red")
 
 
 def delete_s3_object(cluster_data, s3_bucket_name):
