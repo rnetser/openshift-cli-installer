@@ -7,6 +7,7 @@ import yaml
 from jinja2 import DebugUndefined, Environment, FileSystemLoader, meta
 from ocp_utilities.utils import run_command
 from utils.helpers import (
+    bucket_object_name,
     cluster_shortuuid,
     dump_cluster_data_to_file,
     zip_and_upload_to_s3,
@@ -140,7 +141,9 @@ def create_or_destroy_aws_ipi_cluster(
     )
 
     _shortuuid = cluster_shortuuid()
-    cluster_data["s3_object_name"] = f"{cluster_data['name']}-{_shortuuid}.zip"
+    cluster_data["s3_object_name"] = bucket_object_name(
+        cluster_data=cluster_data, _shortuuid=_shortuuid, s3_bucket_path=s3_bucket_path
+    )
     dump_cluster_data_to_file(cluster_data=cluster_data)
 
     if action == "create" and s3_bucket_name:

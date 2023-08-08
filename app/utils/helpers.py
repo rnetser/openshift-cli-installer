@@ -93,3 +93,7 @@ def dump_cluster_data_to_file(cluster_data):
         os.path.join(cluster_data["install-dir"], "cluster_data.yaml"), "w"
     ) as fd:
         fd.write(yaml.dump(cluster_data))
+
+
+def bucket_object_name(cluster_data, _shortuuid, s3_bucket_path=None):
+    return f"{f'{s3_bucket_path}/' if s3_bucket_path else ''}{cluster_data['name']}-{_shortuuid}.zip"

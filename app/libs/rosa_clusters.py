@@ -13,6 +13,7 @@ from ocp_resources.utils import TimeoutSampler
 from python_terraform import IsNotFlagged, Terraform, TerraformCommandError
 from utils.const import HYPERSHIFT_STR, ROSA_STR
 from utils.helpers import (
+    bucket_object_name,
     cluster_shortuuid,
     dump_cluster_data_to_file,
     get_ocm_client,
@@ -272,7 +273,9 @@ def rosa_create_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
             command += f"{cmd} "
 
     _shortuuid = cluster_shortuuid()
-    cluster_data["s3_object_name"] = f"{cluster_data['name']}-{_shortuuid}.zip"
+    cluster_data["s3_object_name"] = bucket_object_name(
+        cluster_data=cluster_data, _shortuuid=_shortuuid, s3_bucket_path=s3_bucket_path
+    )
     dump_cluster_data_to_file(cluster_data=cluster_data)
 
     try:
