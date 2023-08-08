@@ -10,7 +10,7 @@ from libs.aws_ipi_clusters import (
     create_or_destroy_aws_ipi_cluster,
     download_openshift_install_binary,
 )
-from libs.destroy_all_clusters import _destroy_clusters
+from libs.destroy_clusters import destroy_clusters
 from libs.rosa_clusters import (
     prepare_managed_clusters_data,
     rosa_create_cluster,
@@ -304,7 +304,7 @@ def main(
         raise click.Abort()
 
     if destroy_all_clusters or destroy_clusters_from_config_files:
-        _destroy_clusters(
+        destroy_clusters(
             s3_bucket_name=s3_bucket_name,
             s3_bucket_path=s3_bucket_path,
             clusters_install_data_directory=clusters_install_data_directory,

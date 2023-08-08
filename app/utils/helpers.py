@@ -8,8 +8,7 @@ import shortuuid
 import yaml
 from clouds.aws.session_clients import s3_client
 from ocm_python_wrapper.ocm_client import OCMPythonClient
-
-from app.utils.const import CLUSTER_DATA_YAML_FILENAME
+from utils.const import CLUSTER_DATA_YAML_FILENAME
 
 
 # TODO: Move to own repository.

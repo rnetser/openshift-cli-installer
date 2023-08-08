@@ -13,9 +13,7 @@ from libs.aws_ipi_clusters import (
     download_openshift_install_binary,
 )
 from libs.rosa_clusters import rosa_delete_cluster
-from utils.const import AWS_STR
-
-from app.utils.const import CLUSTER_DATA_YAML_FILENAME
+from utils.const import AWS_STR, CLUSTER_DATA_YAML_FILENAME
 
 S3_EXTRACTED_DATA_FILES_DIR_NAME = "extracted_clusters_files"
 
@@ -42,6 +40,7 @@ def download_and_extract_s3_file(
     except client.exceptions.ClientError as ex:
         if ex.response["Error"]["Code"] == str(HTTPStatus.NOT_FOUND):
             click.echo(f"{bucket_filepath} not found in {bucket}")
+            raise click.Abort()
 
 
 def _destroy_all_download_installer_binary(cluster_data_dict, registry_config_file):
@@ -178,7 +177,7 @@ def prepare_data_from_yaml_files(
     # Update clusters_data_dict with path to new install-dir
     for _data_list in clusters_data_dict.values():
         for _cluster_data in _data_list:
-            _cluster_data["install_dir"] = os.path.join(
+            _cluster_data["install-dir"] = os.path.join(
                 extracted_target_dir, _cluster_data["s3_object_name"]
             )
 
@@ -213,7 +212,7 @@ def get_files_from_s3_bucket(
         proc.join()
 
 
-def _destroy_clusters(
+def destroy_clusters(
     s3_bucket_name=None,
     s3_bucket_path=None,
     clusters_install_data_directory=None,

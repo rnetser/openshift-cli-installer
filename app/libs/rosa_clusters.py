@@ -11,7 +11,7 @@ from ocm_python_wrapper.cluster import Cluster
 from ocp_resources.job import Job
 from ocp_resources.utils import TimeoutSampler
 from python_terraform import IsNotFlagged, Terraform, TerraformCommandError
-from utils.const import HYPERSHIFT_STR, ROSA_STR
+from utils.const import CLUSTER_DATA_YAML_FILENAME, HYPERSHIFT_STR, ROSA_STR
 from utils.helpers import (
     bucket_object_name,
     cluster_shortuuid,
@@ -19,8 +19,6 @@ from utils.helpers import (
     get_ocm_client,
     zip_and_upload_to_s3,
 )
-
-from app.utils.const import CLUSTER_DATA_YAML_FILENAME
 
 
 def tts(ts):
