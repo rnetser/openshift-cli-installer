@@ -12,7 +12,13 @@ from ocp_resources.job import Job
 from ocp_resources.utils import TimeoutSampler
 from python_terraform import IsNotFlagged, Terraform, TerraformCommandError
 from utils.const import HYPERSHIFT_STR, ROSA_STR
-from utils.helpers import get_ocm_client, zip_and_upload_to_s3
+from utils.helpers import (
+    bucket_object_name,
+    cluster_shortuuid,
+    dump_cluster_data_to_file,
+    get_ocm_client,
+    zip_and_upload_to_s3,
+)
 
 
 def tts(ts):
@@ -92,13 +98,6 @@ def wait_for_osd_cluster_ready_job(ocp_client):
     job.wait_for_condition(
         condition=job.Condition.COMPLETE, status="True", timeout=tts(ts="1h")
     )
-
-
-def dump_cluster_data_to_file(cluster_data):
-    with open(
-        os.path.join(cluster_data["install-dir"], "cluster_data.yaml"), "w"
-    ) as fd:
-        fd.write(yaml.dump(cluster_data))
 
 
 def create_oidc(cluster_data):
@@ -273,36 +272,34 @@ def rosa_create_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
         else:
             command += f"{cmd} "
 
+    _shortuuid = cluster_shortuuid()
+    cluster_data["s3_object_name"] = bucket_object_name(
+        cluster_data=cluster_data, _shortuuid=_shortuuid, s3_bucket_path=s3_bucket_path
+    )
     dump_cluster_data_to_file(cluster_data=cluster_data)
 
-    zip_base_name = None
-    if s3_bucket_name:
-        zip_base_name = zip_and_upload_to_s3(
-            install_dir=cluster_data["install-dir"],
-            s3_bucket_name=s3_bucket_name,
-            s3_bucket_path=s3_bucket_path,
+    try:
+        rosa.cli.execute(
+            command=command,
+            ocm_env=ocm_env_url,
+            token=ocm_token,
+            aws_region=cluster_data["region"],
         )
 
-    rosa.cli.execute(
-        command=command,
-        ocm_env=ocm_env_url,
-        token=ocm_token,
-        aws_region=cluster_data["region"],
-    )
+    finally:
+        if s3_bucket_name:
+            zip_and_upload_to_s3(
+                uuid=_shortuuid,
+                install_dir=cluster_data["install-dir"],
+                s3_bucket_name=s3_bucket_name,
+                s3_bucket_path=s3_bucket_path,
+            )
 
     cluster_object = get_cluster_object(
         ocm_token=ocm_token, ocm_env=ocm_env, cluster_data=cluster_data
     )
     cluster_object.wait_for_cluster_ready(wait_timeout=cluster_data["timeout"])
     set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
-
-    if s3_bucket_name:
-        zip_and_upload_to_s3(
-            install_dir=cluster_data["install-dir"],
-            s3_bucket_name=s3_bucket_name,
-            s3_bucket_path=s3_bucket_path,
-            base_name=zip_base_name,
-        )
 
     if _platform == ROSA_STR:
         wait_for_osd_cluster_ready_job(ocp_client=cluster_object.ocp_client)
@@ -344,6 +341,7 @@ def rosa_delete_cluster(cluster_data):
 
     if _cluster_data["platform"] == HYPERSHIFT_STR:
         destroy_hypershift_vpc(cluster_data=_cluster_data)
+        delete_oidc(cluster_data=_cluster_data)
 
     if should_raise:
         click.echo(f"Failed to run cluster uninstall\n{should_raise}")
