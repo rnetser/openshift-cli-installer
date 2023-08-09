@@ -3,9 +3,13 @@ import shutil
 from functools import wraps
 from time import sleep
 
+import click
 import shortuuid
+import yaml
 from clouds.aws.session_clients import s3_client
 from ocm_python_wrapper.ocm_client import OCMPythonClient
+
+from openshift_cli_installer.utils.const import CLUSTER_DATA_YAML_FILENAME
 
 
 # TODO: Move to own repository.
@@ -55,20 +59,43 @@ def get_ocm_client(ocm_token, ocm_env):
     ).client
 
 
+def cluster_shortuuid():
+    return shortuuid.uuid()
+
+
 @ignore_exceptions()
-def zip_and_upload_to_s3(install_dir, s3_bucket_name, s3_bucket_path, base_name=None):
+def zip_and_upload_to_s3(
+    install_dir,
+    s3_bucket_name,
+    uuid,
+    s3_bucket_path=None,
+):
     remove_terraform_folder_from_install_dir(install_dir=install_dir)
 
-    _base_name = base_name or f"{install_dir}-{shortuuid.uuid()}"
+    _base_name = f"{install_dir}-{uuid}"
+
     zip_file = shutil.make_archive(
         base_name=_base_name,
         format="zip",
         root_dir=install_dir,
     )
+    bucket_key = os.path.join(s3_bucket_path or "", os.path.split(zip_file)[-1])
+    click.echo(f"Upload {zip_file} file to S3 {s3_bucket_name}, path {bucket_key}")
     s3_client().upload_file(
         Filename=zip_file,
         Bucket=s3_bucket_name,
-        Key=os.path.join(s3_bucket_path or "", os.path.split(zip_file)[-1]),
+        Key=bucket_key,
     )
 
     return _base_name
+
+
+def dump_cluster_data_to_file(cluster_data):
+    with open(
+        os.path.join(cluster_data["install-dir"], CLUSTER_DATA_YAML_FILENAME), "w"
+    ) as fd:
+        fd.write(yaml.dump(cluster_data))
+
+
+def bucket_object_name(cluster_data, _shortuuid, s3_bucket_path=None):
+    return f"{f'{s3_bucket_path}/' if s3_bucket_path else ''}{cluster_data['name']}-{_shortuuid}.zip"
