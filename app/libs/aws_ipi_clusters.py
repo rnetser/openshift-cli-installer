@@ -6,8 +6,9 @@ import click
 import yaml
 from jinja2 import DebugUndefined, Environment, FileSystemLoader, meta
 from ocp_utilities.utils import run_command
-from utils.const import CREATE_STR, DESTROY_STR
-from utils.helpers import (
+
+from app.utils.const import CREATE_STR, DESTROY_STR
+from app.utils.helpers import (
     bucket_object_name,
     cluster_shortuuid,
     dump_cluster_data_to_file,

@@ -5,19 +5,20 @@ from pathlib import Path
 import click
 import rosa.cli
 from clouds.aws.aws_utils import set_and_verify_aws_credentials
-from libs.aws_ipi_clusters import (
+
+from app.libs.aws_ipi_clusters import (
     create_install_config_file,
     create_or_destroy_aws_ipi_cluster,
     download_openshift_install_binary,
 )
-from libs.destroy_clusters import destroy_clusters
-from libs.rosa_clusters import (
+from app.libs.destroy_clusters import destroy_clusters
+from app.libs.rosa_clusters import (
     prepare_managed_clusters_data,
     rosa_create_cluster,
     rosa_delete_cluster,
 )
-from utils.click_dict_type import DictParamType
-from utils.const import (
+from app.utils.click_dict_type import DictParamType
+from app.utils.const import (
     AWS_STR,
     CLUSTER_DATA_YAML_FILENAME,
     CREATE_STR,
@@ -25,7 +26,7 @@ from utils.const import (
     HYPERSHIFT_STR,
     ROSA_STR,
 )
-from utils.helpers import get_ocm_client
+from app.utils.helpers import get_ocm_client
 
 
 def get_clusters_by_type(clusters):
