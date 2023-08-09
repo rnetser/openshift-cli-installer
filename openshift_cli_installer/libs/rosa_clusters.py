@@ -12,8 +12,12 @@ from ocp_resources.job import Job
 from ocp_resources.utils import TimeoutSampler
 from python_terraform import IsNotFlagged, Terraform, TerraformCommandError
 
-from app.utils.const import CLUSTER_DATA_YAML_FILENAME, HYPERSHIFT_STR, ROSA_STR
-from app.utils.helpers import (
+from openshift_cli_installer.utils.const import (
+    CLUSTER_DATA_YAML_FILENAME,
+    HYPERSHIFT_STR,
+    ROSA_STR,
+)
+from openshift_cli_installer.utils.helpers import (
     bucket_object_name,
     cluster_shortuuid,
     dump_cluster_data_to_file,

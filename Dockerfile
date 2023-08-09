@@ -22,8 +22,8 @@ RUN apt-get update \
     && apt-get install -y terraform
 
 
-COPY pyproject.toml poetry.lock /openshift-cli-installer/
-COPY app /openshift-cli-installer/app/
+COPY pyproject.toml poetry.lock README.md /openshift-cli-installer/
+COPY openshift_cli_installer /openshift-cli-installer/openshift_cli_installer/
 
 WORKDIR /openshift-cli-installer
 RUN mkdir clusters-install-data
@@ -42,4 +42,5 @@ RUN python3 -m pip install pip --upgrade \
     && poetry install
 
 
-ENTRYPOINT ["poetry", "run", "python", "app/cli.py"]
+
+ENTRYPOINT ["poetry", "run", "python", "openshift_cli_installer/cli.py"]
