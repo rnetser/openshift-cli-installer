@@ -6,6 +6,7 @@ import click
 import yaml
 from jinja2 import DebugUndefined, Environment, FileSystemLoader, meta
 from ocp_utilities.utils import run_command
+
 from openshift_cli_installer.utils.helpers import (
     bucket_object_name,
     cluster_shortuuid,
