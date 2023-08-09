@@ -44,7 +44,7 @@ Every call to the openshift installer cli must have at least one `--cluster` opt
   * To set cluster create / destroy timeout, pass `--cluster ...timeout=1h'`; default is 30 minutes.
   * `timeout` and `expiration-time` format examples: `1h`, `30m`, `3600s`
   * AWS IPI:
-    * To overwrite cluster config, check [install-config-template.j2](app/manifests/install-config-template.j2) parameters.
+    * To overwrite cluster config, check [install-config-template.j2](openshift_cli_installer/manifests/install-config-template.j2) parameters.
     * Every parameter (marked with double curly brackets in the template) can be overwritten.
     * For example: to overwrite `{{ fips|default("false", true) }}` pass `--cluster '...fips=true'`
   * ROSA / Hypershift:
@@ -53,7 +53,7 @@ Every call to the openshift installer cli must have at least one `--cluster` opt
       * Pass `--cluster ...fips=true'` to enable FIPS
       * Pass `--cluster ...expiration-time=2h'` to have the cluster expiration time set to 2 hours
   * Hypershift:
-    * Cluster VPC CIDR, public and private subnets can be configured from the CLI. Otherwise, values in [setup-vpc.tf](app/manifests/setup-vpc.tf) will be used.
+    * Cluster VPC CIDR, public and private subnets can be configured from the CLI. Otherwise, values in [setup-vpc.tf](openshift_cli_installer/manifests/setup-vpc.tf) will be used.
       * To set `cidr`, pass `--cluster ...cidr=1.1.0.0/16'`
       * To set `private_subnets`, pass `--cluster ...private_subnets=10.1.1.0/24,10.1.2.0/24'`
       * To set `public_subnets`, pass `--cluster ...public_subnets=10.1.10.0/24,10.1.20.0/24'`
@@ -74,17 +74,17 @@ git clone https://github.com/RedHatQE/openshift-cli-installer.git
 
 Install [poetry](https://github.com/python-poetry/poetry)
 
-Use `poetry run python app/cli.py` to execute the cli.
+Use `poetry run python openshift_cli_installer/cli.py` to execute the cli.
 
 ```
 poetry install
-poetry run python app/cli.py --help
+poetry run python openshift_cli_installer/cli.py --help
 ```
 
 
 ### Create Clusters
 
-Each command can be run via container `podman run quay.io/redhat_msi/openshift-cli-installer` or via poetry command `poetry run python app/cli.py`
+Each command can be run via container `podman run quay.io/redhat_msi/openshift-cli-installer` or via poetry command `poetry run python openshift_cli_installer/cli.py`
 When using the container pass:
 `-e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID`
 `-e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY`
