@@ -179,7 +179,9 @@ def destroy_hypershift_vpc(cluster_data):
 
 
 def prepare_hypershift_vpc(cluster_data):
-    shutil.copy("app/manifests/setup-vpc.tf", cluster_data["install-dir"])
+    shutil.copy(
+        "openshift_cli_installer/manifests/setup-vpc.tf", cluster_data["install-dir"]
+    )
     terraform = terraform_init(cluster_data=cluster_data)
     try:
         terraform.plan(dir_or_plan="rosa.plan")

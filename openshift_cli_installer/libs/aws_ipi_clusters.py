@@ -83,7 +83,7 @@ def get_local_ssh_key(ssh_key_file):
 def get_install_config_j2_template(cluster_dict):
     template_file = "install-config-template.j2"
     env = Environment(
-        loader=FileSystemLoader("app/manifests/"),
+        loader=FileSystemLoader("openshift_cli_installer/manifests/"),
         trim_blocks=True,
         lstrip_blocks=True,
         undefined=DebugUndefined,
