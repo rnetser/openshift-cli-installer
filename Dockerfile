@@ -42,5 +42,4 @@ RUN python3 -m pip install pip --upgrade \
     && poetry install
 
 
-
 ENTRYPOINT ["poetry", "run", "python", "app/cli.py"]

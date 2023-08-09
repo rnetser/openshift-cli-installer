@@ -17,7 +17,14 @@ from libs.rosa_clusters import (
     rosa_delete_cluster,
 )
 from utils.click_dict_type import DictParamType
-from utils.const import AWS_STR, CLUSTER_DATA_YAML_FILENAME, HYPERSHIFT_STR, ROSA_STR
+from utils.const import (
+    AWS_STR,
+    CLUSTER_DATA_YAML_FILENAME,
+    CREATE_STR,
+    DESTROY_STR,
+    HYPERSHIFT_STR,
+    ROSA_STR,
+)
 from utils.helpers import get_ocm_client
 
 
@@ -108,7 +115,7 @@ def create_openshift_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=N
     if cluster_platform == AWS_STR:
         create_or_destroy_aws_ipi_cluster(
             cluster_data=cluster_data,
-            action="create",
+            action=CREATE_STR,
             s3_bucket_name=s3_bucket_name,
             s3_bucket_path=s3_bucket_path,
         )
@@ -124,7 +131,7 @@ def create_openshift_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=N
 def destroy_openshift_cluster(cluster_data):
     cluster_platform = cluster_data["platform"]
     if cluster_platform == AWS_STR:
-        create_or_destroy_aws_ipi_cluster(cluster_data=cluster_data, action="destroy")
+        create_or_destroy_aws_ipi_cluster(cluster_data=cluster_data, action=DESTROY_STR)
 
     elif cluster_platform in (ROSA_STR, HYPERSHIFT_STR):
         rosa_delete_cluster(cluster_data=cluster_data)
@@ -166,7 +173,7 @@ def verify_user_input(action, cluster, ssh_key_file):
 @click.option(
     "-a",
     "--action",
-    type=click.Choice(["create", "destroy"]),
+    type=click.Choice([CREATE_STR, DESTROY_STR]),
     help="Action to perform Openshift cluster/s",
 )
 @click.option(
@@ -304,7 +311,7 @@ def main(
         raise click.Abort()
 
     if destroy_all_clusters or destroy_clusters_from_config_files:
-        destroy_clusters(
+        return destroy_clusters(
             s3_bucket_name=s3_bucket_name,
             s3_bucket_path=s3_bucket_path,
             clusters_install_data_directory=clusters_install_data_directory,
@@ -312,7 +319,6 @@ def main(
             clusters_yaml_files=destroy_clusters_from_config_files,
             destroy_all_clusters=destroy_all_clusters,
         )
-        return
 
     verify_user_input(action=action, cluster=cluster, ssh_key_file=ssh_key_file)
 
@@ -320,7 +326,7 @@ def main(
         clusters_install_data_directory
         or "/openshift-cli-installer/clusters-install-data"
     )
-    create = action == "create"
+    create = action == CREATE_STR
     ocm_client = None
     kwargs = {}
 

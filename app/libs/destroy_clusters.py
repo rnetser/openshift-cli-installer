@@ -1,8 +1,6 @@
 import multiprocessing
 import os
-import re
 import shutil
-from http import HTTPStatus
 from pathlib import Path
 
 import click
@@ -13,9 +11,7 @@ from libs.aws_ipi_clusters import (
     download_openshift_install_binary,
 )
 from libs.rosa_clusters import rosa_delete_cluster
-from utils.const import AWS_STR, CLUSTER_DATA_YAML_FILENAME
-
-S3_EXTRACTED_DATA_FILES_DIR_NAME = "extracted_clusters_files"
+from utils.const import AWS_STR, CLUSTER_DATA_YAML_FILENAME, DESTROY_STR
 
 
 def download_and_extract_s3_file(
@@ -37,27 +33,16 @@ def download_and_extract_s3_file(
             extract_dir=target_extract_dir,
             format="zip",
         )
-    except client.exceptions.ClientError as ex:
-        if ex.response["Error"]["Code"] == str(HTTPStatus.NOT_FOUND):
-            click.echo(f"{bucket_filepath} not found in {bucket}")
-            raise click.Abort()
 
-
-def _destroy_clusters_download_installer_binary(
-    cluster_data_dict, registry_config_file
-):
-    aws_clusters = cluster_data_dict["aws"]
-    if aws_clusters:
-        download_openshift_install_binary(
-            clusters=aws_clusters, registry_config_file=registry_config_file
-        )
+    except Exception as ex:
+        click.secho(f"{bucket_filepath} not found in {bucket} on {ex}", fg="red")
 
 
 def destroy_clusters_from_data_dict(cluster_data_dict, s3_bucket_name=None):
     processes = []
 
-    for cluster_type in cluster_data_dict:
-        for cluster_data in cluster_data_dict[cluster_type]:
+    for cluster_type, clusters_data_list in cluster_data_dict.items():
+        for cluster_data in clusters_data_list:
             proc = multiprocessing.Process(
                 target=_destroy_cluster,
                 kwargs={
@@ -78,7 +63,7 @@ def _destroy_cluster(cluster_data, cluster_type, s3_bucket_name=None):
     try:
         if cluster_type == AWS_STR:
             create_or_destroy_aws_ipi_cluster(
-                cluster_data=cluster_data, action="destroy"
+                cluster_data=cluster_data, action=DESTROY_STR
             )
         else:
             rosa_delete_cluster(cluster_data=cluster_data)
@@ -86,8 +71,8 @@ def _destroy_cluster(cluster_data, cluster_type, s3_bucket_name=None):
         if s3_bucket_name:
             delete_s3_object(cluster_data=cluster_data, s3_bucket_name=s3_bucket_name)
 
-    except click.exceptions.Abort:
-        click.secho(f"Cannot delete cluster {cluster_data['name']}", fg="red")
+    except Exception as ex:
+        click.secho(f"Cannot delete cluster {cluster_data['name']} on {ex}", fg="red")
 
 
 def delete_s3_object(cluster_data, s3_bucket_name):
@@ -104,21 +89,18 @@ def prepare_cluster_directories(s3_bucket_path, dir_prefix):
         Path(os.path.join(target_dir, s3_bucket_path)).mkdir(
             parents=True, exist_ok=True
         )
-    extracted_target_dir = os.path.join(target_dir, S3_EXTRACTED_DATA_FILES_DIR_NAME)
+    extracted_target_dir = os.path.join(target_dir, "extracted_clusters_files")
     click.echo(f"Prepare target extracted directory {extracted_target_dir}.")
     Path(extracted_target_dir).mkdir(parents=True, exist_ok=True)
     return extracted_target_dir, target_dir
 
 
 def get_clusters_data(cluster_dirs, clusters_dict):
-    def _get_cluster_dict_from_yaml(_cluster_filepath):
+    def _get_cluster_dict_from_yaml(_root, _cluster_filepath):
         with open(_cluster_filepath) as fd:
             _data = yaml.safe_load(fd.read())
-        _data["install-dir"] = root
-        if S3_EXTRACTED_DATA_FILES_DIR_NAME in root and not _data.get("s3_object_name"):
-            _data["s3_object_name"] = re.match(
-                rf".*{S3_EXTRACTED_DATA_FILES_DIR_NAME}/(.*)", root
-            ).group(1)
+        _data["install-dir"] = _root
+
         return _data
 
     for cluster_dir in cluster_dirs:
@@ -126,7 +108,7 @@ def get_clusters_data(cluster_dirs, clusters_dict):
             for _file in files:
                 if _file == CLUSTER_DATA_YAML_FILENAME:
                     data = _get_cluster_dict_from_yaml(
-                        _cluster_filepath=os.path.join(root, _file)
+                        _root=root, _cluster_filepath=os.path.join(root, _file)
                     )
                     clusters_dict[data["platform"]].append(data)
 
@@ -146,7 +128,8 @@ def prepare_data_from_s3_bucket(s3_bucket_name, s3_bucket_path=None):
     get_files_from_s3_bucket(
         client=client,
         files_list=[
-            cluster_file["Key"] for cluster_file in client.list_objects(**kwargs)
+            cluster_file["Key"]
+            for cluster_file in client.list_objects(**kwargs)["Contents"]
         ],
         extracted_target_dir=extracted_target_dir,
         s3_bucket_name=s3_bucket_name,
@@ -255,9 +238,11 @@ def destroy_clusters(
         )
         s3_target_dirs.append(target_dir)
 
-    _destroy_clusters_download_installer_binary(
-        cluster_data_dict=clusters_data_dict, registry_config_file=registry_config_file
-    )
+    aws_clusters = clusters_data_dict["aws"]
+    if aws_clusters:
+        download_openshift_install_binary(
+            clusters=aws_clusters, registry_config_file=registry_config_file
+        )
 
     destroy_clusters_from_data_dict(
         cluster_data_dict=clusters_data_dict, s3_bucket_name=s3_bucket_name
