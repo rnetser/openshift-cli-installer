@@ -11,13 +11,21 @@ from openshift_cli_installer.libs.aws_ipi_clusters import (
     create_or_destroy_aws_ipi_cluster,
     download_openshift_install_binary,
 )
+from openshift_cli_installer.libs.destroy_clusters import destroy_clusters
 from openshift_cli_installer.libs.rosa_clusters import (
     prepare_managed_clusters_data,
     rosa_create_cluster,
     rosa_delete_cluster,
 )
 from openshift_cli_installer.utils.click_dict_type import DictParamType
-from openshift_cli_installer.utils.const import AWS_STR, HYPERSHIFT_STR, ROSA_STR
+from openshift_cli_installer.utils.const import (
+    AWS_STR,
+    CLUSTER_DATA_YAML_FILENAME,
+    CREATE_STR,
+    DESTROY_STR,
+    HYPERSHIFT_STR,
+    ROSA_STR,
+)
 from openshift_cli_installer.utils.helpers import get_ocm_client
 
 
@@ -108,7 +116,7 @@ def create_openshift_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=N
     if cluster_platform == AWS_STR:
         create_or_destroy_aws_ipi_cluster(
             cluster_data=cluster_data,
-            action="create",
+            action=CREATE_STR,
             s3_bucket_name=s3_bucket_name,
             s3_bucket_path=s3_bucket_path,
         )
@@ -124,7 +132,7 @@ def create_openshift_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=N
 def destroy_openshift_cluster(cluster_data):
     cluster_platform = cluster_data["platform"]
     if cluster_platform == AWS_STR:
-        create_or_destroy_aws_ipi_cluster(cluster_data=cluster_data, action="destroy")
+        create_or_destroy_aws_ipi_cluster(cluster_data=cluster_data, action=DESTROY_STR)
 
     elif cluster_platform in (ROSA_STR, HYPERSHIFT_STR):
         rosa_delete_cluster(cluster_data=cluster_data)
@@ -146,13 +154,28 @@ def check_existing_clusters(clusters, ocm_client):
         raise click.Abort()
 
 
+def verify_user_input(action, cluster, ssh_key_file):
+    if not action:
+        click.echo("'action' must be provided, supported actions: `create`, `destroy`")
+        raise click.Abort()
+
+    if not cluster:
+        click.echo("At least one 'cluster' option must be provided.")
+        raise click.Abort()
+
+    if not os.path.exists(ssh_key_file):
+        click.echo(f"ssh file {ssh_key_file} does not exist.")
+        raise click.Abort()
+
+    is_platform_supported(clusters=cluster)
+
+
 @click.command()
 @click.option(
     "-a",
     "--action",
-    type=click.Choice(["create", "destroy"]),
+    type=click.Choice([CREATE_STR, DESTROY_STR]),
     help="Action to perform Openshift cluster/s",
-    required=True,
 )
 @click.option(
     "-p",
@@ -165,7 +188,7 @@ def check_existing_clusters(clusters, ocm_client):
     "--ssh-key-file",
     help="id_rsa.pub file path for AWS IPI clusters",
     default="/openshift-cli-installer/ssh-key/id_rsa.pub",
-    type=click.Path(exists=True),
+    type=click.Path(),
     show_default=True,
 )
 @click.option(
@@ -175,15 +198,14 @@ def check_existing_clusters(clusters, ocm_client):
 Path to cluster install data.
     For install this will be used to store the install data.
     For uninstall this will be used to uninstall the cluster.
-    Also used to store clusters kubeconfig
+    Also used to store clusters kubeconfig.
+    Default: "/openshift-cli-installer/clusters-install-data"
 """,
     default=os.environ.get(
         "CLUSTER_INSTALL_DATA_DIRECTORY",
-        "/openshift-cli-installer/clusters-install-data",
     ),
     type=click.Path(),
     show_default=True,
-    required=True,
 )
 @click.option(
     "--registry-config-file",
@@ -240,8 +262,31 @@ For example:
     worker_flavor=m5.xlarge
     worker_replicas=6
     """,
-    required=True,
     multiple=True,
+)
+@click.option(
+    "--destroy-all-clusters",
+    help="""
+\b
+Destroy all clusters under `--clusters-install-data-directory` and/or
+saved in S3 bucket (`--s3-bucket-path` `--s3-bucket-name`).
+S3 objects will be deleted upon successful deletion.
+    """,
+    is_flag=True,
+    show_default=True,
+)
+@click.option(
+    "--destroy-clusters-from-config-files",
+    help=f"""
+\b
+Destroy clusters from a list of paths to `{CLUSTER_DATA_YAML_FILENAME}` files.
+The yaml file must include `s3_object_name` with s3 objet name.
+`--s3-bucket-name` and optionally `--s3-bucket-path` must be provided.
+S3 objects will be deleted upon successful deletion.
+For example:
+    '/tmp/cluster1/{CLUSTER_DATA_YAML_FILENAME},/tmp/cluster2/{CLUSTER_DATA_YAML_FILENAME}'
+    """,
+    show_default=True,
 )
 def main(
     action,
@@ -254,12 +299,35 @@ def main(
     ocm_token,
     ocm_env,
     ssh_key_file,
+    destroy_all_clusters,
+    destroy_clusters_from_config_files,
 ):
     """
     Create/Destroy Openshift cluster/s
     """
-    is_platform_supported(clusters=cluster)
-    create = action == "create"
+    if destroy_clusters_from_config_files and not s3_bucket_name:
+        click.echo(
+            "`--s3-bucket-name` must be provided when running with `--destroy-clusters-from-config-files`"
+        )
+        raise click.Abort()
+
+    if destroy_all_clusters or destroy_clusters_from_config_files:
+        return destroy_clusters(
+            s3_bucket_name=s3_bucket_name,
+            s3_bucket_path=s3_bucket_path,
+            clusters_install_data_directory=clusters_install_data_directory,
+            registry_config_file=registry_config_file,
+            clusters_yaml_files=destroy_clusters_from_config_files,
+            destroy_all_clusters=destroy_all_clusters,
+        )
+
+    verify_user_input(action=action, cluster=cluster, ssh_key_file=ssh_key_file)
+
+    clusters_install_data_directory = (
+        clusters_install_data_directory
+        or "/openshift-cli-installer/clusters-install-data"
+    )
+    create = action == CREATE_STR
     ocm_client = None
     kwargs = {}
 

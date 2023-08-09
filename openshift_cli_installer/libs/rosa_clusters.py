@@ -12,7 +12,11 @@ from ocp_resources.job import Job
 from ocp_resources.utils import TimeoutSampler
 from python_terraform import IsNotFlagged, Terraform, TerraformCommandError
 
-from openshift_cli_installer.utils.const import HYPERSHIFT_STR, ROSA_STR
+from openshift_cli_installer.utils.const import (
+    CLUSTER_DATA_YAML_FILENAME,
+    HYPERSHIFT_STR,
+    ROSA_STR,
+)
 from openshift_cli_installer.utils.helpers import (
     bucket_object_name,
     cluster_shortuuid,
@@ -175,7 +179,9 @@ def destroy_hypershift_vpc(cluster_data):
 
 
 def prepare_hypershift_vpc(cluster_data):
-    shutil.copy("app/manifests/setup-vpc.tf", cluster_data["install-dir"])
+    shutil.copy(
+        "openshift_cli_installer/manifests/setup-vpc.tf", cluster_data["install-dir"]
+    )
     terraform = terraform_init(cluster_data=cluster_data)
     try:
         terraform.plan(dir_or_plan="rosa.plan")
@@ -310,7 +316,7 @@ def rosa_delete_cluster(cluster_data):
     base_cluster_data = None
     should_raise = False
     base_cluster_data_path = os.path.join(
-        cluster_data["install-dir"], "cluster_data.yaml"
+        cluster_data["install-dir"], CLUSTER_DATA_YAML_FILENAME
     )
     if os.path.exists(base_cluster_data_path):
         with open(base_cluster_data_path) as fd:

@@ -7,6 +7,7 @@ import yaml
 from jinja2 import DebugUndefined, Environment, FileSystemLoader, meta
 from ocp_utilities.utils import run_command
 
+from openshift_cli_installer.utils.const import CREATE_STR, DESTROY_STR
 from openshift_cli_installer.utils.helpers import (
     bucket_object_name,
     cluster_shortuuid,
@@ -82,7 +83,7 @@ def get_local_ssh_key(ssh_key_file):
 def get_install_config_j2_template(cluster_dict):
     template_file = "install-config-template.j2"
     env = Environment(
-        loader=FileSystemLoader("app/manifests/"),
+        loader=FileSystemLoader("openshift_cli_installer/manifests/"),
         trim_blocks=True,
         lstrip_blocks=True,
         undefined=DebugUndefined,
@@ -147,7 +148,7 @@ def create_or_destroy_aws_ipi_cluster(
     )
     dump_cluster_data_to_file(cluster_data=cluster_data)
 
-    if action == "create" and s3_bucket_name:
+    if action == CREATE_STR and s3_bucket_name:
         zip_and_upload_to_s3(
             install_dir=install_dir,
             s3_bucket_name=s3_bucket_name,
@@ -157,10 +158,10 @@ def create_or_destroy_aws_ipi_cluster(
 
     if not res and not cleanup:
         click.echo(f"Failed to run cluster {action}\n\tERR: {err}\n\tOUT: {out}.")
-        if action == "create":
+        if action == CREATE_STR:
             click.echo("Cleaning leftovers.")
             create_or_destroy_aws_ipi_cluster(
-                cluster_data=cluster_data, action="destroy", cleanup=True
+                cluster_data=cluster_data, action=DESTROY_STR, cleanup=True
             )
 
     if not res:
