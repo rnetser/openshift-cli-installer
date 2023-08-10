@@ -294,6 +294,10 @@ def rosa_create_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
         )
 
     finally:
+        if cluster_data["platform"] == HYPERSHIFT_STR:
+            destroy_hypershift_vpc(cluster_data=cluster_data)
+            delete_oidc(cluster_data=cluster_data)
+
         if s3_bucket_name:
             zip_and_upload_to_s3(
                 uuid=_shortuuid,
