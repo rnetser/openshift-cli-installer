@@ -16,7 +16,9 @@ RUN wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/shar
     && mv oc /usr/bin/oc \
     && mv kubectl /usr/bin/kubectl \
     && chmod +x /usr/bin/oc \
-    && chmod +x /usr/bin/kubectl
+    && chmod +x /usr/bin/kubectl \
+    && curl -L https://github.com/regclient/regclient/releases/latest/download/regctl-linux-amd64 --output /usr/bin/regctl \
+    && chmod +x /usr/bin/regctl
 
 RUN apt-get update \
     && apt-get install -y terraform
