@@ -1,10 +1,13 @@
 import multiprocessing
 import os
+import re
+import shlex
 from pathlib import Path
 
 import click
 import rosa.cli
 from clouds.aws.aws_utils import set_and_verify_aws_credentials
+from ocp_utilities.utils import run_command
 
 from openshift_cli_installer.libs.aws_ipi_clusters import (
     create_install_config_file,
@@ -26,7 +29,7 @@ from openshift_cli_installer.utils.const import (
     HYPERSHIFT_STR,
     ROSA_STR,
 )
-from openshift_cli_installer.utils.helpers import get_ocm_client
+from openshift_cli_installer.utils.helpers import get_cluster_version, get_ocm_client
 
 
 def get_clusters_by_type(clusters):
@@ -178,6 +181,31 @@ def verify_user_input(action, cluster, ssh_key_file):
         raise click.Abort()
 
     is_platform_supported(clusters=cluster)
+
+
+def update_aws_clusters_version(clusters):
+    available_versions = run_command(
+        command=shlex.split("regctl tag ls quay.io/openshift-release-dev/ocp-release"),
+        check=False,
+    )[1].splitlines()
+
+    architecture_str_list = [
+        "-s390x",
+        "-ppc64le",
+        "-x86_64",
+        "-assembly.art7277-x86_64",
+    ]
+    available_versions = [
+        re.sub(rf'(-multi)?({"|".join(architecture_str_list)}?)', "", ver)
+        for ver in available_versions
+    ]
+    for cluster_data in clusters:
+        cluster_data["version"] = get_cluster_version(
+            cluster_version=cluster_data["version"],
+            available_versions=available_versions,
+        )
+
+    return clusters
 
 
 @click.command()
@@ -369,6 +397,9 @@ def main(
         aws_ipi_clusters = generate_cluster_dirs_path(
             clusters=aws_ipi_clusters, base_directory=clusters_install_data_directory
         )
+
+        if action == CREATE_STR:
+            aws_ipi_clusters = update_aws_clusters_version(clusters=aws_ipi_clusters)
 
         aws_ipi_clusters = download_openshift_install_binary(
             clusters=aws_ipi_clusters, registry_config_file=registry_config_file

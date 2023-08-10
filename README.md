@@ -36,7 +36,8 @@ Every call to the openshift installer cli must have at least one `--cluster` opt
 
 * Mandatory parameters:
   * name: The name of the cluster
-  * version: The version of the cluster
+  * version: The version of the cluster; cluster version can be in z-stream format (`x.y.z`) or y-stream (`x.y`); when y-stream format is used, the latest relevant release will be selected.
+    For ROSA / Hypershift clusters - the release will be extracted based on `channel-group` (`stable` is the default).
   * platform: The platform to deploy the cluster on (supported platforms are: aws, rosa and hypershift)
   * region: The region to deploy the cluster
 * Optional parameters:
@@ -73,6 +74,9 @@ git clone https://github.com/RedHatQE/openshift-cli-installer.git
 ```
 
 Install [poetry](https://github.com/python-poetry/poetry)
+
+Install [regctl](https://github.com/regclient/regclient)
+
 
 Use `poetry run python openshift_cli_installer/cli.py` to execute the cli.
 

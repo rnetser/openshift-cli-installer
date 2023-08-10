@@ -21,6 +21,7 @@ from openshift_cli_installer.utils.helpers import (
     bucket_object_name,
     cluster_shortuuid,
     dump_cluster_data_to_file,
+    get_cluster_version,
     get_ocm_client,
     zip_and_upload_to_s3,
 )
@@ -262,6 +263,18 @@ def rosa_create_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
     )
     ocm_token, ocm_env, ocm_env_url = extract_ocm_data_from_cluster_data(cluster_data)
     command = "create cluster --sts "
+
+    base_available_versions = rosa.cli.execute(
+        command=f"list versions --channel-group={cluster_data.get('channel-group','stable')} "
+        f"{'--hosted-cp' if _platform == HYPERSHIFT_STR else ''}",
+        aws_region=cluster_data["region"],
+        ocm_env=ocm_env_url,
+        token=ocm_token,
+    )["out"]
+    available_versions = [ver["raw_id"] for ver in base_available_versions]
+    cluster_data["version"] = get_cluster_version(
+        cluster_version=cluster_data["version"], available_versions=available_versions
+    )
 
     if _platform == HYPERSHIFT_STR:
         cluster_data = create_oidc(cluster_data=cluster_data)
