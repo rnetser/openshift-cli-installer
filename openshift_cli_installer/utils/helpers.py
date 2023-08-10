@@ -117,14 +117,13 @@ def get_cluster_version(cluster_version, available_versions):
         ver for ver in available_versions if ver.startswith(cluster_version)
     ]
 
-    target_versions = [semantic_version.Version(ver) for ver in base_target_versions]
-
-    if not target_versions:
+    if not base_target_versions:
         click.secho(
-            f"Version {cluster_version} is not listed as a minor release in available versions {target_versions}"
+            f"Version {cluster_version} is not listed as a minor release in available versions {base_target_versions}"
         )
         raise click.Abort()
 
+    target_versions = [semantic_version.Version(ver) for ver in base_target_versions]
     target_version = str(max(target_versions))
     click.echo(f"Cluster version set to {target_version}")
     return target_version
