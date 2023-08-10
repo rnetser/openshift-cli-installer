@@ -351,5 +351,5 @@ def rosa_delete_cluster(cluster_data):
         delete_oidc(cluster_data=_cluster_data)
 
     if should_raise:
-        click.echo(f"Failed to run cluster uninstall\n{should_raise}")
+        click.secho(f"Failed to run cluster uninstall\n{should_raise}", fg="red")
         raise click.Abort()

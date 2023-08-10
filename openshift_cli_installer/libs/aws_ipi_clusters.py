@@ -93,7 +93,9 @@ def get_install_config_j2_template(cluster_dict):
     rendered = template.render(cluster_dict)
     undefined_variables = meta.find_undeclared_variables(env.parse(rendered))
     if undefined_variables:
-        click.echo(f"The following variables are undefined: {undefined_variables}")
+        click.secho(
+            f"The following variables are undefined: {undefined_variables}", fg="red"
+        )
         raise click.Abort()
 
     return yaml.safe_load(rendered)
@@ -123,8 +125,9 @@ def download_openshift_install_binary(clusters, registry_config_file):
             check=False,
         )
         if not rc:
-            click.echo(
-                f"Failed to get {openshift_install_str} for version {version}, error: {err}"
+            click.secho(
+                f"Failed to get {openshift_install_str} for version {version}, error: {err}",
+                fg="red",
             )
             raise click.Abort()
 
@@ -160,7 +163,9 @@ def create_or_destroy_aws_ipi_cluster(
             )
 
     if not res and not cleanup:
-        click.echo(f"Failed to run cluster {action}\n\tERR: {err}\n\tOUT: {out}.")
+        click.secho(
+            f"Failed to run cluster {action}\n\tERR: {err}\n\tOUT: {out}.", fg="red"
+        )
         if action == CREATE_STR:
             click.echo("Cleaning leftovers.")
             create_or_destroy_aws_ipi_cluster(
