@@ -47,7 +47,10 @@ def is_platform_supported(clusters):
     for _cluster in clusters:
         _platform = _cluster["platform"]
         if _platform not in supported_platform:
-            click.echo(f"Cluster platform '{_platform}' is not supported.\n{_cluster}")
+            click.secho(
+                f"Cluster platform '{_platform}' is not supported.\n{_cluster}",
+                fg="red",
+            )
             raise click.Abort()
 
 
@@ -72,10 +75,11 @@ def is_region_support_hypershift(ocm_client, hypershift_clusters):
     for _cluster in hypershift_clusters:
         _region = _cluster["region"]
         if _region not in _hypershift_regions:
-            click.echo(
+            click.secho(
                 f"region '{_region}' does not supported {HYPERSHIFT_STR}."
                 f"\nSupported hypershift regions are: {_hypershift_regions}"
-                f"\n{_cluster}"
+                f"\n{_cluster}",
+                fg="red",
             )
             raise click.Abort()
 
@@ -94,7 +98,7 @@ def generate_cluster_dirs_path(clusters, base_directory):
 
 def abort_no_ocm_token(ocm_token):
     if not ocm_token:
-        click.echo("--ocm-token is required for managed cluster")
+        click.secho("--ocm-token is required for managed cluster", fg="red")
         raise click.Abort()
 
 
@@ -107,7 +111,7 @@ def verify_processes_passed(processes, action):
             failed_processes[_proc.name] = _proc.exitcode
 
     if failed_processes:
-        click.echo(f"Some jobs failed to {action}: {failed_processes}\n")
+        click.secho(f"Some jobs failed to {action}: {failed_processes}\n", fg="red")
         raise click.Abort()
 
 
@@ -150,21 +154,27 @@ def check_existing_clusters(clusters, ocm_client):
         requested_clusters_name
     )
     if duplicate_cluster_names:
-        click.echo(f"At least one cluster name duplication: {duplicate_cluster_names}")
+        click.secho(
+            f"At least one cluster name duplication: {duplicate_cluster_names}",
+            fg="red",
+        )
         raise click.Abort()
 
 
 def verify_user_input(action, cluster, ssh_key_file):
     if not action:
-        click.echo("'action' must be provided, supported actions: `create`, `destroy`")
+        click.secho(
+            "'action' must be provided, supported actions: `create`, `destroy`",
+            fg="red",
+        )
         raise click.Abort()
 
     if not cluster:
-        click.echo("At least one 'cluster' option must be provided.")
+        click.secho("At least one 'cluster' option must be provided.", fg="red")
         raise click.Abort()
 
     if not os.path.exists(ssh_key_file):
-        click.echo(f"ssh file {ssh_key_file} does not exist.")
+        click.secho(f"ssh file {ssh_key_file} does not exist.", fg="red")
         raise click.Abort()
 
     is_platform_supported(clusters=cluster)
@@ -306,8 +316,9 @@ def main(
     Create/Destroy Openshift cluster/s
     """
     if destroy_clusters_from_config_files and not s3_bucket_name:
-        click.echo(
-            "`--s3-bucket-name` must be provided when running with `--destroy-clusters-from-config-files`"
+        click.secho(
+            "`--s3-bucket-name` must be provided when running with `--destroy-clusters-from-config-files`",
+            fg="red",
         )
         raise click.Abort()
 
