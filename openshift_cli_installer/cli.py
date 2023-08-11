@@ -207,20 +207,29 @@ def update_aws_clusters_versions(clusters):
         cluster_data["version"] = get_aws_cluster_version(
             cluster_version=cluster_data["version"],
             available_versions=available_versions,
-            channel=cluster_data.get("channel"),
+            channel_group=cluster_data.get("channel-group"),
         )
 
     return clusters
 
 
-def get_aws_cluster_version(cluster_version, available_versions, channel="stable"):
+def get_aws_cluster_version(
+    cluster_version, available_versions, channel_group="stable"
+):
+    nightly_pattern = re.compile(
+        rf"(?P<version>{cluster_version}(.\d+)?)(?P<variant>-\d+.nightly.*)"
+    )
+    stable_pattern = re.compile(
+        rf"(?P<version>{cluster_version}(.\d+)?)(?P<variant>-rc.\d+|-fc.\d+|-ec.\d+)?.*"
+    )
     versions_set = set()
 
     # TODO: address stream - nightly / ci etc
     for version in available_versions:
-        version_match = re.match(
-            rf"(?P<version>{cluster_version}(.\d+)?)(?P<variant>-\d+.nightly.*|-rc.\d+|-fc.\d+|-ec.\d+)?.*",
-            version,
+        version_match = (
+            nightly_pattern.match(version)
+            if channel_group == "nightly"
+            else stable_pattern.match(version)
         )
         if version_match:
             versions_set.add(
