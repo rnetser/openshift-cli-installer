@@ -38,6 +38,7 @@ Every call to the openshift installer cli must have at least one `--cluster` opt
   * name: The name of the cluster
   * version: The version of the cluster; cluster version can be in z-stream format (`x.y.z`) or y-stream (`x.y`); when y-stream format is used, the latest relevant release will be selected.
     For ROSA / Hypershift clusters - the release will be extracted based on `channel-group` (`stable` is the default).
+    # TODO: update version logic
   * platform: The platform to deploy the cluster on (supported platforms are: aws, rosa and hypershift)
   * region: The region to deploy the cluster
 * Optional parameters:

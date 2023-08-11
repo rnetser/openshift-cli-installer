@@ -4,12 +4,10 @@ from functools import wraps
 from time import sleep
 
 import click
-import semantic_version
 import shortuuid
 import yaml
 from clouds.aws.session_clients import s3_client
 from ocm_python_wrapper.ocm_client import OCMPythonClient
-from packaging import version
 
 from openshift_cli_installer.utils.const import CLUSTER_DATA_YAML_FILENAME
 
@@ -101,29 +99,3 @@ def dump_cluster_data_to_file(cluster_data):
 
 def bucket_object_name(cluster_data, _shortuuid, s3_bucket_path=None):
     return f"{f'{s3_bucket_path}/' if s3_bucket_path else ''}{cluster_data['name']}-{_shortuuid}.zip"
-
-
-def get_cluster_version(cluster_version, available_versions):
-    if len(version.parse(cluster_version).release) == 3:
-        if cluster_version in available_versions:
-            return cluster_version
-        else:
-            click.secho(
-                f"Version {cluster_version} is not listed in available versions {available_versions}"
-            )
-            raise click.Abort()
-
-    base_target_versions = [
-        ver for ver in available_versions if ver.startswith(cluster_version)
-    ]
-
-    if not base_target_versions:
-        click.secho(
-            f"Version {cluster_version} is not listed as a minor release in available versions {base_target_versions}"
-        )
-        raise click.Abort()
-
-    target_versions = [semantic_version.Version(ver) for ver in base_target_versions]
-    target_version = str(max(target_versions))
-    click.echo(f"Cluster version set to {target_version}")
-    return target_version
