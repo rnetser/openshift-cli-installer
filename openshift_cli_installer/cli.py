@@ -1,19 +1,16 @@
 import multiprocessing
 import os
-import re
-import shlex
 from pathlib import Path
 
 import click
 import rosa.cli
-import semantic_version
 from clouds.aws.aws_utils import set_and_verify_aws_credentials
-from ocp_utilities.utils import run_command
 
 from openshift_cli_installer.libs.aws_ipi_clusters import (
     create_install_config_file,
     create_or_destroy_aws_ipi_cluster,
     download_openshift_install_binary,
+    update_aws_clusters_versions,
 )
 from openshift_cli_installer.libs.destroy_clusters import destroy_clusters
 from openshift_cli_installer.libs.rosa_clusters import (
@@ -184,77 +181,6 @@ def verify_user_input(action, cluster, ssh_key_file):
     is_platform_supported(clusters=cluster)
 
 
-def update_aws_clusters_versions(clusters):
-    base_available_versions = run_command(
-        command=shlex.split("regctl tag ls quay.io/openshift-release-dev/ocp-release"),
-        check=False,
-    )[1].splitlines()
-
-    available_versions = []
-    orig_clusters_versions = [cluster_data["version"] for cluster_data in clusters]
-    # Extract only available versions which are relevant to the requested clusters versions
-    for version in base_available_versions:
-        if re.match(rf"({'|'.join(orig_clusters_versions)}(.\d+)?)", version):
-            available_versions.append(version)
-
-    if not available_versions:
-        click.secho(
-            f"Clusters versions {orig_clusters_versions} are not available in {base_available_versions}",
-            fg="red",
-        )
-        raise click.Abort()
-
-    for cluster_data in clusters:
-        cluster_data["version"] = get_aws_cluster_version(
-            cluster_version=cluster_data["version"],
-            available_versions=available_versions,
-            stream=cluster_data.get("stream", "stable"),
-        )
-
-    return clusters
-
-
-def get_aws_cluster_version(cluster_version, available_versions, stream):
-    # Example: 4.12.0-0.nightly-multi-2022-08-24-183128
-    nightly_ci_pattern = re.compile(
-        rf"(?P<version>{cluster_version}(.\d+)?)(?P<variant>-\d+.(?:nightly|ci).*)"
-    )
-    # Examples: 4.13.4, 4.14.0-ec.4
-    stable_pattern = re.compile(
-        rf"(?P<version>{cluster_version}(.\d+)?)(?P<variant>-(?:rc|fc|ec).\d+)?.*"
-    )
-    versions_set = set()
-
-    # TODO: address stream - ci
-    # Architectures to be removed from the image tag for version parsing
-    architectures = ["-s390x", "-aarch64", "-x86_64", "-ppc64le"]
-    for version in available_versions:
-        version_match = (
-            nightly_ci_pattern.match(version)
-            if stream in ["nightly", "ci"]
-            else stable_pattern.match(version)
-        )
-        if version_match:
-            target_version = "".join(
-                val for val in version_match.groupdict().values() if val is not None
-            )
-            target_version = re.sub(
-                rf'(-multi)?|({"|".join(architectures)}?)', "", target_version
-            )
-            versions_set.add(target_version)
-    if not versions_set:
-        click.secho(
-            f"Version {cluster_version} is not listed in available versions {available_versions}",
-            fg="red",
-        )
-        raise click.Abort()
-
-    target_version = str(max([semantic_version.Version(ver) for ver in versions_set]))
-    click.echo(f"Cluster version set to {target_version}")
-
-    return target_version
-
-
 @click.command()
 @click.option(
     "-a",
@@ -302,6 +228,16 @@ registry-config file, can be obtained from https://console.redhat.com/openshift/
     default=os.environ.get("PULL_SECRET"),
     type=click.Path(exists=True),
     show_default=True,
+)
+@click.option(
+    "--docker-config-json-dir-path",
+    type=click.Path(exists=True),
+    help="""
+    \b
+Path to directory which contains docker config.json file.
+File must include token for `registry.ci.openshift.org`
+(Needed only for AWS IPI clusters)
+    """,
 )
 @click.option(
     "--s3-bucket-name",
@@ -386,6 +322,7 @@ def main(
     ssh_key_file,
     destroy_all_clusters,
     destroy_clusters_from_config_files,
+    docker_config_json_dir_path,
 ):
     """
     Create/Destroy Openshift cluster/s
@@ -445,7 +382,10 @@ def main(
             clusters=aws_ipi_clusters, base_directory=clusters_install_data_directory
         )
 
-        aws_ipi_clusters = update_aws_clusters_versions(clusters=aws_ipi_clusters)
+        aws_ipi_clusters = update_aws_clusters_versions(
+            clusters=aws_ipi_clusters,
+            docker_config_json_dir_path=docker_config_json_dir_path,
+        )
 
         aws_ipi_clusters = download_openshift_install_binary(
             clusters=aws_ipi_clusters, registry_config_file=registry_config_file
