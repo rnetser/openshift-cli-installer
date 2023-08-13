@@ -271,7 +271,7 @@ def rosa_create_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
         region=cluster_data["region"],
         _platform=cluster_data["platform"],
         cluster_version=cluster_data["version"],
-        channel_group=cluster_data.get("channel-group"),
+        channel_group=cluster_data.get("channel-group", "stable"),
     )
 
     if _platform == HYPERSHIFT_STR:
@@ -367,7 +367,7 @@ def rosa_delete_cluster(cluster_data):
 
 
 def get_cluster_version(
-    ocm_token, ocm_env, cluster_version, _platform, region, channel_group="stable"
+    ocm_token, ocm_env, cluster_version, _platform, region, channel_group
 ):
     base_available_versions = rosa.cli.execute(
         command=f"list versions --channel-group={channel_group} "
@@ -403,4 +403,5 @@ def get_cluster_version(
         max([semantic_version.Version(ver) for ver in base_target_versions])
     )
     click.echo(f"Cluster version set to {target_version}")
+
     return target_version

@@ -192,6 +192,7 @@ def update_aws_clusters_versions(clusters):
 
     available_versions = []
     orig_clusters_versions = [cluster_data["version"] for cluster_data in clusters]
+    # Extract only available versions which are relevant to the requested clusters versions
     for version in base_available_versions:
         if re.match(rf"({'|'.join(orig_clusters_versions)}(.\d+)?)", version):
             available_versions.append(version)
@@ -207,37 +208,40 @@ def update_aws_clusters_versions(clusters):
         cluster_data["version"] = get_aws_cluster_version(
             cluster_version=cluster_data["version"],
             available_versions=available_versions,
-            channel_group=cluster_data.get("channel-group"),
+            stream=cluster_data.get("stream", "stable"),
         )
 
     return clusters
 
 
-def get_aws_cluster_version(
-    cluster_version, available_versions, channel_group="stable"
-):
-    nightly_pattern = re.compile(
-        rf"(?P<version>{cluster_version}(.\d+)?)(?P<variant>-\d+.nightly.*)"
+def get_aws_cluster_version(cluster_version, available_versions, stream):
+    # Example: 4.12.0-0.nightly-multi-2022-08-24-183128
+    nightly_ci_pattern = re.compile(
+        rf"(?P<version>{cluster_version}(.\d+)?)(?P<variant>-\d+.(?:nightly|ci).*)"
     )
+    # Examples: 4.13.4, 4.14.0-ec.4
     stable_pattern = re.compile(
-        rf"(?P<version>{cluster_version}(.\d+)?)(?P<variant>-rc.\d+|-fc.\d+|-ec.\d+)?.*"
+        rf"(?P<version>{cluster_version}(.\d+)?)(?P<variant>-(?:rc|fc|ec).\d+)?.*"
     )
     versions_set = set()
 
-    # TODO: address stream - nightly / ci etc
+    # TODO: address stream - ci
+    # Architectures to be removed from the image tag for version parsing
+    architectures = ["-s390x", "-aarch64", "-x86_64", "-ppc64le"]
     for version in available_versions:
         version_match = (
-            nightly_pattern.match(version)
-            if channel_group == "nightly"
+            nightly_ci_pattern.match(version)
+            if stream in ["nightly", "ci"]
             else stable_pattern.match(version)
         )
         if version_match:
-            versions_set.add(
-                "".join(
-                    val for val in version_match.groupdict().values() if val is not None
-                )
+            target_version = "".join(
+                val for val in version_match.groupdict().values() if val is not None
             )
-
+            target_version = re.sub(
+                rf'(-multi)?|({"|".join(architectures)}?)', "", target_version
+            )
+            versions_set.add(target_version)
     if not versions_set:
         click.secho(
             f"Version {cluster_version} is not listed in available versions {available_versions}",
@@ -441,8 +445,7 @@ def main(
             clusters=aws_ipi_clusters, base_directory=clusters_install_data_directory
         )
 
-        if action == CREATE_STR:
-            aws_ipi_clusters = update_aws_clusters_versions(clusters=aws_ipi_clusters)
+        aws_ipi_clusters = update_aws_clusters_versions(clusters=aws_ipi_clusters)
 
         aws_ipi_clusters = download_openshift_install_binary(
             clusters=aws_ipi_clusters, registry_config_file=registry_config_file
