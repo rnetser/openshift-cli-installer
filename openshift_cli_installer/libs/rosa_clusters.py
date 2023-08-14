@@ -6,14 +6,13 @@ from pathlib import Path
 
 import click
 import rosa.cli
-import semantic_version
 import yaml
 from ocm_python_wrapper.cluster import Cluster
 from ocp_resources.job import Job
 from ocp_resources.utils import TimeoutSampler
-from packaging import version
 from python_terraform import IsNotFlagged, Terraform, TerraformCommandError
 
+from openshift_cli_installer.utils.cluster_versions import set_clusters_versions
 from openshift_cli_installer.utils.const import (
     CLUSTER_DATA_YAML_FILENAME,
     HYPERSHIFT_STR,
@@ -232,6 +231,7 @@ def prepare_managed_clusters_data(clusters, ocm_token, ocm_env):
         _cluster["ocm-token"] = ocm_token
         _cluster["ocm-env"] = ocm_env
         _cluster["timeout"] = tts(ts=_cluster.get("timeout", "30m"))
+        _cluster["channel-group"] = _cluster.get("channel-group", "stable")
         if _cluster["platform"] == HYPERSHIFT_STR:
             _cluster["hosted-cp"] = "true"
             _cluster["tags"] = "dns:external"
@@ -264,15 +264,6 @@ def rosa_create_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
     )
     ocm_token, ocm_env, ocm_env_url = extract_ocm_data_from_cluster_data(cluster_data)
     command = "create cluster --sts "
-
-    cluster_data["version"] = get_cluster_version(
-        ocm_env=ocm_env_url,
-        ocm_token=ocm_token,
-        region=cluster_data["region"],
-        _platform=cluster_data["platform"],
-        cluster_version=cluster_data["version"],
-        channel_group=cluster_data.get("channel-group", "stable"),
-    )
 
     if _platform == HYPERSHIFT_STR:
         cluster_data = create_oidc(cluster_data=cluster_data)
@@ -370,42 +361,24 @@ def rosa_delete_cluster(cluster_data):
         raise click.Abort()
 
 
-def get_cluster_version(
-    ocm_token, ocm_env, cluster_version, _platform, region, channel_group
-):
-    base_available_versions = rosa.cli.execute(
-        command=f"list versions --channel-group={channel_group} "
-        f"{'--hosted-cp' if _platform == HYPERSHIFT_STR else ''}",
-        aws_region=region,
-        ocm_env=ocm_env,
-        token=ocm_token,
-    )["out"]
-    available_versions = [ver["raw_id"] for ver in base_available_versions]
+def update_clusters_version(clusters, ocm_env, ocm_token):
+    base_available_versions_dict = {}
+    available_versions = set()
+    for cluster_data in clusters:
+        channel_group = cluster_data["channel-group"]
+        base_available_versions = rosa.cli.execute(
+            command=f"list versions --channel-group={channel_group} "
+            f"{'--hosted-cp' if cluster_data['platform'] == HYPERSHIFT_STR else ''}",
+            aws_region=cluster_data["region"],
+            ocm_env=ocm_env,
+            token=ocm_token,
+        )["out"]
+        _all_versions = [ver["raw_id"] for ver in base_available_versions]
+        base_available_versions_dict[channel_group] = _all_versions
+        available_versions.update(set(_all_versions))
 
-    if len(version.parse(cluster_version).release) == 3:
-        if cluster_version in available_versions:
-            return cluster_version
-        else:
-            click.secho(
-                f"Version {cluster_version} is not listed in available versions {available_versions}",
-                fg="red",
-            )
-            raise click.Abort()
-
-    base_target_versions = [
-        ver for ver in available_versions if ver.startswith(cluster_version)
-    ]
-
-    if not base_target_versions:
-        click.secho(
-            f"Version {cluster_version} is not listed as a minor release in available versions {base_target_versions}",
-            fg="red",
-        )
-        raise click.Abort()
-
-    target_version = str(
-        max([semantic_version.Version(ver) for ver in base_target_versions])
+    return set_clusters_versions(
+        clusters=clusters,
+        all_versions=available_versions,
+        base_available_versions=base_available_versions_dict,
     )
-    click.echo(f"Cluster version set to {target_version}")
-
-    return target_version

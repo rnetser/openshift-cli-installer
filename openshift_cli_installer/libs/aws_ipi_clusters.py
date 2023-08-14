@@ -1,14 +1,14 @@
+import functools
 import json
 import os
-import re
 import shlex
 
 import click
-import semantic_version
 import yaml
 from jinja2 import DebugUndefined, Environment, FileSystemLoader, meta
 from ocp_utilities.utils import run_command
 
+from openshift_cli_installer.utils.cluster_versions import set_clusters_versions
 from openshift_cli_installer.utils.const import CREATE_STR, DESTROY_STR
 from openshift_cli_installer.utils.helpers import (
     bucket_object_name,
@@ -179,7 +179,8 @@ def create_or_destroy_aws_ipi_cluster(
         raise click.Abort()
 
 
-def get_aws_versions(docker_config_json_dir_path):
+@functools.cache
+def get_aws_versions(docker_config_json_dir_path=None):
     # If running on openshift-ci we need to set `DOCKER_CONFIG`
     if os.environ.get("OPENSHIFT_CI") == "true":
         click.echo("Running in openshift ci")
@@ -198,80 +199,31 @@ def get_aws_versions(docker_config_json_dir_path):
     return versions_dict
 
 
-def update_aws_clusters_versions(clusters, docker_config_json_dir_path):
-    base_available_versions = get_aws_versions(
-        docker_config_json_dir_path=docker_config_json_dir_path
+def update_aws_clusters_versions(
+    clusters, docker_config_json_dir_path=None, _test=False
+):
+    all_versions, base_available_versions = get_all_versions(
+        docker_config_json_dir_path=docker_config_json_dir_path, _test=_test
     )
-    available_versions = []
-    orig_clusters_versions = [cluster_data["version"] for cluster_data in clusters]
 
+    return set_clusters_versions(
+        clusters=clusters,
+        all_versions=all_versions,
+        base_available_versions=base_available_versions,
+    )
+
+
+def get_all_versions(docker_config_json_dir_path=None, _test=None):
+    if _test:
+        with open("openshift_cli_installer/tests/all_aws_versions.json") as fd:
+            base_available_versions = json.load(fd)
+    else:
+        base_available_versions = get_aws_versions(
+            docker_config_json_dir_path=docker_config_json_dir_path
+        )
     # Extract only available versions which are relevant to the requested clusters versions
     all_versions = []
-    # Currently only using X86 installation
-    architectures = ["-s390x", "-aarch64", "-ppc64le", "-multi"]
     for versions in base_available_versions.values():
         all_versions.extend(versions)
 
-    for version in all_versions:
-        if re.match(rf".*({'|'.join(architectures)})", version):
-            continue
-        if re.match(rf"({'|'.join(orig_clusters_versions)}(.\d+)?)", version):
-            available_versions.append(version)
-
-    if not available_versions:
-        click.secho(
-            f"Clusters versions {orig_clusters_versions} are not available in {base_available_versions}",
-            fg="red",
-        )
-        raise click.Abort()
-
-    for cluster_data in clusters:
-        target_version = get_aws_cluster_version(
-            cluster_version=cluster_data["version"],
-            available_versions=available_versions,
-            stream=cluster_data.get("stream", "stable"),
-        )
-        cluster_data["version"] = target_version
-        cluster_data["version_url"] = [
-            url
-            for url, versions in base_available_versions.items()
-            if target_version in versions
-        ][0]
-
-    return clusters
-
-
-def get_aws_cluster_version(cluster_version, available_versions, stream):
-    # Example: 4.12.0-0.nightly-multi-2022-08-24-183128
-    nightly_ci_pattern = re.compile(
-        rf"(?P<version>{cluster_version}(.\d+)?)(?P<variant>-\d+.({stream}).*)"
-    )
-
-    # Examples: 4.12, 4.13.4
-    stable_pattern = re.compile(rf"(?P<version>{cluster_version}(.\d+)?).*")
-    versions_set = set()
-
-    for version in available_versions:
-        version_match = (
-            nightly_ci_pattern.match(version)
-            if stream in ["nightly", "ci"]
-            else stable_pattern.match(version)
-        )
-        if version_match:
-            target_version = "".join(
-                val for val in version_match.groupdict().values() if val is not None
-            ).replace("-x86_64", "")
-
-            versions_set.add(target_version)
-
-    if not versions_set:
-        click.secho(
-            f"Version {cluster_version} is not listed in available versions {available_versions}",
-            fg="red",
-        )
-        raise click.Abort()
-
-    target_version = str(max([semantic_version.Version(ver) for ver in versions_set]))
-    click.echo(f"Cluster version set to {target_version}")
-
-    return target_version
+    return all_versions, base_available_versions
