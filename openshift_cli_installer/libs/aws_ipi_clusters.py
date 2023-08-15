@@ -122,7 +122,7 @@ def download_openshift_install_binary(clusters, registry_config_file):
         rc, _, err = run_command(
             command=shlex.split(
                 "oc adm release extract "
-                f"quay.io/openshift-release-dev/ocp-release:{version}-x86_64 "
+                f"quay.io/openshift-release-dev/ocp-release:{version} "
                 f"--command={openshift_install_str} --to={binary_dir} --registry-config={registry_config_file}"
             ),
             check=False,
@@ -202,13 +202,15 @@ def get_aws_versions(docker_config_json_dir_path=None):
 def update_aws_clusters_versions(
     clusters, docker_config_json_dir_path=None, _test=False
 ):
-    all_versions, base_available_versions = get_all_versions(
+    for _cluster_data in clusters:
+        _cluster_data["stream"] = _cluster_data.get("stream", "stable")
+
+    base_available_versions = get_all_versions(
         docker_config_json_dir_path=docker_config_json_dir_path, _test=_test
     )
 
     return set_clusters_versions(
         clusters=clusters,
-        all_versions=all_versions,
         base_available_versions=base_available_versions,
     )
 
@@ -221,9 +223,11 @@ def get_all_versions(docker_config_json_dir_path=None, _test=None):
         base_available_versions = get_aws_versions(
             docker_config_json_dir_path=docker_config_json_dir_path
         )
-    # Extract only available versions which are relevant to the requested clusters versions
-    all_versions = []
-    for versions in base_available_versions.values():
-        all_versions.extend(versions)
 
-    return all_versions, base_available_versions
+    return base_available_versions
+    # # Extract only available versions which are relevant to the requested clusters versions
+    # all_versions = []
+    # for versions in base_available_versions.values():
+    #     all_versions.extend(versions)
+    #
+    # return all_versions, base_available_versions

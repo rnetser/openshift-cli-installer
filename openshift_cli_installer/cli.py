@@ -17,7 +17,7 @@ from openshift_cli_installer.libs.rosa_clusters import (
     prepare_managed_clusters_data,
     rosa_create_cluster,
     rosa_delete_cluster,
-    update_clusters_version,
+    update_rosa_clusters_versions,
 )
 from openshift_cli_installer.utils.click_dict_type import DictParamType
 from openshift_cli_installer.utils.const import (
@@ -409,7 +409,7 @@ def main(
             ocm_token=ocm_token,
             ocm_env=ocm_env,
         )
-        aws_managed_clusters = update_clusters_version(
+        aws_managed_clusters = update_rosa_clusters_versions(
             clusters=aws_managed_clusters,
             ocm_token=ocm_token,
             ocm_env=ocm_env,

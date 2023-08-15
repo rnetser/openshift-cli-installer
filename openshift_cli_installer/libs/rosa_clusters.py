@@ -12,6 +12,7 @@ from ocp_resources.job import Job
 from ocp_resources.utils import TimeoutSampler
 from python_terraform import IsNotFlagged, Terraform, TerraformCommandError
 
+from openshift_cli_installer.tests.all_rosa_versions import BASE_AVAILABLE_VERSIONS_DICT
 from openshift_cli_installer.utils.cluster_versions import set_clusters_versions
 from openshift_cli_installer.utils.const import (
     CLUSTER_DATA_YAML_FILENAME,
@@ -361,24 +362,24 @@ def rosa_delete_cluster(cluster_data):
         raise click.Abort()
 
 
-def update_clusters_version(clusters, ocm_env, ocm_token):
-    base_available_versions_dict = {}
-    available_versions = set()
-    for cluster_data in clusters:
-        channel_group = cluster_data["channel-group"]
-        base_available_versions = rosa.cli.execute(
-            command=f"list versions --channel-group={channel_group} "
-            f"{'--hosted-cp' if cluster_data['platform'] == HYPERSHIFT_STR else ''}",
-            aws_region=cluster_data["region"],
-            ocm_env=ocm_env,
-            token=ocm_token,
-        )["out"]
-        _all_versions = [ver["raw_id"] for ver in base_available_versions]
-        base_available_versions_dict[channel_group] = _all_versions
-        available_versions.update(set(_all_versions))
+def update_rosa_clusters_versions(clusters, ocm_env, ocm_token, _test=False):
+    if _test:
+        base_available_versions_dict = BASE_AVAILABLE_VERSIONS_DICT
+    else:
+        base_available_versions_dict = {}
+        for cluster_data in clusters:
+            channel_group = cluster_data["channel-group"]
+            base_available_versions = rosa.cli.execute(
+                command=f"list versions --channel-group={channel_group} "
+                f"{'--hosted-cp' if cluster_data['platform'] == HYPERSHIFT_STR else ''}",
+                aws_region=cluster_data["region"],
+                ocm_env=ocm_env,
+                token=ocm_token,
+            )["out"]
+            _all_versions = [ver["raw_id"] for ver in base_available_versions]
+            base_available_versions_dict[channel_group] = _all_versions
 
     return set_clusters_versions(
         clusters=clusters,
-        all_versions=available_versions,
         base_available_versions=base_available_versions_dict,
     )
