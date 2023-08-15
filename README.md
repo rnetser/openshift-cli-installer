@@ -78,6 +78,12 @@ Install [poetry](https://github.com/python-poetry/poetry)
 
 Install [regctl](https://github.com/regclient/regclient)
 
+Install Terraform [how-to](https://computingforgeeks.com/how-to-install-terraform-on-fedora/)
+```bash
+sudo dnf config-manager --add-repo https://rpm.releases.hashicorp.com/fedora/hashicorp.repo
+sudo dnf install terraform
+```
+
 
 Use `poetry run python openshift_cli_installer/cli.py` to execute the cli.
 

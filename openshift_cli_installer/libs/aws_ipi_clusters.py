@@ -104,16 +104,14 @@ def get_install_config_j2_template(cluster_dict):
 
 
 def download_openshift_install_binary(clusters, registry_config_file):
-    versions = set()
+    versions_urls = set()
     openshift_install_str = "openshift-install"
 
     for cluster in clusters:
-        # TODO: get install url
-        versions.add(cluster["version"])
+        versions_urls.add(f"{cluster['version_url']}:{cluster['version']}")
 
-    for version in versions:
-        binary_dir = os.path.join("/tmp", version)
-        clusters = [_cluster for _cluster in clusters if _cluster["version"] == version]
+    for version_url in versions_urls:
+        binary_dir = os.path.join("/tmp", version_url)
         for cluster in clusters:
             cluster["openshift-install-binary"] = os.path.join(
                 binary_dir, openshift_install_str
@@ -122,14 +120,14 @@ def download_openshift_install_binary(clusters, registry_config_file):
         rc, _, err = run_command(
             command=shlex.split(
                 "oc adm release extract "
-                f"quay.io/openshift-release-dev/ocp-release:{version} "
+                f"{version_url} "
                 f"--command={openshift_install_str} --to={binary_dir} --registry-config={registry_config_file}"
             ),
             check=False,
         )
         if not rc:
             click.secho(
-                f"Failed to get {openshift_install_str} for version {version}, error: {err}",
+                f"Failed to get {openshift_install_str} for version {version_url}, error: {err}",
                 fg="red",
             )
             raise click.Abort()
