@@ -225,9 +225,3 @@ def get_all_versions(docker_config_json_dir_path=None, _test=None):
         )
 
     return base_available_versions
-    # # Extract only available versions which are relevant to the requested clusters versions
-    # all_versions = []
-    # for versions in base_available_versions.values():
-    #     all_versions.extend(versions)
-    #
-    # return all_versions, base_available_versions
