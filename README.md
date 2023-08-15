@@ -103,7 +103,15 @@ When using the container pass:
 `-v ./clusters-install-data:/openshift-cli-installer/clusters-install-data`
 
 #### One cluster
+
 ##### AWS IPI cluster
+
+###### Versions
+  * Supported `streams` are: `stable`, `nightly`, `rc` and `ec`.
+  * If passed exact version this version will be used (if exists), Example: 3.14.9
+  * If passed partial version, latest version will be used, Example: 4.13 install 4.13.9 (latest)
+  * If passed `stream=nightly` and version 4.13, latest 4.13 nightly will be used.
+    * stream should be passed as part on `--cluster`, `--cluster ...... stream=stable`
 
 ```
 podman run quay.io/redhat_msi/openshift-cli-installer \
@@ -115,6 +123,15 @@ podman run quay.io/redhat_msi/openshift-cli-installer \
 ```
 
 ##### ROSA cluster
+
+###### Versions
+  [Same for Hypershift clusters]
+
+  * Supported `channel-group` are: `stable`, `candidate`, and `nightly`.
+  * If passed exact version this version will be used (if exists), Example: 3.14.9
+  * If passed partial version, latest version will be used, Example: 4.13 install 4.13.9 (latest)
+  * If passed `channel-group=nightly` and version 4.13, latest 4.13 nightly will be used.
+    * stream should be passed as part on `--cluster`, `--cluster ...... channel-group=stable`
 
 ```
 podman run quay.io/redhat_msi/openshift-cli-installer \

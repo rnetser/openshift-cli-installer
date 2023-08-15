@@ -120,7 +120,7 @@ def create_oidc(cluster_data):
     )
 
     res = rosa.cli.execute(
-        command=f"list oidc-config --region={aws_region}",
+        command="list oidc-config",
         aws_region=aws_region,
         ocm_client=ocm_client,
     )["out"]
@@ -296,11 +296,20 @@ def rosa_create_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
             aws_region=cluster_data["region"],
         )
 
-    finally:
-        if cluster_data["platform"] == HYPERSHIFT_STR:
-            destroy_hypershift_vpc(cluster_data=cluster_data)
-            delete_oidc(cluster_data=cluster_data)
+        cluster_object = get_cluster_object(
+            ocm_token=ocm_token, ocm_env=ocm_env, cluster_data=cluster_data
+        )
+        cluster_object.wait_for_cluster_ready(wait_timeout=cluster_data["timeout"])
+        set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
 
+        if _platform == ROSA_STR:
+            wait_for_osd_cluster_ready_job(ocp_client=cluster_object.ocp_client)
+
+    except Exception as ex:
+        click.secho(
+            f"Failed to run cluster create for cluster {cluster_data['name']}\n{ex}",
+            fg="red",
+        )
         if s3_bucket_name:
             zip_and_upload_to_s3(
                 uuid=_shortuuid,
@@ -308,15 +317,8 @@ def rosa_create_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
                 s3_bucket_name=s3_bucket_name,
                 s3_bucket_path=s3_bucket_path,
             )
-
-    cluster_object = get_cluster_object(
-        ocm_token=ocm_token, ocm_env=ocm_env, cluster_data=cluster_data
-    )
-    cluster_object.wait_for_cluster_ready(wait_timeout=cluster_data["timeout"])
-    set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
-
-    if _platform == ROSA_STR:
-        wait_for_osd_cluster_ready_job(ocp_client=cluster_object.ocp_client)
+        rosa_delete_cluster(cluster_data=cluster_data)
+        raise click.Abort()
 
 
 def rosa_delete_cluster(cluster_data):
@@ -358,7 +360,7 @@ def rosa_delete_cluster(cluster_data):
         delete_oidc(cluster_data=_cluster_data)
 
     if should_raise:
-        click.secho(f"Failed to run cluster uninstall\n{should_raise}", fg="red")
+        click.secho(f"Failed to run cluster destroy\n{should_raise}", fg="red")
         raise click.Abort()
 
 

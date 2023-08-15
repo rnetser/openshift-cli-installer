@@ -163,17 +163,17 @@ def create_or_destroy_aws_ipi_cluster(
                 uuid=_shortuuid,
             )
 
-    if not res and not cleanup:
-        click.secho(
-            f"Failed to run cluster {action}\n\tERR: {err}\n\tOUT: {out}.", fg="red"
-        )
-        if action == CREATE_STR:
-            click.echo("Cleaning leftovers.")
-            create_or_destroy_aws_ipi_cluster(
-                cluster_data=cluster_data, action=DESTROY_STR, cleanup=True
-            )
-
     if not res:
+        if not cleanup:
+            click.secho(
+                f"Failed to run cluster {action}\n\tERR: {err}\n\tOUT: {out}.", fg="red"
+            )
+            if action == CREATE_STR:
+                click.echo("Cleaning leftovers.")
+                create_or_destroy_aws_ipi_cluster(
+                    cluster_data=cluster_data, action=DESTROY_STR, cleanup=True
+                )
+
         raise click.Abort()
 
 

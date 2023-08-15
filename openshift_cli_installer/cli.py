@@ -157,7 +157,7 @@ def check_existing_clusters(clusters, ocm_client):
     )
     if duplicate_cluster_names:
         click.secho(
-            f"At least one cluster name duplication: {duplicate_cluster_names}",
+            f"At least one cluster already exists: {duplicate_cluster_names}",
             fg="red",
         )
         raise click.Abort()
@@ -409,11 +409,12 @@ def main(
             ocm_token=ocm_token,
             ocm_env=ocm_env,
         )
-        aws_managed_clusters = update_rosa_clusters_versions(
-            clusters=aws_managed_clusters,
-            ocm_token=ocm_token,
-            ocm_env=ocm_env,
-        )
+        if create:
+            aws_managed_clusters = update_rosa_clusters_versions(
+                clusters=aws_managed_clusters,
+                ocm_token=ocm_token,
+                ocm_env=ocm_env,
+            )
 
     if create:
         kwargs.update(
@@ -424,10 +425,12 @@ def main(
     action_func = create_openshift_cluster if create else destroy_openshift_cluster
 
     for _cluster in aws_ipi_clusters + aws_managed_clusters:
+        _cluster_name = _cluster["name"]
+        click.echo(f"Executing {action} {_cluster_name} [parallel: {parallel}]")
         kwargs["cluster_data"] = _cluster
         if parallel:
             proc = multiprocessing.Process(
-                name=f"{_cluster['name']}---{action}",
+                name=f"{_cluster_name}---{action}",
                 target=action_func,
                 kwargs=kwargs,
             )
