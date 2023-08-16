@@ -182,7 +182,7 @@ def verify_user_input(action, cluster, ssh_key_file):
     is_platform_supported(clusters=cluster)
 
 
-@click.command()
+@click.command("installer")
 @click.option(
     "-a",
     "--action",
