@@ -135,7 +135,7 @@ def get_regex_str_for_version_match(platform, stream, x86_64_str):
     if platform == AWS_STR:
         reg_stream = stream
         if stream == "stable":
-            reg_stream = "x86_64"
+            reg_stream = x86_64_str.strip("-")
 
         elif stream != "nightly":
             reg_stream = rf"{stream}.\d+{x86_64_str}"
