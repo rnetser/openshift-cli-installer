@@ -172,7 +172,7 @@ def destroy_hypershift_vpc(cluster_data):
     terraform.destroy(
         force=IsNotFlagged,
         auto_approve=True,
-        capture_output=False,
+        capture_output=True,
         raise_on_error=True,
     )
 
@@ -196,12 +196,7 @@ def prepare_hypershift_vpc(cluster_data):
             f"Create hypershift PVC for cluster {cluster_data['name']} failed, rolling back."
         )
         # Clean up already created resources from the plan
-        terraform.destroy(
-            force=IsNotFlagged,
-            auto_approve=True,
-            capture_output=True,
-            raise_on_error=True,
-        )
+        destroy_hypershift_vpc(cluster_data=cluster_data)
         raise
 
 
