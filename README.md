@@ -104,7 +104,7 @@ When using the container pass:
 ##### AWS IPI cluster
 
 ###### Versions
-  * Supported `streams` are: `stable`, `nightly`, `rc` and `ec`, Supported architecture(s): `X86_64`
+  * Supported `streams` are: `stable`, `nightly`, `rc`, `ci` and `ec`, Supported architecture(s): `X86_64`
   * If passed exact version this version will be used (if exists), Example: 3.14.9
   * If passed partial version, latest version will be used, Example: 4.13 install 4.13.9 (latest)
   * If passed `stream=nightly` and version 4.13, latest 4.13 nightly will be used.
