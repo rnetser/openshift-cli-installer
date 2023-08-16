@@ -168,6 +168,7 @@ def terraform_init(cluster_data):
 
 
 def destroy_hypershift_vpc(cluster_data):
+    click.echo(f"Destroy hypershift PVC for cluster {cluster_data['name']}")
     terraform = terraform_init(cluster_data)
     terraform.destroy(
         force=IsNotFlagged,
