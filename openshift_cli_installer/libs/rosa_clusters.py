@@ -2,6 +2,7 @@ import os
 import re
 import shutil
 from datetime import datetime, timedelta
+from importlib.util import find_spec
 from pathlib import Path
 
 import click
@@ -177,9 +178,12 @@ def destroy_hypershift_vpc(cluster_data):
 
 
 def prepare_hypershift_vpc(cluster_data):
-    shutil.copy(
-        "openshift_cli_installer/manifests/setup-vpc.tf", cluster_data["install-dir"]
+    vpc_file_path = os.path.join(
+        find_spec("openshift_cli_installer").submodule_search_locations[0],
+        "manifests/setup-vpc.tf",
     )
+
+    shutil.copy(vpc_file_path, cluster_data["install-dir"])
     terraform = terraform_init(cluster_data=cluster_data)
     try:
         terraform.plan(dir_or_plan="rosa.plan")
