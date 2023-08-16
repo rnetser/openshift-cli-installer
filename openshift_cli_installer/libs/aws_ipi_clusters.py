@@ -2,7 +2,6 @@ import functools
 import json
 import os
 import shlex
-from importlib.util import find_spec
 
 import click
 import yaml
@@ -15,6 +14,7 @@ from openshift_cli_installer.utils.helpers import (
     bucket_object_name,
     cluster_shortuuid,
     dump_cluster_data_to_file,
+    get_manifests_path,
     zip_and_upload_to_s3,
 )
 
@@ -84,23 +84,14 @@ def get_local_ssh_key(ssh_key_file):
 
 
 def get_install_config_j2_template(cluster_dict):
-    manifests_path = os.path.join(
-        find_spec("openshift_cli_installer").submodule_search_locations[0],
-        "manifests",
-    )
-    if "site-packages" not in manifests_path:
-        manifests_path = "openshift_cli_installer/manifests"
-
     env = Environment(
-        loader=FileSystemLoader(manifests_path),
+        loader=FileSystemLoader(get_manifests_path()),
         trim_blocks=True,
         lstrip_blocks=True,
         undefined=DebugUndefined,
     )
 
-    template = env.get_template(
-        name=os.path.join(manifests_path, "install-config-template.j2")
-    )
+    template = env.get_template(name="install-config-template.j2")
     rendered = template.render(cluster_dict)
     undefined_variables = meta.find_undeclared_variables(env.parse(rendered))
     if undefined_variables:

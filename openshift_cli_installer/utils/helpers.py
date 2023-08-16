@@ -1,6 +1,7 @@
 import os
 import shutil
 from functools import wraps
+from importlib.util import find_spec
 from time import sleep
 
 import click
@@ -99,3 +100,13 @@ def dump_cluster_data_to_file(cluster_data):
 
 def bucket_object_name(cluster_data, _shortuuid, s3_bucket_path=None):
     return f"{f'{s3_bucket_path}/' if s3_bucket_path else ''}{cluster_data['name']}-{_shortuuid}.zip"
+
+
+def get_manifests_path():
+    manifests_path = os.path.join("openshift_cli_installer", "manifests")
+    if not os.path.isdir(manifests_path):
+        manifests_path = os.path.join(
+            find_spec("openshift_cli_installer").submodule_search_locations[0],
+            "manifests",
+        )
+    return manifests_path

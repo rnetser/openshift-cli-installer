@@ -2,7 +2,6 @@ import os
 import re
 import shutil
 from datetime import datetime, timedelta
-from importlib.util import find_spec
 from pathlib import Path
 
 import click
@@ -24,6 +23,7 @@ from openshift_cli_installer.utils.helpers import (
     bucket_object_name,
     cluster_shortuuid,
     dump_cluster_data_to_file,
+    get_manifests_path,
     get_ocm_client,
     zip_and_upload_to_s3,
 )
@@ -178,15 +178,8 @@ def destroy_hypershift_vpc(cluster_data):
 
 
 def prepare_hypershift_vpc(cluster_data):
-    manifests_path = os.path.join(
-        find_spec("openshift_cli_installer").submodule_search_locations[0],
-        "manifests",
-    )
-    if "site-packages" not in manifests_path:
-        manifests_path = "openshift_cli_installer/manifests"
-
     shutil.copy(
-        os.path.join(manifests_path, "setup-vpc.tf"), cluster_data["install-dir"]
+        os.path.join(get_manifests_path(), "setup-vpc.tf"), cluster_data["install-dir"]
     )
     terraform = terraform_init(cluster_data=cluster_data)
     try:
