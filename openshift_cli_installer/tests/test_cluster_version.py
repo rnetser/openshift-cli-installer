@@ -73,6 +73,17 @@ from openshift_cli_installer.libs.rosa_clusters import update_rosa_clusters_vers
             ],
         ),
         (
+            [{"version": "4.13", "stream": "ci", "platform": "aws"}],
+            [
+                {
+                    "version": "4.13.0-0.ci-2023-08-14-170508",
+                    "stream": "ci",
+                    "platform": "aws",
+                    "version_url": "registry.ci.openshift.org/ocp/release",
+                }
+            ],
+        ),
+        (
             [{"version": "4.13.9", "stream": "stable", "platform": "aws"}],
             [
                 {
@@ -94,6 +105,7 @@ from openshift_cli_installer.libs.rosa_clusters import update_rosa_clusters_vers
         "aws_4.13_nightly",
         "aws_4.13_ec",
         "aws_4.13_rc",
+        "aws_4.13_ci",
         "aws_4.13.9_stable",
         "aws_4_stable_negative",
         "aws_100.5.1_stable_negative",

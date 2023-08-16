@@ -137,7 +137,7 @@ def get_regex_str_for_version_match(platform, stream, x86_64_str):
         if stream == "stable":
             reg_stream = x86_64_str.strip("-")
 
-        elif stream != "nightly":
+        elif stream not in ("nightly", "ci"):
             reg_stream = rf"{stream}.\d+{x86_64_str}"
 
     return reg_stream
