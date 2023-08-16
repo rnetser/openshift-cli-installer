@@ -2,6 +2,7 @@ import functools
 import json
 import os
 import shlex
+from importlib.util import find_spec
 
 import click
 import yaml
@@ -83,15 +84,20 @@ def get_local_ssh_key(ssh_key_file):
 
 
 def get_install_config_j2_template(cluster_dict):
-    template_file = "install-config-template.j2"
+    manifests_path = os.path.join(
+        find_spec("openshift_cli_installer").submodule_search_locations[0]
+    )
+
     env = Environment(
-        loader=FileSystemLoader("openshift_cli_installer/manifests/"),
+        loader=FileSystemLoader(manifests_path),
         trim_blocks=True,
         lstrip_blocks=True,
         undefined=DebugUndefined,
     )
 
-    template = env.get_template(name=template_file)
+    template = env.get_template(
+        name=os.path.join(manifests_path, "install-config-template.j2")
+    )
     rendered = template.render(cluster_dict)
     undefined_variables = meta.find_undeclared_variables(env.parse(rendered))
     if undefined_variables:

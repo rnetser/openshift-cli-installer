@@ -25,6 +25,7 @@ repository = "https://github.com/RedHatQE/openshift-cli-installer"
 authors = ["Meni Yakove <myakove@gmail.com>", "Ruth Netser <rnetser@gmail.com>"]
 license = "Apache-2.0"
 packages = [{include = "openshift_cli_installer"}]
+include = [{path = "manifests/*"}]
 homepage = "https://github.com/RedHatQE/openshift-cli-installer"
 documentation = "https://github.com/RedHatQE/openshift-cli-installer/blob/main/README.md"
 classifiers = [
