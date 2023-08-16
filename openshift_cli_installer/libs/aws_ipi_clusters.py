@@ -88,6 +88,8 @@ def get_install_config_j2_template(cluster_dict):
         find_spec("openshift_cli_installer").submodule_search_locations[0],
         "manifests",
     )
+    if not os.path.exists(manifests_path):
+        manifests_path = "openshift_cli_installer/manifests"
 
     env = Environment(
         loader=FileSystemLoader(manifests_path),

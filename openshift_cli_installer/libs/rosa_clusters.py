@@ -178,15 +178,19 @@ def destroy_hypershift_vpc(cluster_data):
 
 
 def prepare_hypershift_vpc(cluster_data):
-    vpc_file_path = os.path.join(
+    manifests_path = os.path.join(
         find_spec("openshift_cli_installer").submodule_search_locations[0],
-        "manifests/setup-vpc.tf",
+        "manifests",
     )
+    if not os.path.exists(manifests_path):
+        manifests_path = "openshift_cli_installer/manifests"
 
-    shutil.copy(vpc_file_path, cluster_data["install-dir"])
+    shutil.copy(
+        os.path.join(manifests_path, "setup-vpc.tf"), cluster_data["install-dir"]
+    )
     terraform = terraform_init(cluster_data=cluster_data)
     try:
-        terraform.plan(dir_or_plan="rosa.plan")
+        terraform.plan("rosa.plan")
         terraform.apply(capture_output=False, skip_plan=True, raise_on_error=True)
         terraform_output = terraform.output()
         private_subnet = terraform_output["cluster-private-subnet"]["value"]
