@@ -85,7 +85,8 @@ def get_local_ssh_key(ssh_key_file):
 
 def get_install_config_j2_template(cluster_dict):
     manifests_path = os.path.join(
-        find_spec("openshift_cli_installer").submodule_search_locations[0]
+        find_spec("openshift_cli_installer").submodule_search_locations[0],
+        "manifests",
     )
 
     env = Environment(
