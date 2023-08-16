@@ -183,14 +183,18 @@ def prepare_hypershift_vpc(cluster_data):
     )
     terraform = terraform_init(cluster_data=cluster_data)
     try:
+        click.echo(f"Preparing hypershift PVC for cluster {cluster_data['name']}")
         terraform.plan("rosa.plan")
-        terraform.apply(capture_output=False, skip_plan=True, raise_on_error=True)
+        terraform.apply(capture_output=True, skip_plan=True, raise_on_error=True)
         terraform_output = terraform.output()
         private_subnet = terraform_output["cluster-private-subnet"]["value"]
         public_subnet = terraform_output["cluster-public-subnet"]["value"]
         cluster_data["subnet-ids"] = f'"{public_subnet},{private_subnet}"'
         return cluster_data
     except TerraformCommandError:
+        click.secho(
+            f"Create hypershift PVC for cluster {cluster_data['name']} failed, rolling back."
+        )
         # Clean up already created resources from the plan
         terraform.destroy(
             force=IsNotFlagged,
