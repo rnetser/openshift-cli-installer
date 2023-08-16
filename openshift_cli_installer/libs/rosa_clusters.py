@@ -184,7 +184,7 @@ def prepare_hypershift_vpc(cluster_data):
     terraform = terraform_init(cluster_data=cluster_data)
     try:
         click.echo(f"Preparing hypershift PVC for cluster {cluster_data['name']}")
-        terraform.plan("rosa.plan")
+        terraform.plan(dir_or_plan="rosa.plan")
         terraform.apply(capture_output=True, skip_plan=True, raise_on_error=True)
         terraform_output = terraform.output()
         private_subnet = terraform_output["cluster-private-subnet"]["value"]
