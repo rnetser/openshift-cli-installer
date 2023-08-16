@@ -182,7 +182,7 @@ def prepare_hypershift_vpc(cluster_data):
         find_spec("openshift_cli_installer").submodule_search_locations[0],
         "manifests",
     )
-    if not os.path.exists(manifests_path):
+    if "site-packages" not in manifests_path:
         manifests_path = "openshift_cli_installer/manifests"
 
     shutil.copy(
