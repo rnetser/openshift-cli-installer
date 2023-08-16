@@ -113,23 +113,19 @@ def create_oidc(cluster_data):
     ocm_token, ocm_env, _ = extract_ocm_data_from_cluster_data(cluster_data)
     ocm_client = get_ocm_client(ocm_token, ocm_env)
 
-    rosa.cli.execute(
+    res = rosa.cli.execute(
         command=f"create oidc-config --managed=false --prefix={oidc_prefix}",
         aws_region=aws_region,
         ocm_client=ocm_client,
     )
+    oidc_id = re.search(r'"id": "([a-z0-9]+)",', res["out"])
+    if not oidc_id:
+        click.secho(
+            f"Failed to get OIDC config for cluster {cluster_data['name']}", fg="red"
+        )
+        raise click.Abort()
 
-    res = rosa.cli.execute(
-        command="list oidc-config",
-        aws_region=aws_region,
-        ocm_client=ocm_client,
-    )["out"]
-
-    cluster_data["oidc-config-id"] = [
-        oidc_config["id"]
-        for oidc_config in res
-        if oidc_prefix in oidc_config["secret_arn"]
-    ][0]
+    cluster_data["oidc-config-id"] = oidc_id.group(1)
     return cluster_data
 
 
