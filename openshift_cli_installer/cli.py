@@ -10,12 +10,14 @@ from openshift_cli_installer.libs.aws_ipi_clusters import (
     create_install_config_file,
     create_or_destroy_aws_ipi_cluster,
     download_openshift_install_binary,
+    update_aws_clusters_versions,
 )
 from openshift_cli_installer.libs.destroy_clusters import destroy_clusters
 from openshift_cli_installer.libs.rosa_clusters import (
     prepare_managed_clusters_data,
     rosa_create_cluster,
     rosa_delete_cluster,
+    update_rosa_clusters_versions,
 )
 from openshift_cli_installer.utils.click_dict_type import DictParamType
 from openshift_cli_installer.utils.const import (
@@ -155,7 +157,7 @@ def check_existing_clusters(clusters, ocm_client):
     )
     if duplicate_cluster_names:
         click.secho(
-            f"At least one cluster name duplication: {duplicate_cluster_names}",
+            f"At least one cluster already exists: {duplicate_cluster_names}",
             fg="red",
         )
         raise click.Abort()
@@ -227,6 +229,16 @@ registry-config file, can be obtained from https://console.redhat.com/openshift/
     default=os.environ.get("PULL_SECRET"),
     type=click.Path(exists=True),
     show_default=True,
+)
+@click.option(
+    "--docker-config-json-dir-path",
+    type=click.Path(exists=True),
+    help="""
+    \b
+Path to directory which contains docker config.json file.
+File must include token for `registry.ci.openshift.org`
+(Needed only for AWS IPI clusters)
+    """,
 )
 @click.option(
     "--s3-bucket-name",
@@ -311,6 +323,7 @@ def main(
     ssh_key_file,
     destroy_all_clusters,
     destroy_clusters_from_config_files,
+    docker_config_json_dir_path,
 ):
     """
     Create/Destroy Openshift cluster/s
@@ -370,6 +383,11 @@ def main(
             clusters=aws_ipi_clusters, base_directory=clusters_install_data_directory
         )
 
+        aws_ipi_clusters = update_aws_clusters_versions(
+            clusters=aws_ipi_clusters,
+            docker_config_json_dir_path=docker_config_json_dir_path,
+        )
+
         aws_ipi_clusters = download_openshift_install_binary(
             clusters=aws_ipi_clusters, registry_config_file=registry_config_file
         )
@@ -391,6 +409,12 @@ def main(
             ocm_token=ocm_token,
             ocm_env=ocm_env,
         )
+        if create:
+            aws_managed_clusters = update_rosa_clusters_versions(
+                clusters=aws_managed_clusters,
+                ocm_token=ocm_token,
+                ocm_env=ocm_env,
+            )
 
     if create:
         kwargs.update(
@@ -401,10 +425,12 @@ def main(
     action_func = create_openshift_cluster if create else destroy_openshift_cluster
 
     for _cluster in aws_ipi_clusters + aws_managed_clusters:
+        _cluster_name = _cluster["name"]
+        click.echo(f"Executing {action} {_cluster_name} [parallel: {parallel}]")
         kwargs["cluster_data"] = _cluster
         if parallel:
             proc = multiprocessing.Process(
-                name=f"{_cluster['name']}---{action}",
+                name=f"{_cluster_name}---{action}",
                 target=action_func,
                 kwargs=kwargs,
             )

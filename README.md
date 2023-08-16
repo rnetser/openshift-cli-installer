@@ -36,7 +36,6 @@ Every call to the openshift installer cli must have at least one `--cluster` opt
 
 * Mandatory parameters:
   * name: The name of the cluster
-  * version: The version of the cluster
   * platform: The platform to deploy the cluster on (supported platforms are: aws, rosa and hypershift)
   * region: The region to deploy the cluster
 * Optional parameters:
@@ -74,6 +73,15 @@ git clone https://github.com/RedHatQE/openshift-cli-installer.git
 
 Install [poetry](https://github.com/python-poetry/poetry)
 
+Install [regctl](https://github.com/regclient/regclient)
+
+Install Terraform [how-to](https://computingforgeeks.com/how-to-install-terraform-on-fedora/)
+```bash
+sudo dnf config-manager --add-repo https://rpm.releases.hashicorp.com/fedora/hashicorp.repo
+sudo dnf install terraform
+```
+
+
 Use `poetry run python openshift_cli_installer/cli.py` to execute the cli.
 
 ```
@@ -92,7 +100,15 @@ When using the container pass:
 `-v ./clusters-install-data:/openshift-cli-installer/clusters-install-data`
 
 #### One cluster
+
 ##### AWS IPI cluster
+
+###### Versions
+  * Supported `streams` are: `stable`, `nightly`, `rc`, `ci` and `ec`, Supported architecture(s): `X86_64`
+  * If passed exact version this version will be used (if exists), Example: 3.14.9
+  * If passed partial version, latest version will be used, Example: 4.13 install 4.13.9 (latest)
+  * If passed `stream=nightly` and version 4.13, latest 4.13 nightly will be used.
+    * stream should be passed as part on `--cluster`, `--cluster ...... stream=stable`
 
 ```
 podman run quay.io/redhat_msi/openshift-cli-installer \
@@ -104,6 +120,15 @@ podman run quay.io/redhat_msi/openshift-cli-installer \
 ```
 
 ##### ROSA cluster
+
+###### Versions
+  [Same for Hypershift clusters]
+
+  * Supported `channel-group` are: `stable`, `candidate`, and `nightly`.
+  * If passed exact version this version will be used (if exists), Example: 3.14.9
+  * If passed partial version, latest version will be used, Example: 4.13 install 4.13.9 (latest)
+  * If passed `channel-group=nightly` and version 4.13, latest 4.13 nightly will be used.
+    * stream should be passed as part on `--cluster`, `--cluster ...... channel-group=stable`
 
 ```
 podman run quay.io/redhat_msi/openshift-cli-installer \

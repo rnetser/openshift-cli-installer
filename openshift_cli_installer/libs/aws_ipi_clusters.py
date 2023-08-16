@@ -1,3 +1,4 @@
+import functools
 import json
 import os
 import shlex
@@ -7,6 +8,7 @@ import yaml
 from jinja2 import DebugUndefined, Environment, FileSystemLoader, meta
 from ocp_utilities.utils import run_command
 
+from openshift_cli_installer.utils.cluster_versions import set_clusters_versions
 from openshift_cli_installer.utils.const import CREATE_STR, DESTROY_STR
 from openshift_cli_installer.utils.helpers import (
     bucket_object_name,
@@ -102,15 +104,14 @@ def get_install_config_j2_template(cluster_dict):
 
 
 def download_openshift_install_binary(clusters, registry_config_file):
-    versions = set()
+    versions_urls = set()
     openshift_install_str = "openshift-install"
 
     for cluster in clusters:
-        versions.add(cluster["version"])
+        versions_urls.add(f"{cluster['version_url']}:{cluster['version']}")
 
-    for version in versions:
-        binary_dir = os.path.join("/tmp", version)
-        clusters = [_cluster for _cluster in clusters if _cluster["version"] == version]
+    for version_url in versions_urls:
+        binary_dir = os.path.join("/tmp", version_url)
         for cluster in clusters:
             cluster["openshift-install-binary"] = os.path.join(
                 binary_dir, openshift_install_str
@@ -119,14 +120,14 @@ def download_openshift_install_binary(clusters, registry_config_file):
         rc, _, err = run_command(
             command=shlex.split(
                 "oc adm release extract "
-                f"quay.io/openshift-release-dev/ocp-release:{version}-x86_64 "
+                f"{version_url} "
                 f"--command={openshift_install_str} --to={binary_dir} --registry-config={registry_config_file}"
             ),
             check=False,
         )
         if not rc:
             click.secho(
-                f"Failed to get {openshift_install_str} for version {version}, error: {err}",
+                f"Failed to get {openshift_install_str} for version {version_url}, error: {err}",
                 fg="red",
             )
             raise click.Abort()
@@ -162,15 +163,63 @@ def create_or_destroy_aws_ipi_cluster(
                 uuid=_shortuuid,
             )
 
-    if not res and not cleanup:
-        click.secho(
-            f"Failed to run cluster {action}\n\tERR: {err}\n\tOUT: {out}.", fg="red"
-        )
-        if action == CREATE_STR:
-            click.echo("Cleaning leftovers.")
-            create_or_destroy_aws_ipi_cluster(
-                cluster_data=cluster_data, action=DESTROY_STR, cleanup=True
-            )
-
     if not res:
+        if not cleanup:
+            click.secho(
+                f"Failed to run cluster {action}\n\tERR: {err}\n\tOUT: {out}.", fg="red"
+            )
+            if action == CREATE_STR:
+                click.echo("Cleaning leftovers.")
+                create_or_destroy_aws_ipi_cluster(
+                    cluster_data=cluster_data, action=DESTROY_STR, cleanup=True
+                )
+
         raise click.Abort()
+
+
+@functools.cache
+def get_aws_versions(docker_config_json_dir_path=None):
+    # If running on openshift-ci we need to set `DOCKER_CONFIG`
+    if os.environ.get("OPENSHIFT_CI") == "true":
+        click.echo("Running in openshift ci")
+        os.environ["DOCKER_CONFIG"] = docker_config_json_dir_path
+
+    versions_dict = {}
+    for source_repo in [
+        "quay.io/openshift-release-dev/ocp-release",
+        "registry.ci.openshift.org/ocp/release",
+    ]:
+        versions_dict[source_repo] = run_command(
+            command=shlex.split(f"regctl tag ls {source_repo}"),
+            check=False,
+        )[1].splitlines()
+
+    return versions_dict
+
+
+def update_aws_clusters_versions(
+    clusters, docker_config_json_dir_path=None, _test=False
+):
+    for _cluster_data in clusters:
+        _cluster_data["stream"] = _cluster_data.get("stream", "stable")
+
+    base_available_versions = get_all_versions(
+        docker_config_json_dir_path=docker_config_json_dir_path, _test=_test
+    )
+
+    return set_clusters_versions(
+        clusters=clusters,
+        base_available_versions=base_available_versions,
+    )
+
+
+def get_all_versions(docker_config_json_dir_path=None, _test=None):
+    if _test:
+        with open("openshift_cli_installer/tests/all_aws_versions.json") as fd:
+            base_available_versions = json.load(fd)
+    else:
+        base_available_versions = get_aws_versions(
+            docker_config_json_dir_path=docker_config_json_dir_path
+        )
+
+    return base_available_versions

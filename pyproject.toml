@@ -37,6 +37,8 @@ rosa-python-client = "^1.0.16"
 openshift-cluster-management-python-wrapper = "^1.0.27"
 openshift-python-wrapper = "^4.14.1"
 python-terraform = "^0.10.1"
+semver = "^3.0.1"
+pytest = "^7.4.0"
 
 
 [tool.poetry.group.dev.dependencies]
