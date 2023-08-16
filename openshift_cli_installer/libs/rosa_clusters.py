@@ -199,7 +199,7 @@ def prepare_hypershift_vpc(cluster_data):
         terraform.destroy(
             force=IsNotFlagged,
             auto_approve=True,
-            capture_output=False,
+            capture_output=True,
             raise_on_error=True,
         )
         raise
