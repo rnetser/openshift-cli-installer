@@ -168,7 +168,7 @@ def terraform_init(cluster_data):
 
 
 def destroy_hypershift_vpc(cluster_data):
-    click.echo(f"Destroy hypershift PVC for cluster {cluster_data['name']}")
+    click.echo(f"Destroy hypershift VPC for cluster {cluster_data['name']}")
     terraform = terraform_init(cluster_data)
     terraform.destroy(
         force=IsNotFlagged,
@@ -184,7 +184,7 @@ def prepare_hypershift_vpc(cluster_data):
     )
     terraform = terraform_init(cluster_data=cluster_data)
     try:
-        click.echo(f"Preparing hypershift PVC for cluster {cluster_data['name']}")
+        click.echo(f"Preparing hypershift VPC for cluster {cluster_data['name']}")
         terraform.plan(dir_or_plan="rosa.plan")
         terraform.apply(capture_output=True, skip_plan=True, raise_on_error=True)
         terraform_output = terraform.output()
@@ -194,7 +194,7 @@ def prepare_hypershift_vpc(cluster_data):
         return cluster_data
     except TerraformCommandError:
         click.secho(
-            f"Create hypershift PVC for cluster {cluster_data['name']} failed, rolling back."
+            f"Create hypershift VPC for cluster {cluster_data['name']} failed, rolling back."
         )
         # Clean up already created resources from the plan
         destroy_hypershift_vpc(cluster_data=cluster_data)
