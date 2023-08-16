@@ -18,11 +18,19 @@ profile = "black"
 
 [tool.poetry]
 name = "openshift-cli-installer"
-version = "1.0.0"
+version = "0.0.0"
 description = "CLI to install/uninstall Openshift clusters."
-authors = ["Meni Yakove", "Ruth Netser"]
 readme = "README.md"
 repository = "https://github.com/RedHatQE/openshift-cli-installer"
+authors = ["Meni Yakove <myakove@gmail.com>", "Ruth Netser <rnetser@gmail.com>"]
+license = "Apache-2.0"
+packages = [{include = "openshift_cli_installer"}]
+homepage = "https://github.com/RedHatQE/openshift-cli-installer"
+documentation = "https://github.com/RedHatQE/openshift-cli-installer/blob/main/README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
 
 [tool.poetry.scripts]
 cli = "app.cli:main"
@@ -45,6 +53,13 @@ pytest = "^7.4.0"
 ipdb = "^0.13.13"
 ipython = "*"
 
+[tool.poetry-dynamic-versioning]
+enable = true
+pattern = "((?P<epoch>\\d+)!)?(?P<base>\\d+(\\.\\d+)*)"
+
+[tool.poetry-dynamic-versioning.substitution]
+files = ["VERSION"]
+
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
+build-backend = "poetry_dynamic_versioning.backend"
