@@ -2,7 +2,6 @@ import os
 import re
 import shutil
 from datetime import datetime, timedelta
-from importlib.util import find_spec
 from pathlib import Path
 
 import click
@@ -24,6 +23,7 @@ from openshift_cli_installer.utils.helpers import (
     bucket_object_name,
     cluster_shortuuid,
     dump_cluster_data_to_file,
+    get_manifests_path,
     get_ocm_client,
     zip_and_upload_to_s3,
 )
@@ -168,39 +168,37 @@ def terraform_init(cluster_data):
 
 
 def destroy_hypershift_vpc(cluster_data):
+    click.echo(f"Destroy hypershift VPC for cluster {cluster_data['name']}")
     terraform = terraform_init(cluster_data)
     terraform.destroy(
         force=IsNotFlagged,
         auto_approve=True,
-        capture_output=False,
+        capture_output=True,
         raise_on_error=True,
     )
 
 
 def prepare_hypershift_vpc(cluster_data):
-    vpc_file_path = os.path.join(
-        find_spec("openshift_cli_installer").submodule_search_locations[0],
-        "manifests/setup-vpc.tf",
+    shutil.copy(
+        os.path.join(get_manifests_path(), "setup-vpc.tf"), cluster_data["install-dir"]
     )
-
-    shutil.copy(vpc_file_path, cluster_data["install-dir"])
     terraform = terraform_init(cluster_data=cluster_data)
     try:
+        click.echo(f"Preparing hypershift VPC for cluster {cluster_data['name']}")
         terraform.plan(dir_or_plan="rosa.plan")
-        terraform.apply(capture_output=False, skip_plan=True, raise_on_error=True)
+        terraform.apply(capture_output=True, skip_plan=True, raise_on_error=True)
         terraform_output = terraform.output()
         private_subnet = terraform_output["cluster-private-subnet"]["value"]
         public_subnet = terraform_output["cluster-public-subnet"]["value"]
         cluster_data["subnet-ids"] = f'"{public_subnet},{private_subnet}"'
         return cluster_data
     except TerraformCommandError:
-        # Clean up already created resources from the plan
-        terraform.destroy(
-            force=IsNotFlagged,
-            auto_approve=True,
-            capture_output=False,
-            raise_on_error=True,
+        click.secho(
+            f"Create hypershift VPC for cluster {cluster_data['name']} failed, rolling back."
         )
+        delete_oidc(cluster_data=cluster_data)
+        # Clean up already created resources from the plan
+        destroy_hypershift_vpc(cluster_data=cluster_data)
         raise
 
 
