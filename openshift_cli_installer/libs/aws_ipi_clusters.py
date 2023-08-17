@@ -113,9 +113,10 @@ def download_openshift_install_binary(clusters, registry_config_file):
     for version_url in versions_urls:
         binary_dir = os.path.join("/tmp", version_url)
         for cluster in clusters:
-            cluster["openshift-install-binary"] = os.path.join(
-                binary_dir, openshift_install_str
-            )
+            if version_url.endswith(cluster["version"]):
+                cluster["openshift-install-binary"] = os.path.join(
+                    binary_dir, openshift_install_str
+                )
 
         rc, _, err = run_command(
             command=shlex.split(
