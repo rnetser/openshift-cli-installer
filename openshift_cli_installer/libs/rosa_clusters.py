@@ -196,6 +196,7 @@ def prepare_hypershift_vpc(cluster_data):
         click.secho(
             f"Create hypershift VPC for cluster {cluster_data['name']} failed, rolling back."
         )
+        delete_oidc(cluster_data=cluster_data)
         # Clean up already created resources from the plan
         destroy_hypershift_vpc(cluster_data=cluster_data)
         raise
