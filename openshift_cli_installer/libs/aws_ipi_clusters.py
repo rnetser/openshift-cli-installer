@@ -117,13 +117,6 @@ def download_openshift_install_binary(clusters, registry_config_file):
                 cluster["openshift-install-binary"] = os.path.join(
                     binary_dir, openshift_install_str
                 )
-            else:
-                click.secho(
-                    f"Failed to find a version url {version_url} in {versions_urls} for cluster {cluster['name']} "
-                    f"version {cluster['version']}",
-                    fg="red",
-                )
-                raise click.Abort()
 
         rc, _, err = run_command(
             command=shlex.split(
