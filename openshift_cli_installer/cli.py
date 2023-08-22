@@ -386,7 +386,6 @@ def main(
 
         aws_ipi_clusters = update_aws_clusters_versions(
             clusters=aws_ipi_clusters,
-            docker_config_file=docker_config_file,
         )
 
         aws_ipi_clusters = download_openshift_install_binary(

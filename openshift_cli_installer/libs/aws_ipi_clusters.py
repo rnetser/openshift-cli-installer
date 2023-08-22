@@ -178,12 +178,7 @@ def create_or_destroy_aws_ipi_cluster(
 
 
 @functools.cache
-def get_aws_versions(docker_config_json_dir_path=None):
-    # If running on openshift-ci we need to set `DOCKER_CONFIG`
-    if os.environ.get("OPENSHIFT_CI") == "true":
-        click.echo("Running in openshift ci")
-        os.environ["DOCKER_CONFIG"] = docker_config_json_dir_path
-
+def get_aws_versions():
     versions_dict = {}
     for source_repo in [
         "quay.io/openshift-release-dev/ocp-release",
@@ -197,13 +192,11 @@ def get_aws_versions(docker_config_json_dir_path=None):
     return versions_dict
 
 
-def update_aws_clusters_versions(clusters, docker_config_file=None, _test=False):
+def update_aws_clusters_versions(clusters, _test=False):
     for _cluster_data in clusters:
         _cluster_data["stream"] = _cluster_data.get("stream", "stable")
 
-    base_available_versions = get_all_versions(
-        docker_config_json_dir_path=os.path.dirname(docker_config_file), _test=_test
-    )
+    base_available_versions = get_all_versions(_test=_test)
 
     return set_clusters_versions(
         clusters=clusters,
@@ -211,13 +204,11 @@ def update_aws_clusters_versions(clusters, docker_config_file=None, _test=False)
     )
 
 
-def get_all_versions(docker_config_json_dir_path=None, _test=None):
+def get_all_versions(_test=None):
     if _test:
         with open("openshift_cli_installer/tests/all_aws_versions.json") as fd:
             base_available_versions = json.load(fd)
     else:
-        base_available_versions = get_aws_versions(
-            docker_config_json_dir_path=docker_config_json_dir_path
-        )
+        base_available_versions = get_aws_versions()
 
     return base_available_versions
