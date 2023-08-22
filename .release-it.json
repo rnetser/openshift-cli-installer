@@ -20,7 +20,7 @@
     "pushArgs": [
       "--follow-tags"
     ],
-    "pushRepo": "",
+    "pushRepo": ""
   },
   "github": {
     "release": true,
