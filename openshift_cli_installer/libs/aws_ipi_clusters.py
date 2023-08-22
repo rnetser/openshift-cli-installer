@@ -50,8 +50,9 @@ EOF
 def generate_unified_pull_secret(registry_config_file, docker_config_file):
     registry_config = get_pull_secret_data(registry_config_file=registry_config_file)
     docker_config = get_pull_secret_data(registry_config_file=docker_config_file)
+    docker_config["auths"].update(registry_config["auths"])
 
-    return json.dumps({**docker_config, **registry_config})
+    return json.dumps(docker_config)
 
 
 def create_install_config_file(
