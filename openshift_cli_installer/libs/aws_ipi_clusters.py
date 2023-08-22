@@ -47,19 +47,18 @@ EOF
 """
 
 
-def prepare_pull_secret(clusters, pull_secret):
-    for cluster in clusters:
-        pull_secret_file = os.path.join(cluster["auth-dir"], "pull-secret.json")
-        with open(pull_secret_file, "w") as fd:
-            fd.write(json.dumps(pull_secret))
+def generate_unified_pull_secret(registry_config_file, docker_config_file):
+    registry_config = get_pull_secret_data(registry_config_file=registry_config_file)
+    docker_config = get_pull_secret_data(registry_config_file=docker_config_file)
 
-        cluster["registry_config"] = pull_secret
-        cluster["pull-secret-file"] = pull_secret_file
+    return json.dumps({**docker_config, **registry_config})
 
 
-def create_install_config_file(clusters, registry_config_file, ssh_key_file):
-    pull_secret = json.dumps(
-        get_pull_secret_data(registry_config_file=registry_config_file)
+def create_install_config_file(
+    clusters, registry_config_file, ssh_key_file, docker_config_file
+):
+    pull_secret = generate_unified_pull_secret(
+        registry_config_file=registry_config_file, docker_config_file=docker_config_file
     )
     for _cluster in clusters:
         install_dir = _cluster["install-dir"]
@@ -198,14 +197,12 @@ def get_aws_versions(docker_config_json_dir_path=None):
     return versions_dict
 
 
-def update_aws_clusters_versions(
-    clusters, docker_config_json_dir_path=None, _test=False
-):
+def update_aws_clusters_versions(clusters, docker_config_file=None, _test=False):
     for _cluster_data in clusters:
         _cluster_data["stream"] = _cluster_data.get("stream", "stable")
 
     base_available_versions = get_all_versions(
-        docker_config_json_dir_path=docker_config_json_dir_path, _test=_test
+        docker_config_json_dir_path=os.path.dirname(docker_config_file), _test=_test
     )
 
     return set_clusters_versions(

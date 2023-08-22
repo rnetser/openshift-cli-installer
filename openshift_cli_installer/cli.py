@@ -231,11 +231,12 @@ registry-config file, can be obtained from https://console.redhat.com/openshift/
     show_default=True,
 )
 @click.option(
-    "--docker-config-json-dir-path",
+    "--docker-config-file",
     type=click.Path(exists=True),
+    default=os.path.expanduser("~/.docker/config.json"),
     help="""
     \b
-Path to directory which contains docker config.json file.
+Path to Docker config.json file.
 File must include token for `registry.ci.openshift.org`
 (Needed only for AWS IPI clusters)
     """,
@@ -323,7 +324,7 @@ def main(
     ssh_key_file,
     destroy_all_clusters,
     destroy_clusters_from_config_files,
-    docker_config_json_dir_path,
+    docker_config_file,
 ):
     """
     Create/Destroy Openshift cluster/s
@@ -385,7 +386,7 @@ def main(
 
         aws_ipi_clusters = update_aws_clusters_versions(
             clusters=aws_ipi_clusters,
-            docker_config_json_dir_path=docker_config_json_dir_path,
+            docker_config_file=docker_config_file,
         )
 
         aws_ipi_clusters = download_openshift_install_binary(
@@ -396,6 +397,7 @@ def main(
                 clusters=aws_ipi_clusters,
                 registry_config_file=registry_config_file,
                 ssh_key_file=ssh_key_file,
+                docker_config_file=docker_config_file,
             )
 
     if aws_managed_clusters:
