@@ -177,7 +177,7 @@ def verify_user_input(
         click.secho("At least one 'cluster' option must be provided.", fg="red")
         raise click.Abort()
 
-    if any([_cluster["platform"] == AWS_STR] for _cluster in cluster):
+    if any([_cluster["platform"] == AWS_STR for _cluster in cluster]):
         if not os.path.exists(ssh_key_file):
             click.secho(
                 f"SSH file is required for AWS installations. {ssh_key_file} file does not exist.",
