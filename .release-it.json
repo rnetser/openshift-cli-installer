@@ -20,13 +20,14 @@
     "pushArgs": [
       "--follow-tags"
     ],
-    "pushRepo": ""
+    "pushRepo": "",
+    "changelog": "git log --no-merges --pretty=format:\"* %s (%h) by %cn on %as\" ${from}...${to}"
   },
   "github": {
     "release": true,
     "releaseName": "Release ${version}",
     "releaseNotes": null,
-    "autoGenerate": true,
+    "autoGenerate": false,
     "preRelease": false,
     "draft": false,
     "tokenRef": "GITHUB_TOKEN",
