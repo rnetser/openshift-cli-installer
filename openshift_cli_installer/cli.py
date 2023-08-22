@@ -163,10 +163,12 @@ def check_existing_clusters(clusters, ocm_client):
         raise click.Abort()
 
 
-def verify_user_input(action, cluster, ssh_key_file):
+def verify_user_input(
+    action, cluster, ssh_key_file, docker_config_file, registry_config_file
+):
     if not action:
         click.secho(
-            "'action' must be provided, supported actions: `create`, `destroy`",
+            f"'action' must be provided, supported actions: `{CREATE_STR}`, `{DESTROY_STR}`",
             fg="red",
         )
         raise click.Abort()
@@ -175,9 +177,27 @@ def verify_user_input(action, cluster, ssh_key_file):
         click.secho("At least one 'cluster' option must be provided.", fg="red")
         raise click.Abort()
 
-    if not os.path.exists(ssh_key_file) and cluster[0]["platform"] == AWS_STR:
-        click.secho(f"ssh file {ssh_key_file} does not exist.", fg="red")
-        raise click.Abort()
+    if any([_cluster["platform"] == AWS_STR] for _cluster in cluster):
+        if not os.path.exists(ssh_key_file):
+            click.secho(
+                f"SSH file is required for AWS installations. {ssh_key_file} file does not exist.",
+                fg="red",
+            )
+            raise click.Abort()
+
+        if not os.path.exists(docker_config_file):
+            click.secho(
+                f"Docker config file is required for AWS installations. {docker_config_file} file does not exist.",
+                fg="red",
+            )
+            raise click.Abort()
+
+        if not registry_config_file or not os.path.exists(registry_config_file):
+            click.secho(
+                f"Registry config file is required for AWS installations. {registry_config_file} file does not exist.",
+                fg="red",
+            )
+            raise click.Abort()
 
     is_platform_supported(clusters=cluster)
 
@@ -231,11 +251,12 @@ registry-config file, can be obtained from https://console.redhat.com/openshift/
     show_default=True,
 )
 @click.option(
-    "--docker-config-json-dir-path",
-    type=click.Path(exists=True),
+    "--docker-config-file",
+    type=click.Path(),
+    default=os.path.expanduser("~/.docker/config.json"),
     help="""
     \b
-Path to directory which contains docker config.json file.
+Path to Docker config.json file.
 File must include token for `registry.ci.openshift.org`
 (Needed only for AWS IPI clusters)
     """,
@@ -323,7 +344,7 @@ def main(
     ssh_key_file,
     destroy_all_clusters,
     destroy_clusters_from_config_files,
-    docker_config_json_dir_path,
+    docker_config_file,
 ):
     """
     Create/Destroy Openshift cluster/s
@@ -345,7 +366,13 @@ def main(
             destroy_all_clusters=destroy_all_clusters,
         )
 
-    verify_user_input(action=action, cluster=cluster, ssh_key_file=ssh_key_file)
+    verify_user_input(
+        action=action,
+        cluster=cluster,
+        ssh_key_file=ssh_key_file,
+        docker_config_file=docker_config_file,
+        registry_config_file=registry_config_file,
+    )
 
     clusters_install_data_directory = (
         clusters_install_data_directory
@@ -385,7 +412,6 @@ def main(
 
         aws_ipi_clusters = update_aws_clusters_versions(
             clusters=aws_ipi_clusters,
-            docker_config_json_dir_path=docker_config_json_dir_path,
         )
 
         aws_ipi_clusters = download_openshift_install_binary(
@@ -396,6 +422,7 @@ def main(
                 clusters=aws_ipi_clusters,
                 registry_config_file=registry_config_file,
                 ssh_key_file=ssh_key_file,
+                docker_config_file=docker_config_file,
             )
 
     if aws_managed_clusters:

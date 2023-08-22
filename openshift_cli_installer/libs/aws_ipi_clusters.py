@@ -47,19 +47,19 @@ EOF
 """
 
 
-def prepare_pull_secret(clusters, pull_secret):
-    for cluster in clusters:
-        pull_secret_file = os.path.join(cluster["auth-dir"], "pull-secret.json")
-        with open(pull_secret_file, "w") as fd:
-            fd.write(json.dumps(pull_secret))
+def generate_unified_pull_secret(registry_config_file, docker_config_file):
+    registry_config = get_pull_secret_data(registry_config_file=registry_config_file)
+    docker_config = get_pull_secret_data(registry_config_file=docker_config_file)
+    docker_config["auths"].update(registry_config["auths"])
 
-        cluster["registry_config"] = pull_secret
-        cluster["pull-secret-file"] = pull_secret_file
+    return json.dumps(docker_config)
 
 
-def create_install_config_file(clusters, registry_config_file, ssh_key_file):
-    pull_secret = json.dumps(
-        get_pull_secret_data(registry_config_file=registry_config_file)
+def create_install_config_file(
+    clusters, registry_config_file, ssh_key_file, docker_config_file
+):
+    pull_secret = generate_unified_pull_secret(
+        registry_config_file=registry_config_file, docker_config_file=docker_config_file
     )
     for _cluster in clusters:
         install_dir = _cluster["install-dir"]
@@ -179,12 +179,7 @@ def create_or_destroy_aws_ipi_cluster(
 
 
 @functools.cache
-def get_aws_versions(docker_config_json_dir_path=None):
-    # If running on openshift-ci we need to set `DOCKER_CONFIG`
-    if os.environ.get("OPENSHIFT_CI") == "true":
-        click.echo("Running in openshift ci")
-        os.environ["DOCKER_CONFIG"] = docker_config_json_dir_path
-
+def get_aws_versions():
     versions_dict = {}
     for source_repo in [
         "quay.io/openshift-release-dev/ocp-release",
@@ -198,15 +193,11 @@ def get_aws_versions(docker_config_json_dir_path=None):
     return versions_dict
 
 
-def update_aws_clusters_versions(
-    clusters, docker_config_json_dir_path=None, _test=False
-):
+def update_aws_clusters_versions(clusters, _test=False):
     for _cluster_data in clusters:
         _cluster_data["stream"] = _cluster_data.get("stream", "stable")
 
-    base_available_versions = get_all_versions(
-        docker_config_json_dir_path=docker_config_json_dir_path, _test=_test
-    )
+    base_available_versions = get_all_versions(_test=_test)
 
     return set_clusters_versions(
         clusters=clusters,
@@ -214,13 +205,11 @@ def update_aws_clusters_versions(
     )
 
 
-def get_all_versions(docker_config_json_dir_path=None, _test=None):
+def get_all_versions(_test=None):
     if _test:
         with open("openshift_cli_installer/tests/all_aws_versions.json") as fd:
             base_available_versions = json.load(fd)
     else:
-        base_available_versions = get_aws_versions(
-            docker_config_json_dir_path=docker_config_json_dir_path
-        )
+        base_available_versions = get_aws_versions()
 
     return base_available_versions
