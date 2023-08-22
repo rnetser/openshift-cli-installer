@@ -21,13 +21,12 @@
       "--follow-tags"
     ],
     "pushRepo": "",
-    "changelog": "git log --pretty=format:\"* %s (%h) by %cn on %as\" ${from}...${to}"
   },
   "github": {
     "release": true,
     "releaseName": "Release ${version}",
     "releaseNotes": null,
-    "autoGenerate": false,
+    "autoGenerate": true,
     "preRelease": false,
     "draft": false,
     "tokenRef": "GITHUB_TOKEN",
