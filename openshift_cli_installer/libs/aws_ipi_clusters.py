@@ -11,9 +11,11 @@ from ocp_utilities.utils import run_command
 from openshift_cli_installer.utils.cluster_versions import set_clusters_versions
 from openshift_cli_installer.utils.const import CREATE_STR, DESTROY_STR
 from openshift_cli_installer.utils.helpers import (
+    add_cluster_info_to_cluster_data,
     bucket_object_name,
     cluster_shortuuid,
     dump_cluster_data_to_file,
+    get_cluster_object,
     get_manifests_path,
     zip_and_upload_to_s3,
 )
@@ -154,6 +156,10 @@ def create_or_destroy_aws_ipi_cluster(
             cluster_data=cluster_data,
             _shortuuid=_shortuuid,
             s3_bucket_path=s3_bucket_path,
+        )
+        cluster_data = add_cluster_info_to_cluster_data(
+            cluster_data=cluster_data,
+            cluster_object=get_cluster_object(cluster_data=cluster_data),
         )
         dump_cluster_data_to_file(cluster_data=cluster_data)
 

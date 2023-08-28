@@ -7,9 +7,7 @@ from pathlib import Path
 import click
 import rosa.cli
 import yaml
-from ocm_python_wrapper.cluster import Cluster
 from ocp_resources.job import Job
-from ocp_resources.utils import TimeoutSampler
 from python_terraform import IsNotFlagged, Terraform, TerraformCommandError
 
 from openshift_cli_installer.utils.const import (
@@ -18,9 +16,11 @@ from openshift_cli_installer.utils.const import (
     ROSA_STR,
 )
 from openshift_cli_installer.utils.helpers import (
+    add_cluster_info_to_cluster_data,
     bucket_object_name,
     cluster_shortuuid,
     dump_cluster_data_to_file,
+    get_cluster_object,
     get_manifests_path,
     zip_and_upload_to_s3,
 )
@@ -209,18 +209,6 @@ def extract_ocm_data_from_cluster_data(cluster_data):
     return ocm_token, ocm_env_url
 
 
-def get_cluster_object(cluster_data):
-    for sample in TimeoutSampler(
-        wait_timeout=tts(ts="5m"),
-        sleep=1,
-        func=Cluster,
-        client=cluster_data["ocm-client"],
-        name=cluster_data["cluster-name"],
-    ):
-        if sample and sample.exists:
-            return sample
-
-
 def prepare_managed_clusters_data(
     clusters, ocm_client, aws_account_id, aws_secret_access_key, aws_access_key_id
 ):
@@ -291,7 +279,6 @@ def rosa_create_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
     cluster_data["s3_object_name"] = bucket_object_name(
         cluster_data=cluster_data, _shortuuid=_shortuuid, s3_bucket_path=s3_bucket_path
     )
-    dump_cluster_data_to_file(cluster_data=cluster_data)
 
     try:
         rosa.cli.execute(
@@ -308,11 +295,17 @@ def rosa_create_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
         if _platform == ROSA_STR:
             wait_for_osd_cluster_ready_job(ocp_client=cluster_object.ocp_client)
 
+        cluster_data = add_cluster_info_to_cluster_data(
+            cluster_data=cluster_data, cluster_object=cluster_object
+        )
+        dump_cluster_data_to_file(cluster_data=cluster_data)
+
     except Exception as ex:
         click.secho(
             f"Failed to run cluster create for cluster {cluster_data['name']}\n{ex}",
             fg="red",
         )
+        dump_cluster_data_to_file(cluster_data=cluster_data)
         if s3_bucket_name and _platform == HYPERSHIFT_STR:
             zip_and_upload_to_s3(
                 uuid=_shortuuid,

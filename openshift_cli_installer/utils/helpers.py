@@ -9,9 +9,13 @@ import rosa.cli
 import shortuuid
 import yaml
 from clouds.aws.session_clients import s3_client
+from ocm_python_wrapper.cluster import Cluster
 from ocm_python_wrapper.ocm_client import OCMPythonClient
 from ocm_python_wrapper.versions import Versions
+from ocp_resources.route import Route
+from ocp_resources.utils import TimeoutSampler
 
+from openshift_cli_installer.libs.rosa_clusters import tts
 from openshift_cli_installer.utils.cluster_versions import set_clusters_versions
 from openshift_cli_installer.utils.const import (
     AWS_OSD_STR,
@@ -153,3 +157,33 @@ def update_rosa_osd_clusters_versions(
         clusters=clusters,
         base_available_versions=base_available_versions_dict,
     )
+
+
+def add_cluster_info_to_cluster_data(cluster_data, cluster_object):
+    ocp_client = cluster_object.ocp_client
+    cluster_data["cluster-id"] = cluster_object.cluster_id
+    cluster_data["api-url"] = ocp_client.configuration.host
+
+    console_route = Route(
+        name="console", namespace="openshift-console", client=ocp_client
+    )
+    if console_route.exists:
+        route_spec = console_route.instance.spec
+        cluster_data["console-url"] = f"{route_spec.port}:{route_spec.host}"
+    else:
+        click.secho("Console Route does not exist.", fg="red")
+        raise click.Abort()
+
+    return cluster_data
+
+
+def get_cluster_object(cluster_data):
+    for sample in TimeoutSampler(
+        wait_timeout=tts(ts="5m"),
+        sleep=1,
+        func=Cluster,
+        client=cluster_data["ocm-client"],
+        name=cluster_data["cluster-name"],
+    ):
+        if sample and sample.exists:
+            return sample
