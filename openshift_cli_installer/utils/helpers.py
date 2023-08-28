@@ -1,3 +1,4 @@
+import copy
 import os
 import re
 import shutil
@@ -104,7 +105,7 @@ def zip_and_upload_to_s3(
 
 
 def dump_cluster_data_to_file(cluster_data):
-    _cluster_data = dict(cluster_data)
+    _cluster_data = copy.copy(cluster_data)
     _cluster_data.pop("ocm-client", "")
     with open(
         os.path.join(_cluster_data["install-dir"], CLUSTER_DATA_YAML_FILENAME), "w"
@@ -159,6 +160,18 @@ def update_rosa_osd_clusters_versions(clusters, _test=False, _test_versions_dict
 
 
 def add_cluster_info_to_cluster_data(cluster_data, cluster_object):
+    """
+    Adds cluster information to the given cluster data dictionary.
+
+    `cluster-id`, `api-url` and `console-url` (when available) will be added to `cluster_data`.
+
+    Args:
+        cluster_data (dict): A dictionary containing cluster data.
+        cluster_object (ClusterObject): An object representing a cluster.
+
+    Returns:
+        dict: The updated cluster data dictionary.
+    """
     ocp_client = cluster_object.ocp_client
     cluster_data["cluster-id"] = cluster_object.cluster_id
     cluster_data["api-url"] = ocp_client.configuration.host

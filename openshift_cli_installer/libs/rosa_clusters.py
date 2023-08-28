@@ -162,15 +162,6 @@ def prepare_hypershift_vpc(cluster_data):
         raise
 
 
-# def extract_ocm_data_from_cluster_data(cluster_data):
-#     ocm_token = cluster_data["ocm-token"]
-#     ocm_env = cluster_data["ocm-env"]
-#     ocm_env_url = (
-#         None if ocm_env == "production" else f"https://api.{ocm_env}.openshift.com"
-#     )
-#     return ocm_token, ocm_env_url
-
-
 def prepare_managed_clusters_data(
     clusters,
     ocm_client,
@@ -289,9 +280,7 @@ def rosa_delete_cluster(cluster_data):
         cluster_data["install-dir"], CLUSTER_DATA_YAML_FILENAME
     )
 
-    if os.path.exists(base_cluster_data_path) and os.path.getsize(
-        base_cluster_data_path
-    ):
+    if os.path.exists(base_cluster_data_path):
         with open(base_cluster_data_path) as fd:
             base_cluster_data = yaml.safe_load(fd.read())
 
