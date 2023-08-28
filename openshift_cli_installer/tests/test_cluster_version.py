@@ -281,8 +281,6 @@ def test_rosa_cluster_version(clusters, expected):
         res = update_rosa_osd_clusters_versions(
             clusters=clusters,
             _test=True,
-            ocm_env=None,
-            ocm_token=None,
             _test_versions_dict=BASE_AVAILABLE_ROSA_VERSIONS_DICT,
         )
         assert res == expected
@@ -444,8 +442,6 @@ def test_osd_cluster_version(clusters, expected):
         res = update_rosa_osd_clusters_versions(
             clusters=clusters,
             _test=True,
-            ocm_env=None,
-            ocm_token=None,
             _test_versions_dict=BASE_AVAILABLE_OSD_VERSIONS_DICT,
         )
         assert res == expected
