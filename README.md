@@ -18,6 +18,8 @@ To pull the image: `podman pull quay.io/openshift-cli-installer`
     * `<cluster directory>/auth` contains `kubeconfig` and `kubeadmin-password` files
 * `--parallel`: To create / destroy clusters in parallel
 * Pass `--s3-bucket-name` (and optionally `--s3-bucket-path`) to backup <cluster directory> in an S3 bucket.  
+* `--ocm-token`: OCM token, defaults to `OCM_TOKEN` environment variable.
+* `--ocm-env`: OCM environment to deploy the cluster; available options: `stage` or `production` (defaults to `stage`)
 
 
 * AWS IPI clusters:
@@ -31,13 +33,9 @@ To pull the image: `podman pull quay.io/openshift-cli-installer`
 
 * ROSA / Hypershift clusters:
   * `platform=rosa`: Must pass in cluster parameters
-  * `--ocm-token`: OCM token, defaults to `OCM_TOKEN` environment variable.
-  * `--ocm-env`: OCM environment to deploy the cluster; available options: `stage` or `production` (defaults to `stage`)
 
 * AWS OSD clusters:
   * `platform=aws-osd`: Must pass in cluster parameters
-  * `--ocm-token`: OCM token, defaults to `OCM_TOKEN` environment variable.
-  * `--ocm-env`: OCM environment to deploy the cluster; available options: `stage` or `production` (defaults to `stage`)
   * `--aws-access-key-id`: AWS access key ID
   * `--aws-secret-access-key`: AWS secret access key
   * `--aws-account-id`: AWS account ID

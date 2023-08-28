@@ -128,7 +128,12 @@ def verify_processes_passed(processes, action):
         raise click.Abort()
 
 
-def create_openshift_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
+def create_openshift_cluster(
+    cluster_data,
+    ocm_client,
+    s3_bucket_name=None,
+    s3_bucket_path=None,
+):
     cluster_platform = cluster_data["platform"]
     if cluster_platform == AWS_STR:
         create_or_destroy_aws_ipi_cluster(
@@ -136,6 +141,7 @@ def create_openshift_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=N
             action=CREATE_STR,
             s3_bucket_name=s3_bucket_name,
             s3_bucket_path=s3_bucket_path,
+            ocm_client=ocm_client,
         )
 
     elif cluster_platform in (ROSA_STR, HYPERSHIFT_STR):
@@ -188,6 +194,7 @@ def verify_user_input(
     aws_access_key_id,
     aws_secret_access_key,
     aws_account_id,
+    ocm_token,
 ):
     if not action:
         click.secho(
@@ -236,6 +243,7 @@ def verify_user_input(
             raise click.Abort()
 
     is_platform_supported(clusters=cluster)
+    abort_no_ocm_token(ocm_token=ocm_token)
 
 
 @click.command("installer")
@@ -309,14 +317,14 @@ File must include token for `registry.ci.openshift.org`
 )
 @click.option(
     "--ocm-env",
-    help="OCM env to log in into. Needed for managed AWS cluster",
+    help="OCM env to log in into.",
     type=click.Choice(["stage", "production"]),
     default="stage",
     show_default=True,
 )
 @click.option(
     "--ocm-token",
-    help="OCM token, needed for managed AWS cluster.",
+    help="OCM token.",
     default=os.environ.get("OCM_TOKEN"),
 )
 @click.option(
@@ -430,6 +438,7 @@ def main(
         aws_access_key_id=aws_access_key_id,
         aws_secret_access_key=aws_secret_access_key,
         aws_account_id=aws_account_id,
+        ocm_token=ocm_token,
     )
 
     clusters_install_data_directory = (
@@ -437,7 +446,7 @@ def main(
         or "/openshift-cli-installer/clusters-install-data"
     )
     create = action == CREATE_STR
-    ocm_client = None
+    ocm_client = get_ocm_client(ocm_token=ocm_token, ocm_env=ocm_env)
     kwargs = {}
 
     (
@@ -446,17 +455,15 @@ def main(
         hypershift_clusters,
         aws_osd_clusters,
     ) = get_clusters_by_type(clusters=cluster)
-    if hypershift_clusters or rosa_clusters or aws_osd_clusters:
-        ocm_client = get_ocm_client(ocm_token=ocm_token, ocm_env=ocm_env)
-        if create:
-            if hypershift_clusters or rosa_clusters:
-                rosa_check_existing_clusters(
-                    clusters=hypershift_clusters + rosa_clusters, ocm_client=ocm_client
-                )
-            if aws_osd_clusters:
-                osd_check_existing_clusters(
-                    clusters=aws_osd_clusters, ocm_client=ocm_client
-                )
+    if (hypershift_clusters or rosa_clusters or aws_osd_clusters) and create:
+        if hypershift_clusters or rosa_clusters:
+            rosa_check_existing_clusters(
+                clusters=hypershift_clusters + rosa_clusters, ocm_client=ocm_client
+            )
+        if aws_osd_clusters:
+            osd_check_existing_clusters(
+                clusters=aws_osd_clusters, ocm_client=ocm_client
+            )
 
     if hypershift_clusters:
         is_region_support_hypershift(
@@ -494,7 +501,6 @@ def main(
             )
 
     if aws_managed_clusters:
-        abort_no_ocm_token(ocm_token)
         aws_managed_clusters = generate_cluster_dirs_path(
             clusters=aws_managed_clusters,
             base_directory=clusters_install_data_directory,
@@ -509,13 +515,15 @@ def main(
         if create:
             aws_managed_clusters = update_rosa_osd_clusters_versions(
                 clusters=aws_managed_clusters,
-                ocm_token=ocm_token,
-                ocm_env=ocm_env,
             )
 
     if create:
         kwargs.update(
-            {"s3_bucket_name": s3_bucket_name, "s3_bucket_path": s3_bucket_path}
+            {
+                "s3_bucket_name": s3_bucket_name,
+                "s3_bucket_path": s3_bucket_path,
+                "ocm_client": ocm_client,
+            }
         )
 
     processes = []

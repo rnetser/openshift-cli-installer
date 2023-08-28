@@ -140,7 +140,12 @@ def download_openshift_install_binary(clusters, registry_config_file):
 
 
 def create_or_destroy_aws_ipi_cluster(
-    cluster_data, action, s3_bucket_name=None, s3_bucket_path=None, cleanup=False
+    cluster_data,
+    action,
+    s3_bucket_name=None,
+    s3_bucket_path=None,
+    cleanup=False,
+    ocm_client=None,
 ):
     install_dir = cluster_data["install-dir"]
     binary_path = cluster_data["openshift-install-binary"]
@@ -157,6 +162,7 @@ def create_or_destroy_aws_ipi_cluster(
             _shortuuid=_shortuuid,
             s3_bucket_path=s3_bucket_path,
         )
+        cluster_data["ocm-client"] = ocm_client
         cluster_data = add_cluster_info_to_cluster_data(
             cluster_data=cluster_data,
             cluster_object=get_cluster_object(cluster_data=cluster_data),
@@ -179,7 +185,10 @@ def create_or_destroy_aws_ipi_cluster(
             if action == CREATE_STR:
                 click.echo("Cleaning leftovers.")
                 create_or_destroy_aws_ipi_cluster(
-                    cluster_data=cluster_data, action=DESTROY_STR, cleanup=True
+                    cluster_data=cluster_data,
+                    action=DESTROY_STR,
+                    cleanup=True,
+                    ocm_client=ocm_client,
                 )
 
         raise click.Abort()

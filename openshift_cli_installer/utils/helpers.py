@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 from functools import wraps
 from importlib.util import find_spec
@@ -15,7 +16,6 @@ from ocm_python_wrapper.versions import Versions
 from ocp_resources.route import Route
 from ocp_resources.utils import TimeoutSampler
 
-from openshift_cli_installer.libs.rosa_clusters import tts
 from openshift_cli_installer.utils.cluster_versions import set_clusters_versions
 from openshift_cli_installer.utils.const import (
     AWS_OSD_STR,
@@ -104,10 +104,12 @@ def zip_and_upload_to_s3(
 
 
 def dump_cluster_data_to_file(cluster_data):
+    _cluster_data = dict(cluster_data)
+    _cluster_data.pop("ocm-client", "")
     with open(
-        os.path.join(cluster_data["install-dir"], CLUSTER_DATA_YAML_FILENAME), "w"
+        os.path.join(_cluster_data["install-dir"], CLUSTER_DATA_YAML_FILENAME), "w"
     ) as fd:
-        fd.write(yaml.dump(cluster_data))
+        fd.write(yaml.dump(_cluster_data))
 
 
 def bucket_object_name(cluster_data, _shortuuid, s3_bucket_path=None):
@@ -126,9 +128,7 @@ def get_manifests_path():
     return manifests_path
 
 
-def update_rosa_osd_clusters_versions(
-    clusters, ocm_env, ocm_token, _test=False, _test_versions_dict=None
-):
+def update_rosa_osd_clusters_versions(clusters, _test=False, _test_versions_dict=None):
     if _test:
         base_available_versions_dict = _test_versions_dict
     else:
@@ -147,8 +147,7 @@ def update_rosa_osd_clusters_versions(
                         f"{'--hosted-cp' if cluster_data['platform'] == HYPERSHIFT_STR else ''}"
                     ),
                     aws_region=cluster_data["region"],
-                    ocm_env=ocm_env,
-                    token=ocm_token,
+                    ocm_client=cluster_data["ocm-client"],
                 )["out"]
                 _all_versions = [ver["raw_id"] for ver in base_available_versions]
                 base_available_versions_dict[channel_group] = _all_versions
@@ -169,10 +168,9 @@ def add_cluster_info_to_cluster_data(cluster_data, cluster_object):
     )
     if console_route.exists:
         route_spec = console_route.instance.spec
-        cluster_data["console-url"] = f"{route_spec.port}:{route_spec.host}"
-    else:
-        click.secho("Console Route does not exist.", fg="red")
-        raise click.Abort()
+        cluster_data["console-url"] = (
+            f"{route_spec.port.targetPort}://{route_spec.host}"
+        )
 
     return cluster_data
 
@@ -183,7 +181,41 @@ def get_cluster_object(cluster_data):
         sleep=1,
         func=Cluster,
         client=cluster_data["ocm-client"],
-        name=cluster_data["cluster-name"],
+        name=cluster_data["name"],
     ):
         if sample and sample.exists:
             return sample
+
+
+def tts(ts):
+    """
+    Convert time string to seconds.
+
+    Args:
+        ts (str): time string to convert, can be and int followed by s/m/h
+            if only numbers was sent return int(ts)
+
+    Example:
+        >>> tts(ts="1h")
+        3600
+        >>> tts(ts="3600")
+        3600
+
+    Returns:
+        int: Time in seconds
+    """
+    try:
+        time_and_unit = re.match(r"(?P<time>\d+)(?P<unit>\w)", str(ts)).groupdict()
+    except AttributeError:
+        return int(ts)
+
+    _time = int(time_and_unit["time"])
+    _unit = time_and_unit["unit"].lower()
+    if _unit == "s":
+        return _time
+    elif _unit == "m":
+        return _time * 60
+    elif _unit == "h":
+        return _time * 60 * 60
+    else:
+        return int(ts)
