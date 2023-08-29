@@ -32,7 +32,9 @@ from openshift_cli_installer.utils.const import (
     CREATE_STR,
     DESTROY_STR,
     HYPERSHIFT_STR,
+    PRODUCTION_STR,
     ROSA_STR,
+    STAGE_STR,
 )
 from openshift_cli_installer.utils.helpers import (
     add_ocm_client_to_cluster_dict,
@@ -85,7 +87,7 @@ def hypershift_regions(ocm_client):
 
 
 def is_region_support_hypershift(hypershift_clusters):
-    hypershift_regions_dict = {"production": None, "stage": None}
+    hypershift_regions_dict = {PRODUCTION_STR: None, STAGE_STR: None}
     for _cluster in hypershift_clusters:
         cluster_ocm_env = _cluster["ocm-env"]
         _hypershift_regions = hypershift_regions_dict[cluster_ocm_env]
