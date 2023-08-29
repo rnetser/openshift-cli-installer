@@ -20,6 +20,7 @@ from ocp_resources.utils import TimeoutSampler
 from openshift_cli_installer.utils.cluster_versions import set_clusters_versions
 from openshift_cli_installer.utils.const import (
     AWS_OSD_STR,
+    AWS_STR,
     CLUSTER_DATA_YAML_FILENAME,
     HYPERSHIFT_STR,
     PRODUCTION_STR,
@@ -241,7 +242,7 @@ def add_ocm_client_to_cluster_dict(clusters, ocm_token):
     for _cluster in clusters:
         ocm_env = (
             PRODUCTION_STR
-            if _cluster["platform"] == AWS_OSD_STR
+            if _cluster["platform"] == AWS_STR
             else _cluster.get("ocm-env", STAGE_STR)
         )
         if ocm_env not in supported_envs:
@@ -250,6 +251,7 @@ def add_ocm_client_to_cluster_dict(clusters, ocm_token):
                 f" envs: {supported_envs}"
             )
             raise click.Abort()
+
         _cluster["ocm-client"] = get_ocm_client(ocm_token=ocm_token, ocm_env=ocm_env)
 
     return clusters
