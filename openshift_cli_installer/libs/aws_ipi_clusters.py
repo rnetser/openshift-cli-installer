@@ -15,7 +15,6 @@ from openshift_cli_installer.utils.helpers import (
     bucket_object_name,
     cluster_shortuuid,
     dump_cluster_data_to_file,
-    get_cluster_object,
     get_manifests_path,
     get_ocm_client,
     zip_and_upload_to_s3,
@@ -166,7 +165,6 @@ def create_or_destroy_aws_ipi_cluster(
         if res:
             cluster_data = add_cluster_info_to_cluster_data(
                 cluster_data=cluster_data,
-                cluster_object=get_cluster_object(cluster_data=cluster_data),
             )
             dump_cluster_data_to_file(cluster_data=cluster_data)
 

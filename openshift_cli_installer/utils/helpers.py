@@ -16,6 +16,7 @@ from ocm_python_wrapper.ocm_client import OCMPythonClient
 from ocm_python_wrapper.versions import Versions
 from ocp_resources.route import Route
 from ocp_resources.utils import TimeoutSampler
+from ocp_utilities.infra import get_client
 
 from openshift_cli_installer.utils.cluster_versions import set_clusters_versions
 from openshift_cli_installer.utils.const import (
@@ -162,7 +163,7 @@ def update_rosa_osd_clusters_versions(clusters, _test=False, _test_versions_dict
     )
 
 
-def add_cluster_info_to_cluster_data(cluster_data, cluster_object):
+def add_cluster_info_to_cluster_data(cluster_data, cluster_object=None):
     """
     Adds cluster information to the given cluster data dictionary.
 
@@ -170,15 +171,19 @@ def add_cluster_info_to_cluster_data(cluster_data, cluster_object):
 
     Args:
         cluster_data (dict): A dictionary containing cluster data.
-        cluster_object (ClusterObject): An object representing a cluster.
+        cluster_object (ClusterObject, optional): An object representing a cluster.
+            Relevant for ROSA, Hypershift and OSD clusters.
 
     Returns:
         dict: The updated cluster data dictionary.
     """
-    ocp_client = cluster_object.ocp_client
-    cluster_data["cluster-id"] = cluster_object.cluster_id
-    cluster_data["api-url"] = ocp_client.configuration.host
+    if cluster_data["platform"] == AWS_STR:
+        ocp_client = get_client(config_file=f"{cluster_data['auth-dir']}/kubeconfig")
+    else:
+        ocp_client = cluster_object.ocp_client
+        cluster_data["cluster-id"] = cluster_object.cluster_id
 
+    cluster_data["api-url"] = ocp_client.configuration.host
     console_route = Route(
         name="console", namespace="openshift-console", client=ocp_client
     )
