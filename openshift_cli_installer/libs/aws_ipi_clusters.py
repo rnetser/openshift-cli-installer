@@ -17,6 +17,7 @@ from openshift_cli_installer.utils.helpers import (
     dump_cluster_data_to_file,
     get_cluster_object,
     get_manifests_path,
+    get_ocm_client,
     zip_and_upload_to_s3,
 )
 
@@ -229,3 +230,12 @@ def get_all_versions(_test=None):
         base_available_versions = get_aws_versions()
 
     return base_available_versions
+
+
+def prepare_base_aws_cluster_data(aws_ipi_clusters, ocm_token):
+    for _cluster in aws_ipi_clusters:
+        _cluster["ocm-client"] = get_ocm_client(
+            ocm_token=ocm_token, ocm_env=_cluster["ocm_env"]
+        )
+
+    return aws_ipi_clusters

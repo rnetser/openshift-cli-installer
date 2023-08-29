@@ -20,6 +20,7 @@ from openshift_cli_installer.libs.osd_clusters import (
 )
 from openshift_cli_installer.libs.rosa_clusters import (
     prepare_managed_clusters_data,
+    rosa_check_existing_clusters,
     rosa_create_cluster,
     rosa_delete_cluster,
 )
@@ -34,7 +35,7 @@ from openshift_cli_installer.utils.const import (
     ROSA_STR,
 )
 from openshift_cli_installer.utils.helpers import (
-    get_ocm_client,
+    add_ocm_client_to_cluster_dict,
     update_rosa_osd_clusters_versions,
 )
 
@@ -83,9 +84,15 @@ def hypershift_regions(ocm_client):
     ]
 
 
-def is_region_support_hypershift(ocm_client, hypershift_clusters):
-    _hypershift_regions = hypershift_regions(ocm_client=ocm_client)
+def is_region_support_hypershift(hypershift_clusters):
+    hypershift_regions_dict = {"production": None, "stage": None}
     for _cluster in hypershift_clusters:
+        cluster_ocm_env = _cluster["ocm-env"]
+        _hypershift_regions = hypershift_regions_dict[cluster_ocm_env]
+        if not _hypershift_regions:
+            _hypershift_regions = hypershift_regions(ocm_client=_cluster["ocm-client"])
+            hypershift_regions_dict[cluster_ocm_env] = _hypershift_regions
+
         _region = _cluster["region"]
         if _region not in _hypershift_regions:
             click.secho(
@@ -164,25 +171,6 @@ def destroy_openshift_cluster(cluster_data):
 
     elif cluster_platform == AWS_OSD_STR:
         osd_delete_cluster(cluster_data=cluster_data)
-
-
-def rosa_check_existing_clusters(clusters, ocm_client):
-    deployed_clusters_names = {
-        cluster["name"]
-        for cluster in rosa.cli.execute(
-            command="list clusters", aws_region="us-west-2", ocm_client=ocm_client
-        )["out"]
-    }
-    requested_clusters_name = {cluster["name"] for cluster in clusters}
-    duplicate_cluster_names = deployed_clusters_names.intersection(
-        requested_clusters_name
-    )
-    if duplicate_cluster_names:
-        click.secho(
-            f"At least one cluster already exists: {duplicate_cluster_names}",
-            fg="red",
-        )
-        raise click.Abort()
 
 
 def verify_user_input(
@@ -316,13 +304,6 @@ File must include token for `registry.ci.openshift.org`
     show_default=True,
 )
 @click.option(
-    "--ocm-env",
-    help="OCM env to log in into.",
-    type=click.Choice(["stage", "production"]),
-    default="stage",
-    show_default=True,
-)
-@click.option(
     "--ocm-token",
     help="OCM token.",
     default=os.environ.get("OCM_TOKEN"),
@@ -399,7 +380,6 @@ def main(
     s3_bucket_name,
     s3_bucket_path,
     ocm_token,
-    ocm_env,
     ssh_key_file,
     destroy_all_clusters,
     destroy_clusters_from_config_files,
@@ -445,8 +425,9 @@ def main(
         clusters_install_data_directory
         or "/openshift-cli-installer/clusters-install-data"
     )
+
+    clusters = add_ocm_client_to_cluster_dict(clusters=cluster, ocm_token=ocm_token)
     create = action == CREATE_STR
-    ocm_client = get_ocm_client(ocm_token=ocm_token, ocm_env=ocm_env)
     kwargs = {}
 
     (
@@ -454,24 +435,24 @@ def main(
         rosa_clusters,
         hypershift_clusters,
         aws_osd_clusters,
-    ) = get_clusters_by_type(clusters=cluster)
+    ) = get_clusters_by_type(clusters=clusters)
+    aws_managed_clusters = rosa_clusters + hypershift_clusters + aws_osd_clusters
+
     if (hypershift_clusters or rosa_clusters or aws_osd_clusters) and create:
         if hypershift_clusters or rosa_clusters:
             rosa_check_existing_clusters(
-                clusters=hypershift_clusters + rosa_clusters, ocm_client=ocm_client
+                clusters=hypershift_clusters + rosa_clusters, ocm_token=ocm_token
             )
         if aws_osd_clusters:
             osd_check_existing_clusters(
-                clusters=aws_osd_clusters, ocm_client=ocm_client
+                clusters=aws_osd_clusters,
             )
 
     if hypershift_clusters:
         is_region_support_hypershift(
-            ocm_client=ocm_client,
             hypershift_clusters=hypershift_clusters,
         )
 
-    aws_managed_clusters = rosa_clusters + hypershift_clusters + aws_osd_clusters
     if aws_ipi_clusters or aws_managed_clusters:
         _regions_to_verify = set()
         for _cluster in aws_ipi_clusters + aws_managed_clusters:
@@ -507,7 +488,6 @@ def main(
         )
         aws_managed_clusters = prepare_managed_clusters_data(
             clusters=aws_managed_clusters,
-            ocm_client=ocm_client,
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
             aws_account_id=aws_account_id,
@@ -522,7 +502,6 @@ def main(
             {
                 "s3_bucket_name": s3_bucket_name,
                 "s3_bucket_path": s3_bucket_path,
-                "ocm_client": ocm_client,
             }
         )
 

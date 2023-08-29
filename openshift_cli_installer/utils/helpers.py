@@ -22,7 +22,9 @@ from openshift_cli_installer.utils.const import (
     AWS_OSD_STR,
     CLUSTER_DATA_YAML_FILENAME,
     HYPERSHIFT_STR,
+    PRODUCTION_STR,
     ROSA_STR,
+    STAGE_STR,
 )
 
 
@@ -232,3 +234,22 @@ def tts(ts):
         return _time * 60 * 60
     else:
         return int(ts)
+
+
+def add_ocm_client_to_cluster_dict(clusters, ocm_token):
+    supported_envs = (PRODUCTION_STR, STAGE_STR)
+    for _cluster in clusters:
+        ocm_env = (
+            PRODUCTION_STR
+            if _cluster["platform"] == AWS_OSD_STR
+            else _cluster.get("ocm-env", STAGE_STR)
+        )
+        if ocm_env not in supported_envs:
+            click.secho(
+                f"{_cluster['name']} got unsupported OCM env - {ocm_env}, supported"
+                f" envs: {supported_envs}"
+            )
+            raise click.Abort()
+        _cluster["ocm-client"] = get_ocm_client(ocm_token=ocm_token, ocm_env=ocm_env)
+
+    return clusters

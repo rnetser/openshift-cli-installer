@@ -164,7 +164,6 @@ def prepare_hypershift_vpc(cluster_data):
 
 def prepare_managed_clusters_data(
     clusters,
-    ocm_client,
     aws_account_id,
     aws_secret_access_key,
     aws_access_key_id,
@@ -177,7 +176,6 @@ def prepare_managed_clusters_data(
         _cluster["aws-secret-access-key"] = aws_secret_access_key
         _cluster["aws-account-id"] = aws_account_id
         _cluster["multi-az"] = _cluster.get("multi-az", False)
-        _cluster["ocm-client"] = ocm_client
         if _cluster["platform"] == HYPERSHIFT_STR:
             _cluster["hosted-cp"] = "true"
             _cluster["tags"] = "dns:external"
@@ -307,4 +305,32 @@ def rosa_delete_cluster(cluster_data):
 
     if should_raise:
         click.secho(f"Failed to run cluster destroy\n{should_raise}", fg="red")
+        raise click.Abort()
+
+
+def rosa_check_existing_clusters(clusters, ocm_token):
+    all_duplicate_cluster_names = []
+    cluster_envs = set([_cluster["ocm-env"] for _cluster in clusters])
+    for cluster_env in cluster_envs:
+        deployed_clusters_names = {
+            cluster["name"]
+            for cluster in rosa.cli.execute(
+                command="list clusters",
+                aws_region="us-west-2",
+                token=ocm_token,
+                ocm_env=cluster_env,
+            )["out"]
+        }
+        requested_clusters_name = {cluster["name"] for cluster in clusters}
+        duplicate_cluster_names = deployed_clusters_names.intersection(
+            requested_clusters_name
+        )
+        if duplicate_cluster_names:
+            all_duplicate_cluster_names.extend(duplicate_cluster_names)
+
+    if all_duplicate_cluster_names:
+        click.secho(
+            f"At least one cluster already exists: {all_duplicate_cluster_names}",
+            fg="red",
+        )
         raise click.Abort()
