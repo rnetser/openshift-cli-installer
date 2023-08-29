@@ -177,11 +177,11 @@ def add_cluster_info_to_cluster_data(cluster_data, cluster_object=None):
     Returns:
         dict: The updated cluster data dictionary.
     """
-    if cluster_data["platform"] == AWS_STR:
-        ocp_client = get_client(config_file=f"{cluster_data['auth-dir']}/kubeconfig")
-    else:
+    if cluster_object:
         ocp_client = cluster_object.ocp_client
         cluster_data["cluster-id"] = cluster_object.cluster_id
+    else:
+        ocp_client = get_client(config_file=f"{cluster_data['auth-dir']}/kubeconfig")
 
     cluster_data["api-url"] = ocp_client.configuration.host
     console_route = Route(
