@@ -137,7 +137,6 @@ def verify_processes_passed(processes, action):
 
 def create_openshift_cluster(
     cluster_data,
-    ocm_client,
     s3_bucket_name=None,
     s3_bucket_path=None,
 ):
@@ -148,7 +147,6 @@ def create_openshift_cluster(
             action=CREATE_STR,
             s3_bucket_name=s3_bucket_name,
             s3_bucket_path=s3_bucket_path,
-            ocm_client=ocm_client,
         )
 
     elif cluster_platform in (ROSA_STR, HYPERSHIFT_STR):

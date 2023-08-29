@@ -1,7 +1,6 @@
 import click
 from ocm_python_wrapper.cluster import Cluster, Clusters
 
-from openshift_cli_installer.utils.const import PRODUCTION_STR, STAGE_STR
 from openshift_cli_installer.utils.helpers import (
     add_cluster_info_to_cluster_data,
     dump_cluster_data_to_file,
@@ -10,7 +9,7 @@ from openshift_cli_installer.utils.helpers import (
 
 
 def osd_check_existing_clusters(clusters):
-    clients = {PRODUCTION_STR: None, STAGE_STR: None}
+    clients = {}
     for _cluster in clusters:
         clients.setdefault(_cluster["ocm-env"], _cluster["ocm-client"])
 

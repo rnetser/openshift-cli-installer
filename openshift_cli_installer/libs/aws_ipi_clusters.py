@@ -146,7 +146,6 @@ def create_or_destroy_aws_ipi_cluster(
     s3_bucket_name=None,
     s3_bucket_path=None,
     cleanup=False,
-    ocm_client=None,
 ):
     install_dir = cluster_data["install-dir"]
     binary_path = cluster_data["openshift-install-binary"]
@@ -163,12 +162,13 @@ def create_or_destroy_aws_ipi_cluster(
             _shortuuid=_shortuuid,
             s3_bucket_path=s3_bucket_path,
         )
-        cluster_data["ocm-client"] = ocm_client
-        cluster_data = add_cluster_info_to_cluster_data(
-            cluster_data=cluster_data,
-            cluster_object=get_cluster_object(cluster_data=cluster_data),
-        )
-        dump_cluster_data_to_file(cluster_data=cluster_data)
+
+        if res:
+            cluster_data = add_cluster_info_to_cluster_data(
+                cluster_data=cluster_data,
+                cluster_object=get_cluster_object(cluster_data=cluster_data),
+            )
+            dump_cluster_data_to_file(cluster_data=cluster_data)
 
         if s3_bucket_name:
             zip_and_upload_to_s3(
@@ -189,7 +189,6 @@ def create_or_destroy_aws_ipi_cluster(
                     cluster_data=cluster_data,
                     action=DESTROY_STR,
                     cleanup=True,
-                    ocm_client=ocm_client,
                 )
 
         raise click.Abort()

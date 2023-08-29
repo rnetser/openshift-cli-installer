@@ -50,7 +50,7 @@ Every call to the openshift installer cli must have at least one `--cluster` opt
   * Parameter names should be separated by semicolons (`;`)
   * To set cluster create / destroy timeout, pass `--cluster ...timeout=1h'`; default is 30 minutes.
   * `timeout` and `expiration-time` format examples: `1h`, `30m`, `3600s`
-  * `ocm-env`: OCM environment to deploy the cluster; available options: `stage` or `production` (defaults to `stage`)
+  * `ocm-env`: OCM environment to deploy the cluster; available options: `stage` or `production` (defaults to `stage`). AWS-IPI clusters only use `production`.
   * AWS IPI:
     * To overwrite cluster config, check [install-config-template.j2](openshift_cli_installer/manifests/install-config-template.j2) parameters.
     * Every parameter (marked with double curly brackets in the template) can be overwritten.
@@ -180,7 +180,7 @@ podman run quay.io/redhat_msi/openshift-cli-installer \
 podman run quay.io/redhat_msi/openshift-cli-installer \
     --action destroy \
     --ocm-token=$OCM_TOKEN \
-    --cluster 'name=ipi1;region=us-east-2;version=4.14.0-ec.2;timeout=1h;ocm-env=production'
+    --cluster 'name=ipi1;region=us-east-2;version=4.14.0-ec.2;timeout=1h'
 ```
 
 ##### ROSA cluster
@@ -189,7 +189,7 @@ podman run quay.io/redhat_msi/openshift-cli-installer \
 podman run quay.io/redhat_msi/openshift-cli-installer \
     --action destroy \
     --ocm-token=$OCM_TOKEN \
-    --cluster 'name=rosa1;platform=rosa;region=us-east-2;version=4.13.4;timeout=1h'
+    --cluster 'name=rosa1;platform=rosa;region=us-east-2;version=4.13.4;timeout=1h;ocm-env=production'
 ```
 
 
