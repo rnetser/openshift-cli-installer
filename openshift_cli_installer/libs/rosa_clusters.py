@@ -7,13 +7,11 @@ from pathlib import Path
 import click
 import rosa.cli
 import yaml
-from ocp_resources.job import Job
 from python_terraform import IsNotFlagged, Terraform, TerraformCommandError
 
 from openshift_cli_installer.utils.const import (
     CLUSTER_DATA_YAML_FILENAME,
     HYPERSHIFT_STR,
-    ROSA_STR,
 )
 from openshift_cli_installer.utils.helpers import (
     add_cluster_info_to_cluster_data,
@@ -59,17 +57,6 @@ def set_cluster_auth(cluster_data, cluster_object):
 
     with open(os.path.join(auth_path, "kubeadmin-password"), "w") as fd:
         fd.write(cluster_object.kubeadmin_password)
-
-
-def wait_for_osd_cluster_ready_job(ocp_client):
-    job = Job(
-        client=ocp_client,
-        name="osd-cluster-ready",
-        namespace="openshift-monitoring",
-    )
-    job.wait_for_condition(
-        condition=job.Condition.COMPLETE, status="True", timeout=tts(ts="1h")
-    )
 
 
 def create_oidc(cluster_data):
@@ -245,9 +232,6 @@ def rosa_create_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
         cluster_object = get_cluster_object(cluster_data=cluster_data)
         cluster_object.wait_for_cluster_ready(wait_timeout=cluster_data["timeout"])
         set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
-
-        if _platform == ROSA_STR:
-            wait_for_osd_cluster_ready_job(ocp_client=cluster_object.ocp_client)
 
         cluster_data = add_cluster_info_to_cluster_data(
             cluster_data=cluster_data, cluster_object=cluster_object
