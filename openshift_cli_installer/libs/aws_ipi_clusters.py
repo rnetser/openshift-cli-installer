@@ -11,10 +11,12 @@ from ocp_utilities.utils import run_command
 from openshift_cli_installer.utils.cluster_versions import set_clusters_versions
 from openshift_cli_installer.utils.const import CREATE_STR, DESTROY_STR
 from openshift_cli_installer.utils.helpers import (
+    add_cluster_info_to_cluster_data,
     bucket_object_name,
     cluster_shortuuid,
     dump_cluster_data_to_file,
     get_manifests_path,
+    get_ocm_client,
     zip_and_upload_to_s3,
 )
 
@@ -138,7 +140,11 @@ def download_openshift_install_binary(clusters, registry_config_file):
 
 
 def create_or_destroy_aws_ipi_cluster(
-    cluster_data, action, s3_bucket_name=None, s3_bucket_path=None, cleanup=False
+    cluster_data,
+    action,
+    s3_bucket_name=None,
+    s3_bucket_path=None,
+    cleanup=False,
 ):
     install_dir = cluster_data["install-dir"]
     binary_path = cluster_data["openshift-install-binary"]
@@ -155,7 +161,14 @@ def create_or_destroy_aws_ipi_cluster(
             _shortuuid=_shortuuid,
             s3_bucket_path=s3_bucket_path,
         )
-        dump_cluster_data_to_file(cluster_data=cluster_data)
+
+        if res:
+            cluster_data = add_cluster_info_to_cluster_data(
+                cluster_data=cluster_data,
+            )
+            dump_cluster_data_to_file(cluster_data=cluster_data)
+
+            click.echo(f"Cluster {cluster_data['name']} created successfully")
 
         if s3_bucket_name:
             zip_and_upload_to_s3(
@@ -173,7 +186,9 @@ def create_or_destroy_aws_ipi_cluster(
             if action == CREATE_STR:
                 click.echo("Cleaning leftovers.")
                 create_or_destroy_aws_ipi_cluster(
-                    cluster_data=cluster_data, action=DESTROY_STR, cleanup=True
+                    cluster_data=cluster_data,
+                    action=DESTROY_STR,
+                    cleanup=True,
                 )
 
         raise click.Abort()
@@ -214,3 +229,12 @@ def get_all_versions(_test=None):
         base_available_versions = get_aws_versions()
 
     return base_available_versions
+
+
+def prepare_base_aws_cluster_data(aws_ipi_clusters, ocm_token):
+    for _cluster in aws_ipi_clusters:
+        _cluster["ocm-client"] = get_ocm_client(
+            ocm_token=ocm_token, ocm_env=_cluster["ocm_env"]
+        )
+
+    return aws_ipi_clusters
