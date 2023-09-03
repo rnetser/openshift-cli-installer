@@ -238,6 +238,8 @@ def rosa_create_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
         )
         dump_cluster_data_to_file(cluster_data=cluster_data)
 
+        click.echo(f"Cluster {cluster_data['name']} created successfully")
+
     except Exception as ex:
         click.secho(
             f"Failed to run cluster create for cluster {cluster_data['name']}\n{ex}",

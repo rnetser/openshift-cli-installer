@@ -168,6 +168,8 @@ def create_or_destroy_aws_ipi_cluster(
             )
             dump_cluster_data_to_file(cluster_data=cluster_data)
 
+            click.echo(f"Cluster {cluster_data['name']} created successfully")
+
         if s3_bucket_name:
             zip_and_upload_to_s3(
                 install_dir=install_dir,
