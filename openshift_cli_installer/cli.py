@@ -440,9 +440,7 @@ def main(
 
     if (hypershift_clusters or rosa_clusters or aws_osd_clusters) and create:
         if hypershift_clusters or rosa_clusters:
-            rosa_check_existing_clusters(
-                clusters=hypershift_clusters + rosa_clusters, ocm_token=ocm_token
-            )
+            rosa_check_existing_clusters(clusters=hypershift_clusters + rosa_clusters)
         if aws_osd_clusters:
             osd_check_existing_clusters(
                 clusters=aws_osd_clusters,
