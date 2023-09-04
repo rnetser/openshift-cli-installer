@@ -7,11 +7,14 @@ from pathlib import Path
 import click
 import rosa.cli
 import yaml
+from ocm_python_wrapper.cluster import Clusters
 from python_terraform import IsNotFlagged, Terraform, TerraformCommandError
 
 from openshift_cli_installer.utils.const import (
     CLUSTER_DATA_YAML_FILENAME,
     HYPERSHIFT_STR,
+    PRODUCTION_STR,
+    STAGE_STR,
 )
 from openshift_cli_installer.utils.helpers import (
     add_cluster_info_to_cluster_data,
@@ -20,6 +23,7 @@ from openshift_cli_installer.utils.helpers import (
     dump_cluster_data_to_file,
     get_cluster_object,
     get_manifests_path,
+    get_ocm_client,
     tts,
     zip_and_upload_to_s3,
 )
@@ -294,29 +298,31 @@ def rosa_delete_cluster(cluster_data):
         raise click.Abort()
 
 
-def rosa_check_existing_clusters(clusters, ocm_token):
-    all_duplicate_cluster_names = []
-    cluster_envs = set([_cluster["ocm-env"] for _cluster in clusters])
-    for cluster_env in cluster_envs:
-        deployed_clusters_names = {
-            cluster["name"]
-            for cluster in rosa.cli.execute(
-                command="list clusters",
-                aws_region="us-west-2",
-                token=ocm_token,
-                ocm_env=cluster_env,
-            )["out"]
-        }
-        requested_clusters_name = {cluster["name"] for cluster in clusters}
-        duplicate_cluster_names = deployed_clusters_names.intersection(
-            requested_clusters_name
-        )
-        if duplicate_cluster_names:
-            all_duplicate_cluster_names.extend(duplicate_cluster_names)
+def rosa_check_existing_clusters(clusters):
+    existing_clusters_list = []
+    ocm_token = clusters[0]["ocm-client"].api_client.token
 
-    if all_duplicate_cluster_names:
+    for env in [PRODUCTION_STR, STAGE_STR]:
+        click.echo(f"Fetching existing clusters from OCM {env} environment.")
+        client = get_ocm_client(ocm_token=ocm_token, ocm_env=env)
+        existing_clusters = Clusters(client=client).get()
+        existing_clusters_list.extend(
+            [
+                cluster.name
+                for cluster in existing_clusters
+                if cluster.rosa or cluster.hypershift
+            ]
+        )
+
+    duplicate_cluster_names = []
+    for _cluster in clusters:
+        cluster_name = _cluster["name"]
+        if cluster_name in existing_clusters_list:
+            duplicate_cluster_names.append(cluster_name)
+
+    if duplicate_cluster_names:
         click.secho(
-            f"At least one cluster already exists: {all_duplicate_cluster_names}",
+            f"At least one cluster already exists: {duplicate_cluster_names}",
             fg="red",
         )
         raise click.Abort()
