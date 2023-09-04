@@ -4,6 +4,7 @@ import re
 import shutil
 from functools import wraps
 from importlib.util import find_spec
+from pathlib import Path
 from time import sleep
 
 import click
@@ -260,3 +261,14 @@ def add_ocm_client_to_cluster_dict(clusters, ocm_token):
         _cluster["ocm-client"] = get_ocm_client(ocm_token=ocm_token, ocm_env=ocm_env)
 
     return clusters
+
+
+def set_cluster_auth(cluster_data, cluster_object):
+    auth_path = os.path.join(cluster_data["install-dir"], "auth")
+    Path(auth_path).mkdir(parents=True, exist_ok=True)
+
+    with open(os.path.join(auth_path, "kubeconfig"), "w") as fd:
+        fd.write(yaml.dump(cluster_object.kubeconfig))
+
+    with open(os.path.join(auth_path, "kubeadmin-password"), "w") as fd:
+        fd.write(cluster_object.kubeadmin_password)

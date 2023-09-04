@@ -2,7 +2,6 @@ import os
 import re
 import shutil
 from datetime import datetime, timedelta
-from pathlib import Path
 
 import click
 import rosa.cli
@@ -24,6 +23,7 @@ from openshift_cli_installer.utils.helpers import (
     get_cluster_object,
     get_manifests_path,
     get_ocm_client,
+    set_cluster_auth,
     tts,
     zip_and_upload_to_s3,
 )
@@ -50,17 +50,6 @@ def remove_leftovers(res, cluster_data):
                     ocm_client=cluster_data["ocm-client"],
                     aws_region=cluster_data["region"],
                 )
-
-
-def set_cluster_auth(cluster_data, cluster_object):
-    auth_path = os.path.join(cluster_data["install-dir"], "auth")
-    Path(auth_path).mkdir(parents=True, exist_ok=True)
-
-    with open(os.path.join(auth_path, "kubeconfig"), "w") as fd:
-        fd.write(yaml.dump(cluster_object.kubeconfig))
-
-    with open(os.path.join(auth_path, "kubeadmin-password"), "w") as fd:
-        fd.write(cluster_object.kubeadmin_password)
 
 
 def create_oidc(cluster_data):
