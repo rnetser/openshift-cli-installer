@@ -24,7 +24,6 @@ from openshift_cli_installer.utils.helpers import (
     get_ocm_client,
     set_cluster_auth,
     tts,
-    wait_for_cluster_exists,
     zip_and_upload_to_s3,
 )
 
@@ -224,7 +223,6 @@ def rosa_create_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
         )
 
         cluster_object = Cluster(name=cluster_data["name"], client=ocm_client)
-        wait_for_cluster_exists(cluster_object=cluster_object)
         cluster_object.wait_for_cluster_ready(wait_timeout=cluster_data["timeout"])
         set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
 
@@ -288,4 +286,34 @@ def rosa_delete_cluster(cluster_data):
 
     if should_raise:
         click.secho(f"Failed to run cluster destroy\n{should_raise}", fg="red")
+        raise click.Abort()
+
+
+def rosa_check_existing_clusters(clusters):
+    existing_clusters_list = []
+    ocm_token = clusters[0]["ocm-client"].api_client.token
+
+    for env in [PRODUCTION_STR, STAGE_STR]:
+        click.echo(f"Fetching existing clusters from OCM {env} environment.")
+        client = get_ocm_client(ocm_token=ocm_token, ocm_env=env)
+        existing_clusters = Clusters(client=client).get()
+        existing_clusters_list.extend(
+            [
+                cluster.name
+                for cluster in existing_clusters
+                if cluster.rosa or cluster.hypershift
+            ]
+        )
+
+    duplicate_cluster_names = []
+    for _cluster in clusters:
+        cluster_name = _cluster["name"]
+        if cluster_name in existing_clusters_list:
+            duplicate_cluster_names.append(cluster_name)
+
+    if duplicate_cluster_names:
+        click.secho(
+            f"At least one cluster already exists: {duplicate_cluster_names}",
+            fg="red",
+        )
         raise click.Abort()

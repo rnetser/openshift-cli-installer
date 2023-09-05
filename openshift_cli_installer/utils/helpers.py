@@ -16,7 +16,6 @@ from ocm_python_wrapper.cluster import Cluster
 from ocm_python_wrapper.ocm_client import OCMPythonClient
 from ocm_python_wrapper.versions import Versions
 from ocp_resources.route import Route
-from ocp_resources.utils import TimeoutSampler
 from ocp_utilities.infra import get_client
 
 from openshift_cli_installer.utils.cluster_versions import set_clusters_versions
@@ -195,16 +194,6 @@ def add_cluster_info_to_cluster_data(cluster_data, cluster_object=None):
         )
 
     return cluster_data
-
-
-def wait_for_cluster_exists(cluster_object):
-    for sample in TimeoutSampler(
-        wait_timeout=tts(ts="5m"),
-        sleep=1,
-        func=lambda: cluster_object.exists,
-    ):
-        if sample:
-            return
 
 
 def tts(ts):
