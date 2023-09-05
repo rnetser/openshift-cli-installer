@@ -5,6 +5,7 @@ from openshift_cli_installer.utils.helpers import (
     add_cluster_info_to_cluster_data,
     dump_cluster_data_to_file,
     get_cluster_object,
+    set_cluster_auth,
 )
 
 
@@ -50,11 +51,14 @@ def osd_create_cluster(cluster_data):
             channel_group=cluster_data["channel-group"],
             expiration_time=cluster_data.get("expiration-time"),
         )
+
+        cluster_object = get_cluster_object(cluster_data=cluster_data)
         cluster_data = add_cluster_info_to_cluster_data(
             cluster_data=cluster_data,
-            cluster_object=get_cluster_object(cluster_data=cluster_data),
+            cluster_object=cluster_object,
         )
         dump_cluster_data_to_file(cluster_data=cluster_data)
+        set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
 
     except Exception as ex:
         click.secho(
