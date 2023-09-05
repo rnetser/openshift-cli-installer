@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import click
 import rosa.cli
 import yaml
-from ocm_python_wrapper.cluster import Clusters
+from ocm_python_wrapper.cluster import Cluster, Clusters
 from python_terraform import IsNotFlagged, Terraform, TerraformCommandError
 
 from openshift_cli_installer.utils.const import (
@@ -20,7 +20,6 @@ from openshift_cli_installer.utils.helpers import (
     bucket_object_name,
     cluster_shortuuid,
     dump_cluster_data_to_file,
-    get_cluster_object,
     get_manifests_path,
     get_ocm_client,
     set_cluster_auth,
@@ -216,13 +215,14 @@ def rosa_create_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
     dump_cluster_data_to_file(cluster_data=cluster_data)
 
     try:
+        ocm_client = cluster_data["ocm-client"]
         rosa.cli.execute(
             command=command,
-            ocm_client=cluster_data["ocm-client"],
+            ocm_client=ocm_client,
             aws_region=cluster_data["region"],
         )
 
-        cluster_object = get_cluster_object(cluster_data=cluster_data)
+        cluster_object = Cluster(name=cluster_data["name"], client=ocm_client)
         cluster_object.wait_for_cluster_ready(wait_timeout=cluster_data["timeout"])
         set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
 
@@ -264,16 +264,18 @@ def rosa_delete_cluster(cluster_data):
         base_cluster_data.update(cluster_data)
 
     _cluster_data = base_cluster_data or cluster_data
-    command = f"delete cluster --cluster={_cluster_data['cluster-name']}"
+    name = _cluster_data["cluster-name"]
+    command = f"delete cluster --cluster={name}"
     try:
+        ocm_client = _cluster_data["ocm-client"]
         res = rosa.cli.execute(
             command=command,
-            ocm_client=cluster_data["ocm-client"],
-            aws_region=cluster_data["region"],
+            ocm_client=ocm_client,
+            aws_region=_cluster_data["region"],
         )
-        cluster_object = get_cluster_object(cluster_data=_cluster_data)
+        cluster_object = Cluster(name=name, client=ocm_client)
         cluster_object.wait_for_cluster_deletion(wait_timeout=_cluster_data["timeout"])
-        remove_leftovers(res=res, cluster_data=cluster_data)
+        remove_leftovers(res=res, cluster_data=_cluster_data)
 
     except rosa.cli.CommandExecuteError as ex:
         should_raise = ex
