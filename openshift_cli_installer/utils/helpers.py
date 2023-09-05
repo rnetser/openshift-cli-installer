@@ -12,7 +12,6 @@ import rosa.cli
 import shortuuid
 import yaml
 from clouds.aws.session_clients import s3_client
-from ocm_python_wrapper.cluster import Cluster
 from ocm_python_wrapper.ocm_client import OCMPythonClient
 from ocm_python_wrapper.versions import Versions
 from ocp_resources.route import Route
@@ -197,16 +196,14 @@ def add_cluster_info_to_cluster_data(cluster_data, cluster_object=None):
     return cluster_data
 
 
-def get_cluster_object(cluster_data):
+def wait_for_cluster_exists(cluster_object):
     for sample in TimeoutSampler(
         wait_timeout=tts(ts="5m"),
         sleep=1,
-        func=Cluster,
-        client=cluster_data["ocm-client"],
-        name=cluster_data["name"],
+        func=lambda: cluster_object.exists,
     ):
-        if sample and sample.exists:
-            return sample
+        if sample:
+            return
 
 
 def tts(ts):
