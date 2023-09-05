@@ -12,6 +12,7 @@ import rosa.cli
 import shortuuid
 import yaml
 from clouds.aws.session_clients import s3_client
+from ocm_python_wrapper.cluster import Cluster
 from ocm_python_wrapper.ocm_client import OCMPythonClient
 from ocm_python_wrapper.versions import Versions
 from ocp_resources.route import Route
