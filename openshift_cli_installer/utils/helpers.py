@@ -269,3 +269,24 @@ def set_cluster_auth(cluster_data, cluster_object):
 
     with open(os.path.join(auth_path, "kubeadmin-password"), "w") as fd:
         fd.write(cluster_object.kubeadmin_password)
+
+
+def check_existing_clusters(clusters):
+    ocm_clients_list = []
+    ocm_token = clusters[0]["ocm-client"].api_client.token
+    for env in [PRODUCTION_STR, STAGE_STR]:
+        ocm_clients_list.append(get_ocm_client(ocm_token=ocm_token, ocm_env=env))
+
+    existing_clusters_list = []
+    for _cluster in clusters:
+        cluster_name = _cluster["name"]
+        for ocm_client in ocm_clients_list:
+            if Cluster(client=ocm_client, name=cluster_name).exists:
+                existing_clusters_list.append(cluster_name)
+
+    if existing_clusters_list:
+        click.secho(
+            f"At least one cluster already exists: {existing_clusters_list}",
+            fg="red",
+        )
+        raise click.Abort()
