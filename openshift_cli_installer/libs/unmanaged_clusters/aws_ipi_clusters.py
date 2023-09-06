@@ -9,14 +9,16 @@ from jinja2 import DebugUndefined, Environment, FileSystemLoader, meta
 from ocp_utilities.utils import run_command
 
 from openshift_cli_installer.utils.cluster_versions import set_clusters_versions
-from openshift_cli_installer.utils.const import CREATE_STR, DESTROY_STR
-from openshift_cli_installer.utils.helpers import (
+from openshift_cli_installer.utils.clusters import (
     add_cluster_info_to_cluster_data,
-    bucket_object_name,
     cluster_shortuuid,
     dump_cluster_data_to_file,
-    get_manifests_path,
     get_ocm_client,
+)
+from openshift_cli_installer.utils.const import CREATE_STR, DESTROY_STR
+from openshift_cli_installer.utils.general import (
+    bucket_object_name,
+    get_manifests_path,
     zip_and_upload_to_s3,
 )
 

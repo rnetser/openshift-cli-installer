@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from openshift_cli_installer.utils.const import HYPERSHIFT_STR, TIMEOUT_60MIN
-from openshift_cli_installer.utils.helpers import tts
+from openshift_cli_installer.utils.general import tts
 
 
 def prepare_managed_clusters_data(

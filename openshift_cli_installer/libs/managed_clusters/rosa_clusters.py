@@ -8,17 +8,19 @@ import yaml
 from ocm_python_wrapper.cluster import Cluster
 from python_terraform import IsNotFlagged, Terraform, TerraformCommandError
 
+from openshift_cli_installer.utils.clusters import (
+    add_cluster_info_to_cluster_data,
+    cluster_shortuuid,
+    dump_cluster_data_to_file,
+    set_cluster_auth,
+)
 from openshift_cli_installer.utils.const import (
     CLUSTER_DATA_YAML_FILENAME,
     HYPERSHIFT_STR,
 )
-from openshift_cli_installer.utils.helpers import (
-    add_cluster_info_to_cluster_data,
+from openshift_cli_installer.utils.general import (
     bucket_object_name,
-    cluster_shortuuid,
-    dump_cluster_data_to_file,
     get_manifests_path,
-    set_cluster_auth,
     zip_and_upload_to_s3,
 )
 
