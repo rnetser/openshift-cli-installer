@@ -14,13 +14,11 @@ from openshift_cli_installer.libs.aws_ipi_clusters import (
 )
 from openshift_cli_installer.libs.destroy_clusters import destroy_clusters
 from openshift_cli_installer.libs.osd_clusters import (
-    osd_check_existing_clusters,
     osd_create_cluster,
     osd_delete_cluster,
 )
 from openshift_cli_installer.libs.rosa_clusters import (
     prepare_managed_clusters_data,
-    rosa_check_existing_clusters,
     rosa_create_cluster,
     rosa_delete_cluster,
 )
@@ -38,6 +36,7 @@ from openshift_cli_installer.utils.const import (
 )
 from openshift_cli_installer.utils.helpers import (
     add_ocm_client_to_cluster_dict,
+    check_existing_clusters,
     update_rosa_osd_clusters_versions,
 )
 
@@ -439,12 +438,9 @@ def main(
     aws_managed_clusters = rosa_clusters + hypershift_clusters + aws_osd_clusters
 
     if (hypershift_clusters or rosa_clusters or aws_osd_clusters) and create:
-        if hypershift_clusters or rosa_clusters:
-            rosa_check_existing_clusters(clusters=hypershift_clusters + rosa_clusters)
-        if aws_osd_clusters:
-            osd_check_existing_clusters(
-                clusters=aws_osd_clusters,
-            )
+        check_existing_clusters(
+            clusters=hypershift_clusters + rosa_clusters + aws_osd_clusters
+        )
 
     if hypershift_clusters:
         is_region_support_hypershift(

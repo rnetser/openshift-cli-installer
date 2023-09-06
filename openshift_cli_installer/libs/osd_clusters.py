@@ -1,35 +1,11 @@
 import click
-from ocm_python_wrapper.cluster import Cluster, Clusters
+from ocm_python_wrapper.cluster import Cluster
 
 from openshift_cli_installer.utils.helpers import (
     add_cluster_info_to_cluster_data,
     dump_cluster_data_to_file,
     set_cluster_auth,
 )
-
-
-def osd_check_existing_clusters(clusters):
-    clients = {}
-    for _cluster in clusters:
-        clients.setdefault(_cluster["ocm-env"], _cluster["ocm-client"])
-
-    all_duplicate_cluster_names = []
-    for client in clients.values():
-        for _cluster in Clusters(client=client).get():
-            duplicate_cluster_names = [
-                cluster_data["name"]
-                for cluster_data in clusters
-                if cluster_data["name"] == _cluster.name
-            ]
-            if duplicate_cluster_names:
-                all_duplicate_cluster_names.extend(duplicate_cluster_names)
-
-    if all_duplicate_cluster_names:
-        click.secho(
-            f"At least one cluster already exists: {all_duplicate_cluster_names}",
-            fg="red",
-        )
-        raise click.Abort()
 
 
 def osd_create_cluster(cluster_data):

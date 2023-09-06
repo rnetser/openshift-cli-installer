@@ -6,14 +6,12 @@ from datetime import datetime, timedelta
 import click
 import rosa.cli
 import yaml
-from ocm_python_wrapper.cluster import Cluster, Clusters
+from ocm_python_wrapper.cluster import Cluster
 from python_terraform import IsNotFlagged, Terraform, TerraformCommandError
 
 from openshift_cli_installer.utils.const import (
     CLUSTER_DATA_YAML_FILENAME,
     HYPERSHIFT_STR,
-    PRODUCTION_STR,
-    STAGE_STR,
 )
 from openshift_cli_installer.utils.helpers import (
     add_cluster_info_to_cluster_data,
@@ -21,7 +19,6 @@ from openshift_cli_installer.utils.helpers import (
     cluster_shortuuid,
     dump_cluster_data_to_file,
     get_manifests_path,
-    get_ocm_client,
     set_cluster_auth,
     tts,
     zip_and_upload_to_s3,
@@ -286,34 +283,4 @@ def rosa_delete_cluster(cluster_data):
 
     if should_raise:
         click.secho(f"Failed to run cluster destroy\n{should_raise}", fg="red")
-        raise click.Abort()
-
-
-def rosa_check_existing_clusters(clusters):
-    existing_clusters_list = []
-    ocm_token = clusters[0]["ocm-client"].api_client.token
-
-    for env in [PRODUCTION_STR, STAGE_STR]:
-        click.echo(f"Fetching existing clusters from OCM {env} environment.")
-        client = get_ocm_client(ocm_token=ocm_token, ocm_env=env)
-        existing_clusters = Clusters(client=client).get()
-        existing_clusters_list.extend(
-            [
-                cluster.name
-                for cluster in existing_clusters
-                if cluster.rosa or cluster.hypershift
-            ]
-        )
-
-    duplicate_cluster_names = []
-    for _cluster in clusters:
-        cluster_name = _cluster["name"]
-        if cluster_name in existing_clusters_list:
-            duplicate_cluster_names.append(cluster_name)
-
-    if duplicate_cluster_names:
-        click.secho(
-            f"At least one cluster already exists: {duplicate_cluster_names}",
-            fg="red",
-        )
         raise click.Abort()
