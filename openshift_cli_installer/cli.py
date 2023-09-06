@@ -13,12 +13,14 @@ from openshift_cli_installer.libs.aws_ipi_clusters import (
     update_aws_clusters_versions,
 )
 from openshift_cli_installer.libs.destroy_clusters import destroy_clusters
+from openshift_cli_installer.libs.managed_clusters.helpers import (
+    prepare_managed_clusters_data,
+)
 from openshift_cli_installer.libs.osd_clusters import (
     osd_create_cluster,
     osd_delete_cluster,
 )
 from openshift_cli_installer.libs.rosa_clusters import (
-    prepare_managed_clusters_data,
     rosa_create_cluster,
     rosa_delete_cluster,
 )
