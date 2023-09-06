@@ -13,7 +13,6 @@ from openshift_cli_installer.utils.clusters import (
     add_cluster_info_to_cluster_data,
     cluster_shortuuid,
     dump_cluster_data_to_file,
-    get_ocm_client,
 )
 from openshift_cli_installer.utils.const import CREATE_STR, DESTROY_STR
 from openshift_cli_installer.utils.general import (
@@ -231,12 +230,3 @@ def get_all_versions(_test=None):
         base_available_versions = get_aws_versions()
 
     return base_available_versions
-
-
-def prepare_base_aws_cluster_data(aws_ipi_clusters, ocm_token):
-    for _cluster in aws_ipi_clusters:
-        _cluster["ocm-client"] = get_ocm_client(
-            ocm_token=ocm_token, ocm_env=_cluster["ocm_env"]
-        )
-
-    return aws_ipi_clusters
