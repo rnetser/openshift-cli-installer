@@ -1,7 +1,6 @@
 import os
 import re
 import shutil
-from datetime import datetime, timedelta
 
 import click
 import rosa.cli
@@ -9,18 +8,19 @@ import yaml
 from ocm_python_wrapper.cluster import Cluster
 from python_terraform import IsNotFlagged, Terraform, TerraformCommandError
 
+from openshift_cli_installer.utils.clusters import (
+    add_cluster_info_to_cluster_data,
+    cluster_shortuuid,
+    dump_cluster_data_to_file,
+    set_cluster_auth,
+)
 from openshift_cli_installer.utils.const import (
     CLUSTER_DATA_YAML_FILENAME,
     HYPERSHIFT_STR,
 )
-from openshift_cli_installer.utils.helpers import (
-    add_cluster_info_to_cluster_data,
+from openshift_cli_installer.utils.general import (
     bucket_object_name,
-    cluster_shortuuid,
-    dump_cluster_data_to_file,
     get_manifests_path,
-    set_cluster_auth,
-    tts,
     zip_and_upload_to_s3,
 )
 
@@ -136,35 +136,6 @@ def prepare_hypershift_vpc(cluster_data):
         # Clean up already created resources from the plan
         destroy_hypershift_vpc(cluster_data=cluster_data)
         raise
-
-
-def prepare_managed_clusters_data(
-    clusters,
-    aws_account_id,
-    aws_secret_access_key,
-    aws_access_key_id,
-):
-    for _cluster in clusters:
-        _cluster["cluster-name"] = _cluster["name"]
-        _cluster["timeout"] = tts(ts=_cluster.get("timeout", "30m"))
-        _cluster["channel-group"] = _cluster.get("channel-group", "stable")
-        _cluster["aws-access-key-id"] = aws_access_key_id
-        _cluster["aws-secret-access-key"] = aws_secret_access_key
-        _cluster["aws-account-id"] = aws_account_id
-        _cluster["multi-az"] = _cluster.get("multi-az", False)
-        if _cluster["platform"] == HYPERSHIFT_STR:
-            _cluster["hosted-cp"] = "true"
-            _cluster["tags"] = "dns:external"
-            _cluster["machine-cidr"] = _cluster.get("cidr", "10.0.0.0/16")
-
-        expiration_time = _cluster.get("expiration-time")
-        if expiration_time:
-            _expiration_time = tts(ts=expiration_time)
-            _cluster["expiration-time"] = (
-                f"{(datetime.now() + timedelta(seconds=_expiration_time)).isoformat()}Z"
-            )
-
-    return clusters
 
 
 def rosa_create_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
