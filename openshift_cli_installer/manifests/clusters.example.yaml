@@ -1,0 +1,65 @@
+action: "create" # destroy
+registry_config_file: !ENV "${HOME}/registry-config.json"
+parallel: True
+clusters_install_data_directory: "/tmp/clusters-data"
+s3_bucket_name: "openshift-cli-installer"
+s3_bucket_path: "openshift-ci"
+ocm_token: !ENV "${OCM_TOKEN}"
+ssh_key_file: !ENV "${HOME}/.ssh/id_rsa.pub"
+docker_config_file: !ENV "${HOME}/.docker/config.json"
+aws_access_key_id: !ENV "${AWS_ACCESS_KEY}"
+aws_secret_access_key: !ENV "${AWS_SECRET_ACCESS_KEY}"
+aws_account_id: !ENV "${AWS_ACCOUNT_ID}"
+
+clusters:
+- name: osd-c1
+  platform: aws-osd
+  region: us-east-2
+  version: "4.13"
+  channel-group: stable
+  compute-machine-type: m5.4xlarge
+  timeout: 90m
+  replicas: 2
+  fips: True
+  ocm-env: stage
+  expiration-time: 1h
+
+- name: rosa-c1
+  platform: rosa
+  region: us-east-2
+  version: "4.13"
+  channel-group: stable
+  compute-machine-type: m5.4xlarge
+  timeout: 90m
+  replicas: 2
+  fips: True
+  ocm-env: stage
+
+- name: hyper-c1
+  platform: hypershift
+  region: us-west-2
+  version: "4.13"
+  channel-group: stable
+  compute-machine-type: m5.4xlarge
+  timeout: 90m
+  replicas: 2
+  ocm-env: stage
+  expiration-time: 1h
+  private_subnets:
+    - 10.0.1.0/24
+    - 10.0.2.0/24
+  public_subnets:
+    - 10.0.101.0/24
+    - 10.0.102.0/24
+  cidr: 10.0.0.0/16
+
+- name: aws-ipi-c1
+  base_domain: aws.domain.example.com
+  platform: aws
+  region: us-east-2
+  version: "4.13"
+  stream: stable
+  timeout: 1h
+  worker_replicas: 2
+  worker_flavor: m5.4xlarge
+  worker_root_disk_size: 128

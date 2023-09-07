@@ -78,7 +78,7 @@ def update_rosa_osd_clusters_versions(clusters, _test=False, _test_versions_dict
 
 def add_cluster_info_to_cluster_data(cluster_data, cluster_object=None):
     """
-    Adds cluster information to the given cluster data dictionary.
+    Adds cluster information to the given clusters data dictionary.
 
     `cluster-id`, `api-url` and `console-url` (when available) will be added to `cluster_data`.
 
