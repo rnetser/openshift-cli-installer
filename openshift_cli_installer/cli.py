@@ -356,7 +356,7 @@ S3 objects will be deleted upon successful deletion.
     show_default=True,
 )
 @click.option(
-    "--destroy-clusters-from-config-files",
+    "--destroy-clusters-from-s3-config-files",
     help=f"""
 \b
 Destroy clusters from a list of paths to `{CLUSTER_DATA_YAML_FILENAME}` files.
@@ -387,7 +387,7 @@ def main(
     ocm_token,
     ssh_key_file,
     destroy_all_clusters,
-    destroy_clusters_from_config_files,
+    destroy_clusters_from_s3_config_files,
     docker_config_file,
     aws_access_key_id,
     aws_secret_access_key,
@@ -397,21 +397,21 @@ def main(
     """
     Create/Destroy Openshift cluster/s
     """
-    if destroy_clusters_from_config_files and not s3_bucket_name:
+    if destroy_clusters_from_s3_config_files and not s3_bucket_name:
         click.secho(
             "`--s3-bucket-name` must be provided when running with"
-            " `--destroy-clusters-from-config-files`",
+            " `--destroy-clusters-from-s3-config-files`",
             fg="red",
         )
         raise click.Abort()
 
-    if destroy_all_clusters or destroy_clusters_from_config_files:
+    if destroy_all_clusters or destroy_clusters_from_s3_config_files:
         return destroy_clusters(
             s3_bucket_name=s3_bucket_name,
             s3_bucket_path=s3_bucket_path,
             clusters_install_data_directory=clusters_install_data_directory,
             registry_config_file=registry_config_file,
-            clusters_yaml_files=destroy_clusters_from_config_files,
+            clusters_yaml_files=destroy_clusters_from_s3_config_files,
             destroy_all_clusters=destroy_all_clusters,
         )
 
