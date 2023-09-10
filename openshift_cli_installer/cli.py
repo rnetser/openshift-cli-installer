@@ -143,23 +143,17 @@ def verify_processes_passed(processes, action):
 
 def create_openshift_cluster(
     cluster_data,
-    s3_bucket_name=None,
-    s3_bucket_path=None,
 ):
     cluster_platform = cluster_data["platform"]
     if cluster_platform == AWS_STR:
         create_or_destroy_aws_ipi_cluster(
             cluster_data=cluster_data,
             action=CREATE_STR,
-            s3_bucket_name=s3_bucket_name,
-            s3_bucket_path=s3_bucket_path,
         )
 
     elif cluster_platform in (ROSA_STR, HYPERSHIFT_STR):
         rosa_create_cluster(
             cluster_data=cluster_data,
-            s3_bucket_name=s3_bucket_name,
-            s3_bucket_path=s3_bucket_path,
         )
     elif cluster_platform == AWS_OSD_STR:
         osd_create_cluster(cluster_data=cluster_data)
@@ -238,10 +232,12 @@ def verify_user_input(
     abort_no_ocm_token(ocm_token=ocm_token)
 
 
-def add_s3_bucket_name(clusters, s3_bucket_path=None):
+def add_s3_bucket_data(clusters, s3_bucket_name, s3_bucket_path=None):
     for cluster in clusters:
         cluster["shortuuid"] = shortuuid.uuid()
-        cluster["s3_object_name"] = bucket_object_name(
+        cluster["s3-bucket-name"] = s3_bucket_name
+        cluster["s3-bucket-path"] = s3_bucket_path
+        cluster["s3-object-name"] = bucket_object_name(
             cluster_data=cluster, s3_bucket_path=s3_bucket_path
         )
 
@@ -377,7 +373,7 @@ S3 objects will be deleted upon successful deletion.
     help=f"""
 \b
 Destroy clusters from a list of paths to `{CLUSTER_DATA_YAML_FILENAME}` files.
-The yaml file must include `s3_object_name` with s3 objet name.
+The yaml file must include `s3-object-name` with s3 objet name.
 `--s3-bucket-name` and optionally `--s3-bucket-path` must be provided.
 S3 objects will be deleted upon successful deletion.
 For example:
@@ -473,6 +469,13 @@ def main(
 
     clusters = add_ocm_client_to_cluster_dict(clusters=clusters, ocm_token=ocm_token)
     create = action == CREATE_STR
+    if create and s3_bucket_name:
+        clusters = add_s3_bucket_data(
+            clusters=clusters,
+            s3_bucket_name=s3_bucket_name,
+            s3_bucket_path=s3_bucket_path,
+        )
+
     kwargs = {}
 
     (
@@ -536,18 +539,6 @@ def main(
             aws_managed_clusters = update_rosa_osd_clusters_versions(
                 clusters=aws_managed_clusters,
             )
-
-    if create:
-        if s3_bucket_name:
-            clusters = add_s3_bucket_name(
-                clusters=clusters, s3_bucket_path=s3_bucket_path
-            )
-        kwargs.update(
-            {
-                "s3_bucket_name": s3_bucket_name,
-                "s3_bucket_path": s3_bucket_path,
-            }
-        )
 
     processes = []
     action_func = create_openshift_cluster if create else destroy_openshift_cluster

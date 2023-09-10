@@ -48,7 +48,7 @@ def download_and_extract_s3_file(
         click.secho(f"{bucket_filepath} not found in {bucket} on {ex}", fg="red")
 
 
-def destroy_clusters_from_data_dict(cluster_data_dict, s3_bucket_name=None):
+def destroy_clusters_from_data_dict(cluster_data_dict):
     processes = []
 
     for cluster_type, clusters_data_list in cluster_data_dict.items():
@@ -58,7 +58,6 @@ def destroy_clusters_from_data_dict(cluster_data_dict, s3_bucket_name=None):
                 kwargs={
                     "cluster_data": cluster_data,
                     "cluster_type": cluster_type,
-                    "s3_bucket_name": s3_bucket_name,
                 },
             )
 
@@ -69,7 +68,7 @@ def destroy_clusters_from_data_dict(cluster_data_dict, s3_bucket_name=None):
         proc.join()
 
 
-def _destroy_cluster(cluster_data, cluster_type, s3_bucket_name=None):
+def _destroy_cluster(cluster_data, cluster_type):
     try:
         if cluster_type == AWS_STR:
             create_or_destroy_aws_ipi_cluster(
@@ -78,6 +77,7 @@ def _destroy_cluster(cluster_data, cluster_type, s3_bucket_name=None):
         else:
             rosa_delete_cluster(cluster_data=cluster_data)
 
+        s3_bucket_name = cluster_data.get("s3-bucket-name")
         if s3_bucket_name:
             delete_s3_object(cluster_data=cluster_data, s3_bucket_name=s3_bucket_name)
 
@@ -86,7 +86,7 @@ def _destroy_cluster(cluster_data, cluster_type, s3_bucket_name=None):
 
 
 def delete_s3_object(cluster_data, s3_bucket_name):
-    bucket_key = cluster_data["s3_object_name"]
+    bucket_key = cluster_data["s3-object-name"]
     click.echo(f"Delete {bucket_key} from bucket {s3_bucket_name}")
     s3_client().delete_object(Bucket=s3_bucket_name, Key=bucket_key)
 
@@ -159,7 +159,7 @@ def prepare_data_from_yaml_files(
     )
 
     files_list = [
-        cluster_data["s3_object_name"]
+        cluster_data["s3-object-name"]
         for data_list in clusters_data_dict.values()
         for cluster_data in data_list
     ]
@@ -176,7 +176,7 @@ def prepare_data_from_yaml_files(
     for _data_list in clusters_data_dict.values():
         for _cluster_data in _data_list:
             _cluster_data["install-dir"] = os.path.join(
-                extracted_target_dir, _cluster_data["s3_object_name"]
+                extracted_target_dir, _cluster_data["s3-object-name"]
             )
 
     return target_dir, clusters_data_dict
@@ -260,7 +260,7 @@ def destroy_clusters(
         )
 
     destroy_clusters_from_data_dict(
-        cluster_data_dict=clusters_data_dict, s3_bucket_name=s3_bucket_name
+        cluster_data_dict=clusters_data_dict,
     )
 
     for _dir in s3_target_dirs:

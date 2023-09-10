@@ -141,8 +141,6 @@ def download_openshift_install_binary(clusters, registry_config_file):
 def create_or_destroy_aws_ipi_cluster(
     cluster_data,
     action,
-    s3_bucket_name=None,
-    s3_bucket_path=None,
     cleanup=False,
 ):
     name = cluster_data["name"]
@@ -163,11 +161,12 @@ def create_or_destroy_aws_ipi_cluster(
 
             click.echo(f"Cluster {name} created successfully")
 
+        s3_bucket_name = cluster_data.get("s3-bucket-name")
         if s3_bucket_name:
             zip_and_upload_to_s3(
                 install_dir=install_dir,
                 s3_bucket_name=s3_bucket_name,
-                s3_bucket_path=s3_bucket_path,
+                s3_bucket_path=cluster_data["s3-bucket-path"],
                 uuid=cluster_data["shortuuid"],
             )
 

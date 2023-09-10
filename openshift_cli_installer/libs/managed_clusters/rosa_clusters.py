@@ -141,7 +141,7 @@ def prepare_hypershift_vpc(cluster_data):
     return cluster_data
 
 
-def rosa_create_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
+def rosa_create_cluster(cluster_data):
     hosted_cp_arg = "--hosted-cp"
     _platform = cluster_data["platform"]
     ignore_keys = (
@@ -206,15 +206,18 @@ def rosa_create_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
             fg="red",
         )
 
-        if s3_bucket_name and _platform == HYPERSHIFT_STR:
+        rosa_delete_cluster(cluster_data=cluster_data)
+        raise click.Abort()
+
+    finally:
+        s3_bucket_name = cluster_data.get("s3-bucket-name")
+        if s3_bucket_name:
             zip_and_upload_to_s3(
                 uuid=cluster_data["shortuuid"],
                 install_dir=cluster_data["install-dir"],
                 s3_bucket_name=s3_bucket_name,
-                s3_bucket_path=s3_bucket_path,
+                s3_bucket_path=cluster_data["s3-bucket-path"],
             )
-        rosa_delete_cluster(cluster_data=cluster_data)
-        raise click.Abort()
 
 
 def rosa_delete_cluster(cluster_data):
