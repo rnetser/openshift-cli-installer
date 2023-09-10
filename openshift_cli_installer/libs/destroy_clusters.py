@@ -15,9 +15,12 @@ from openshift_cli_installer.libs.unmanaged_clusters.aws_ipi_clusters import (
     download_openshift_install_binary,
 )
 from openshift_cli_installer.utils.const import (
+    AWS_OSD_STR,
     AWS_STR,
     CLUSTER_DATA_YAML_FILENAME,
     DESTROY_STR,
+    HYPERSHIFT_STR,
+    ROSA_STR,
 )
 
 
@@ -215,7 +218,12 @@ def destroy_clusters(
     clusters_yaml_files=None,
     destroy_all_clusters=False,
 ):
-    clusters_data_dict = {"aws": [], "rosa": [], "hypershift": []}
+    clusters_data_dict = {
+        AWS_STR: [],
+        ROSA_STR: [],
+        HYPERSHIFT_STR: [],
+        AWS_OSD_STR: [],
+    }
     cluster_dirs = []
     s3_target_dirs = []
     if destroy_all_clusters:
