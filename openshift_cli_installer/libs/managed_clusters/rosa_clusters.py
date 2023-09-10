@@ -10,7 +10,6 @@ from python_terraform import IsNotFlagged, Terraform
 
 from openshift_cli_installer.utils.clusters import (
     add_cluster_info_to_cluster_data,
-    cluster_shortuuid,
     dump_cluster_data_to_file,
     set_cluster_auth,
 )
@@ -19,7 +18,6 @@ from openshift_cli_installer.utils.const import (
     HYPERSHIFT_STR,
 )
 from openshift_cli_installer.utils.general import (
-    bucket_object_name,
     get_manifests_path,
     zip_and_upload_to_s3,
 )
@@ -181,10 +179,6 @@ def rosa_create_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
         else:
             command += f"{cmd} "
 
-    _shortuuid = cluster_shortuuid()
-    cluster_data["s3_object_name"] = bucket_object_name(
-        cluster_data=cluster_data, _shortuuid=_shortuuid, s3_bucket_path=s3_bucket_path
-    )
     dump_cluster_data_to_file(cluster_data=cluster_data)
 
     try:
@@ -214,7 +208,7 @@ def rosa_create_cluster(cluster_data, s3_bucket_name=None, s3_bucket_path=None):
 
         if s3_bucket_name and _platform == HYPERSHIFT_STR:
             zip_and_upload_to_s3(
-                uuid=_shortuuid,
+                uuid=cluster_data["shortuuid"],
                 install_dir=cluster_data["install-dir"],
                 s3_bucket_name=s3_bucket_name,
                 s3_bucket_path=s3_bucket_path,

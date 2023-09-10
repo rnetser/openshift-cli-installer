@@ -4,7 +4,6 @@ from pathlib import Path
 
 import click
 import rosa.cli
-import shortuuid
 import yaml
 from ocm_python_wrapper.cluster import Cluster
 from ocm_python_wrapper.ocm_client import OCMPythonClient
@@ -31,10 +30,6 @@ def get_ocm_client(ocm_token, ocm_env):
         api_host=ocm_env,
         discard_unknown_keys=True,
     ).client
-
-
-def cluster_shortuuid():
-    return shortuuid.uuid()
 
 
 def dump_cluster_data_to_file(cluster_data):
