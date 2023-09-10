@@ -436,6 +436,8 @@ def main(
         clusters_install_data_directory = yaml_config_data[
             "clusters_install_data_directory"
         ]
+        s3_bucket_name = yaml_config_data.get("s3_bucket_name")
+        s3_bucket_path = yaml_config_data.get("s3_bucket_path")
 
     verify_user_input(
         action=action,
