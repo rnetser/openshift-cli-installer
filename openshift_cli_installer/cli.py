@@ -4,7 +4,6 @@ from pathlib import Path
 
 import click
 import rosa.cli
-import shortuuid
 from clouds.aws.aws_utils import set_and_verify_aws_credentials
 from pyaml_env import parse_config
 
@@ -29,6 +28,7 @@ from openshift_cli_installer.libs.unmanaged_clusters.aws_ipi_clusters import (
 from openshift_cli_installer.utils.click_dict_type import DictParamType
 from openshift_cli_installer.utils.clusters import (
     add_ocm_client_to_cluster_dict,
+    add_s3_bucket_data,
     check_existing_clusters,
     update_rosa_osd_clusters_versions,
 )
@@ -43,7 +43,6 @@ from openshift_cli_installer.utils.const import (
     ROSA_STR,
     STAGE_STR,
 )
-from openshift_cli_installer.utils.general import bucket_object_name
 
 
 def get_clusters_by_type(clusters):
@@ -230,18 +229,6 @@ def verify_user_input(
 
     is_platform_supported(clusters=clusters)
     abort_no_ocm_token(ocm_token=ocm_token)
-
-
-def add_s3_bucket_data(clusters, s3_bucket_name, s3_bucket_path=None):
-    for cluster in clusters:
-        cluster["shortuuid"] = shortuuid.uuid()
-        cluster["s3-bucket-name"] = s3_bucket_name
-        cluster["s3-bucket-path"] = s3_bucket_path
-        cluster["s3-object-name"] = bucket_object_name(
-            cluster_data=cluster, s3_bucket_path=s3_bucket_path
-        )
-
-    return clusters
 
 
 @click.command("installer")

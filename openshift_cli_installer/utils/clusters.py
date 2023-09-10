@@ -4,6 +4,7 @@ from pathlib import Path
 
 import click
 import rosa.cli
+import shortuuid
 import yaml
 from ocm_python_wrapper.cluster import Cluster
 from ocm_python_wrapper.ocm_client import OCMPythonClient
@@ -21,6 +22,7 @@ from openshift_cli_installer.utils.const import (
     ROSA_STR,
     STAGE_STR,
 )
+from openshift_cli_installer.utils.general import bucket_object_name
 
 
 def get_ocm_client(ocm_token, ocm_env):
@@ -154,3 +156,15 @@ def check_existing_clusters(clusters):
             fg="red",
         )
         raise click.Abort()
+
+
+def add_s3_bucket_data(clusters, s3_bucket_name, s3_bucket_path=None):
+    for cluster in clusters:
+        cluster["shortuuid"] = shortuuid.uuid()
+        cluster["s3-bucket-name"] = s3_bucket_name
+        cluster["s3-bucket-path"] = s3_bucket_path
+        cluster["s3-object-name"] = bucket_object_name(
+            cluster_data=cluster, s3_bucket_path=s3_bucket_path
+        )
+
+    return clusters
