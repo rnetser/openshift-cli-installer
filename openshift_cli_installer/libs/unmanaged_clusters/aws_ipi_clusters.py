@@ -11,12 +11,10 @@ from ocp_utilities.utils import run_command
 from openshift_cli_installer.utils.cluster_versions import set_clusters_versions
 from openshift_cli_installer.utils.clusters import (
     add_cluster_info_to_cluster_data,
-    cluster_shortuuid,
     dump_cluster_data_to_file,
 )
 from openshift_cli_installer.utils.const import CREATE_STR, DESTROY_STR
 from openshift_cli_installer.utils.general import (
-    bucket_object_name,
     get_manifests_path,
     zip_and_upload_to_s3,
 )
@@ -143,8 +141,6 @@ def download_openshift_install_binary(clusters, registry_config_file):
 def create_or_destroy_aws_ipi_cluster(
     cluster_data,
     action,
-    s3_bucket_name=None,
-    s3_bucket_path=None,
     cleanup=False,
 ):
     name = cluster_data["name"]
@@ -157,13 +153,6 @@ def create_or_destroy_aws_ipi_cluster(
     )
 
     if action == CREATE_STR:
-        _shortuuid = cluster_shortuuid()
-        cluster_data["s3_object_name"] = bucket_object_name(
-            cluster_data=cluster_data,
-            _shortuuid=_shortuuid,
-            s3_bucket_path=s3_bucket_path,
-        )
-
         if res:
             cluster_data = add_cluster_info_to_cluster_data(
                 cluster_data=cluster_data,
@@ -172,12 +161,13 @@ def create_or_destroy_aws_ipi_cluster(
 
             click.echo(f"Cluster {name} created successfully")
 
+        s3_bucket_name = cluster_data.get("s3-bucket-name")
         if s3_bucket_name:
             zip_and_upload_to_s3(
                 install_dir=install_dir,
                 s3_bucket_name=s3_bucket_name,
-                s3_bucket_path=s3_bucket_path,
-                uuid=_shortuuid,
+                s3_bucket_path=cluster_data["s3-bucket-path"],
+                uuid=cluster_data["shortuuid"],
             )
 
     if not res:

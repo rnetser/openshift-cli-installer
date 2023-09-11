@@ -22,6 +22,7 @@ from openshift_cli_installer.utils.const import (
     ROSA_STR,
     STAGE_STR,
 )
+from openshift_cli_installer.utils.general import bucket_object_name
 
 
 def get_ocm_client(ocm_token, ocm_env):
@@ -31,10 +32,6 @@ def get_ocm_client(ocm_token, ocm_env):
         api_host=ocm_env,
         discard_unknown_keys=True,
     ).client
-
-
-def cluster_shortuuid():
-    return shortuuid.uuid()
 
 
 def dump_cluster_data_to_file(cluster_data):
@@ -111,6 +108,7 @@ def add_cluster_info_to_cluster_data(cluster_data, cluster_object=None):
 
 def add_ocm_client_to_cluster_dict(clusters, ocm_token):
     supported_envs = (PRODUCTION_STR, STAGE_STR)
+
     for _cluster in clusters:
         ocm_env = (
             PRODUCTION_STR
@@ -159,3 +157,15 @@ def check_existing_clusters(clusters):
             fg="red",
         )
         raise click.Abort()
+
+
+def add_s3_bucket_data(clusters, s3_bucket_name, s3_bucket_path=None):
+    for cluster in clusters:
+        cluster["shortuuid"] = shortuuid.uuid()
+        cluster["s3-bucket-name"] = s3_bucket_name
+        cluster["s3-bucket-path"] = s3_bucket_path
+        cluster["s3-object-name"] = bucket_object_name(
+            cluster_data=cluster, s3_bucket_path=s3_bucket_path
+        )
+
+    return clusters

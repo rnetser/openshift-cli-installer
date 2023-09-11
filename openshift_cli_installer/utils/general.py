@@ -73,9 +73,9 @@ def zip_and_upload_to_s3(
     return _base_name
 
 
-def bucket_object_name(cluster_data, _shortuuid, s3_bucket_path=None):
+def bucket_object_name(cluster_data, s3_bucket_path=None):
     return (
-        f"{f'{s3_bucket_path}/' if s3_bucket_path else ''}{cluster_data['name']}-{_shortuuid}.zip"
+        f"{f'{s3_bucket_path}/' if s3_bucket_path else ''}{cluster_data['name']}-{cluster_data['shortuuid']}.zip"
     )
 
 
