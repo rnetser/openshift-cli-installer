@@ -8,6 +8,9 @@ import click
 import yaml
 from clouds.aws.session_clients import s3_client
 
+from openshift_cli_installer.libs.managed_clusters.osd_clusters import (
+    osd_delete_cluster,
+)
 from openshift_cli_installer.libs.managed_clusters.rosa_clusters import (
     rosa_delete_cluster,
 )
@@ -76,6 +79,8 @@ def _destroy_cluster(cluster_data, cluster_type):
             create_or_destroy_aws_ipi_cluster(
                 cluster_data=cluster_data, action=DESTROY_STR
             )
+        elif cluster_type == AWS_OSD_STR:
+            osd_delete_cluster(cluster_data=cluster_data)
         else:
             rosa_delete_cluster(cluster_data=cluster_data)
 
