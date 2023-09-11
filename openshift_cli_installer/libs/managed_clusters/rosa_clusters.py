@@ -160,6 +160,10 @@ def rosa_create_cluster(cluster_data):
         "aws-account-id",
         "multi-az",
         "ocm-client",
+        "shortuuid",
+        "s3-object-name",
+        "s3-bucket-name",
+        "s3-bucket-path",
     )
     command = "create cluster --sts "
 
