@@ -413,6 +413,7 @@ def main(
             registry_config_file=registry_config_file,
             clusters_yaml_files=destroy_clusters_from_s3_config_files,
             destroy_all_clusters=destroy_all_clusters,
+            ocm_token=ocm_token,
         )
 
     if action and clusters_yaml_config_file:

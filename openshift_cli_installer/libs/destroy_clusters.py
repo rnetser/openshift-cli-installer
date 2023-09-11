@@ -1,3 +1,4 @@
+import copy
 import multiprocessing
 import os
 import shutil
@@ -14,6 +15,7 @@ from openshift_cli_installer.libs.unmanaged_clusters.aws_ipi_clusters import (
     create_or_destroy_aws_ipi_cluster,
     download_openshift_install_binary,
 )
+from openshift_cli_installer.utils.clusters import add_ocm_client_to_cluster_dict
 from openshift_cli_installer.utils.const import (
     AWS_OSD_STR,
     AWS_STR,
@@ -105,7 +107,7 @@ def prepare_cluster_directories(s3_bucket_path, dir_prefix):
     return extracted_target_dir, target_dir
 
 
-def get_clusters_data(cluster_dirs, clusters_dict):
+def set_clusters_data(cluster_dirs, clusters_dict, ocm_token):
     def _get_cluster_dict_from_yaml(_root, _cluster_filepath):
         with open(_cluster_filepath) as fd:
             _data = yaml.safe_load(fd.read())
@@ -122,7 +124,13 @@ def get_clusters_data(cluster_dirs, clusters_dict):
                     )
                     clusters_dict[data["platform"]].append(data)
 
-    return clusters_dict
+    _clusters_dict = copy.copy(clusters_dict)
+    for cluster_type, clusters_list in clusters_dict.items():
+        _clusters_dict[cluster_type] = add_ocm_client_to_cluster_dict(
+            clusters=clusters_list, ocm_token=ocm_token
+        )
+
+    return _clusters_dict
 
 
 def prepare_data_from_s3_bucket(s3_bucket_name, s3_bucket_path=None):
@@ -211,6 +219,7 @@ def get_files_from_s3_bucket(
 
 
 def destroy_clusters(
+    ocm_token,
     s3_bucket_name=None,
     s3_bucket_path=None,
     clusters_install_data_directory=None,
@@ -237,14 +246,18 @@ def destroy_clusters(
             cluster_dirs.append(s3_data_directory)
             s3_target_dirs.append(s3_target_dir)
 
-        clusters_data_dict = get_clusters_data(
-            cluster_dirs=cluster_dirs, clusters_dict=clusters_data_dict
+        clusters_data_dict = set_clusters_data(
+            cluster_dirs=cluster_dirs,
+            clusters_dict=clusters_data_dict,
+            ocm_token=ocm_token,
         )
 
     if clusters_yaml_files:
         dir_paths = [os.path.dirname(_file) for _file in clusters_yaml_files.split(",")]
-        clusters_data_dict = get_clusters_data(
-            cluster_dirs=dir_paths, clusters_dict=clusters_data_dict
+        clusters_data_dict = set_clusters_data(
+            cluster_dirs=dir_paths,
+            clusters_dict=clusters_data_dict,
+            ocm_token=ocm_token,
         )
         target_dir, clusters_data_dict = prepare_data_from_yaml_files(
             s3_bucket_name=s3_bucket_name,

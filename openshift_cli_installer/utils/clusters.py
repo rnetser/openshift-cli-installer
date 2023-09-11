@@ -108,6 +108,7 @@ def add_cluster_info_to_cluster_data(cluster_data, cluster_object=None):
 
 def add_ocm_client_to_cluster_dict(clusters, ocm_token):
     supported_envs = (PRODUCTION_STR, STAGE_STR)
+
     for _cluster in clusters:
         ocm_env = (
             PRODUCTION_STR
