@@ -27,7 +27,7 @@ from openshift_cli_installer.libs.unmanaged_clusters.aws_ipi_clusters import (
 )
 from openshift_cli_installer.utils.click_dict_type import DictParamType
 from openshift_cli_installer.utils.clusters import (
-    add_ocm_client_to_cluster_dict,
+    add_ocm_client_and_env_to_cluster_dict,
     add_s3_bucket_data,
     check_existing_clusters,
     update_rosa_osd_clusters_versions,
@@ -93,7 +93,7 @@ def hypershift_regions(ocm_client):
 def is_region_support_hypershift(hypershift_clusters):
     hypershift_regions_dict = {PRODUCTION_STR: None, STAGE_STR: None}
     for _cluster in hypershift_clusters:
-        cluster_ocm_env = _cluster.get("ocm-env", STAGE_STR)
+        cluster_ocm_env = _cluster["ocm-env"]
         _hypershift_regions = hypershift_regions_dict[cluster_ocm_env]
         if not _hypershift_regions:
             _hypershift_regions = hypershift_regions(ocm_client=_cluster["ocm-client"])
@@ -462,7 +462,9 @@ def main(
         or "/openshift-cli-installer/clusters-install-data"
     )
 
-    clusters = add_ocm_client_to_cluster_dict(clusters=clusters, ocm_token=ocm_token)
+    clusters = add_ocm_client_and_env_to_cluster_dict(
+        clusters=clusters, ocm_token=ocm_token
+    )
     create = action == CREATE_STR
     if create and s3_bucket_name:
         clusters = add_s3_bucket_data(

@@ -107,7 +107,7 @@ def add_cluster_info_to_cluster_data(cluster_data, cluster_object=None):
     return cluster_data
 
 
-def add_ocm_client_to_cluster_dict(clusters, ocm_token):
+def add_ocm_client_and_env_to_cluster_dict(clusters, ocm_token):
     supported_envs = (PRODUCTION_STR, STAGE_STR)
 
     for _cluster in clusters:
@@ -124,6 +124,8 @@ def add_ocm_client_to_cluster_dict(clusters, ocm_token):
             raise click.Abort()
 
         _cluster["ocm-client"] = get_ocm_client(ocm_token=ocm_token, ocm_env=ocm_env)
+        if not _cluster.get("ocm-env"):
+            _cluster["ocm-env"] = ocm_env
 
     return clusters
 
