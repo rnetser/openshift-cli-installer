@@ -24,6 +24,7 @@ from openshift_cli_installer.utils.const import (
     AWS_STR,
     CLUSTER_DATA_YAML_FILENAME,
     DESTROY_STR,
+    ERROR_LOG_COLOR,
     HYPERSHIFT_STR,
     ROSA_STR,
 )
@@ -50,7 +51,9 @@ def download_and_extract_s3_file(
         )
 
     except Exception as ex:
-        click.secho(f"{bucket_filepath} not found in {bucket} on {ex}", fg="red")
+        click.secho(
+            f"{bucket_filepath} not found in {bucket} on {ex}", fg=ERROR_LOG_COLOR
+        )
 
 
 def destroy_clusters_from_data_dict(cluster_data_dict):
@@ -89,7 +92,9 @@ def _destroy_cluster(cluster_data, cluster_type):
             delete_s3_object(cluster_data=cluster_data, s3_bucket_name=s3_bucket_name)
 
     except Exception as ex:
-        click.secho(f"Cannot delete cluster {cluster_data['name']} on {ex}", fg="red")
+        click.secho(
+            f"Cannot delete cluster {cluster_data['name']} on {ex}", fg=ERROR_LOG_COLOR
+        )
 
 
 def delete_s3_object(cluster_data, s3_bucket_name):

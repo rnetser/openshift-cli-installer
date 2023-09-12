@@ -13,7 +13,12 @@ from openshift_cli_installer.utils.clusters import (
     add_cluster_info_to_cluster_data,
     dump_cluster_data_to_file,
 )
-from openshift_cli_installer.utils.const import CREATE_STR, DESTROY_STR
+from openshift_cli_installer.utils.const import (
+    CREATE_STR,
+    DESTROY_STR,
+    ERROR_LOG_COLOR,
+    SUCCESS_LOG_COLOR,
+)
 from openshift_cli_installer.utils.general import (
     get_manifests_path,
     zip_and_upload_to_s3,
@@ -97,7 +102,8 @@ def get_install_config_j2_template(cluster_dict):
     undefined_variables = meta.find_undeclared_variables(env.parse(rendered))
     if undefined_variables:
         click.secho(
-            f"The following variables are undefined: {undefined_variables}", fg="red"
+            f"The following variables are undefined: {undefined_variables}",
+            fg=ERROR_LOG_COLOR,
         )
         raise click.Abort()
 
@@ -131,7 +137,7 @@ def download_openshift_install_binary(clusters, registry_config_file):
             click.secho(
                 f"Failed to get {openshift_install_str} for version {version_url},"
                 f" error: {err}",
-                fg="red",
+                fg=ERROR_LOG_COLOR,
             )
             raise click.Abort()
 
@@ -159,7 +165,7 @@ def create_or_destroy_aws_ipi_cluster(
             )
             dump_cluster_data_to_file(cluster_data=cluster_data)
 
-            click.echo(f"Cluster {name} created successfully")
+            click.secho(f"Cluster {name} created successfully", fg=SUCCESS_LOG_COLOR)
 
         s3_bucket_name = cluster_data.get("s3-bucket-name")
         if s3_bucket_name:
@@ -174,7 +180,7 @@ def create_or_destroy_aws_ipi_cluster(
         if not cleanup:
             click.secho(
                 f"Failed to run cluster {action}\n\tERR: {err}\n\tOUT: {out}.",
-                fg="red",
+                fg=ERROR_LOG_COLOR,
             )
             if action == CREATE_STR:
                 click.echo("Cleaning leftovers.")
@@ -187,7 +193,7 @@ def create_or_destroy_aws_ipi_cluster(
         raise click.Abort()
     else:
         if action == DESTROY_STR:
-            click.echo(f"Cluster {name} destroyed successfully")
+            click.secho(f"Cluster {name} destroyed successfully", fg=SUCCESS_LOG_COLOR)
 
 
 @functools.cache

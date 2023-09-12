@@ -38,6 +38,7 @@ from openshift_cli_installer.utils.const import (
     CLUSTER_DATA_YAML_FILENAME,
     CREATE_STR,
     DESTROY_STR,
+    ERROR_LOG_COLOR,
     HYPERSHIFT_STR,
     PRODUCTION_STR,
     ROSA_STR,
@@ -68,7 +69,7 @@ def is_platform_supported(clusters):
         if _platform not in supported_platform:
             click.secho(
                 f"Cluster platform '{_platform}' is not supported.\n{_cluster}",
-                fg="red",
+                fg=ERROR_LOG_COLOR,
             )
             raise click.Abort()
 
@@ -104,7 +105,7 @@ def is_region_support_hypershift(hypershift_clusters):
                 f"region '{_region}' does not supported {HYPERSHIFT_STR}."
                 f"\nSupported hypershift regions are: {_hypershift_regions}"
                 f"\n{_cluster}",
-                fg="red",
+                fg=ERROR_LOG_COLOR,
             )
             raise click.Abort()
 
@@ -123,7 +124,7 @@ def generate_cluster_dirs_path(clusters, base_directory):
 
 def abort_no_ocm_token(ocm_token):
     if not ocm_token:
-        click.secho("--ocm-token is required for clusters", fg="red")
+        click.secho("--ocm-token is required for clusters", fg=ERROR_LOG_COLOR)
         raise click.Abort()
 
 
@@ -136,7 +137,9 @@ def verify_processes_passed(processes, action):
             failed_processes[_proc.name] = _proc.exitcode
 
     if failed_processes:
-        click.secho(f"Some jobs failed to {action}: {failed_processes}\n", fg="red")
+        click.secho(
+            f"Some jobs failed to {action}: {failed_processes}\n", fg=ERROR_LOG_COLOR
+        )
         raise click.Abort()
 
 
@@ -185,12 +188,14 @@ def verify_user_input(
         click.secho(
             f"'action' must be provided, supported actions: `{CREATE_STR}`,"
             f" `{DESTROY_STR}`",
-            fg="red",
+            fg=ERROR_LOG_COLOR,
         )
         raise click.Abort()
 
     if not clusters:
-        click.secho("At least one '--cluster' option must be provided.", fg="red")
+        click.secho(
+            "At least one '--cluster' option must be provided.", fg=ERROR_LOG_COLOR
+        )
         raise click.Abort()
 
     if any([_cluster["platform"] == AWS_STR for _cluster in clusters]):
@@ -198,7 +203,7 @@ def verify_user_input(
             click.secho(
                 f"SSH file is required for AWS installations. {ssh_key_file} file does"
                 " not exist.",
-                fg="red",
+                fg=ERROR_LOG_COLOR,
             )
             raise click.Abort()
 
@@ -206,7 +211,7 @@ def verify_user_input(
             click.secho(
                 "Docker config file is required for AWS installations."
                 f" {docker_config_file} file does not exist.",
-                fg="red",
+                fg=ERROR_LOG_COLOR,
             )
             raise click.Abort()
 
@@ -214,7 +219,7 @@ def verify_user_input(
             click.secho(
                 "Registry config file is required for AWS installations."
                 f" {registry_config_file} file does not exist.",
-                fg="red",
+                fg=ERROR_LOG_COLOR,
             )
             raise click.Abort()
 
@@ -223,7 +228,7 @@ def verify_user_input(
             click.secho(
                 "--aws-account_id and --aws-secret-access-key and aws-access-key-id"
                 " required for AWS OSD installations.",
-                fg="red",
+                fg=ERROR_LOG_COLOR,
             )
             raise click.Abort()
 
@@ -401,7 +406,7 @@ def main(
         click.secho(
             "`--s3-bucket-name` must be provided when running with"
             " `--destroy-clusters-from-s3-config-files`",
-            fg="red",
+            fg=ERROR_LOG_COLOR,
         )
         raise click.Abort()
 

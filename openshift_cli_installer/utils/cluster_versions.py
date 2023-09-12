@@ -6,6 +6,7 @@ import semver
 from openshift_cli_installer.utils.const import (
     AWS_OSD_STR,
     AWS_STR,
+    ERROR_LOG_COLOR,
     HYPERSHIFT_STR,
     ROSA_STR,
 )
@@ -37,18 +38,19 @@ def set_clusters_versions(clusters, base_available_versions):
                     cluster_data["version"] = _ver
                     break
             else:
-                click.secho(f"{err_msg}", fg="red")
+                click.secho(f"{err_msg}", fg=ERROR_LOG_COLOR)
                 raise click.Abort()
         elif len(cluster_version.split(".")) < 2:
             click.secho(
-                f"Version must be at least x.y (4.3), got {cluster_version}", fg="red"
+                f"Version must be at least x.y (4.3), got {cluster_version}",
+                fg=ERROR_LOG_COLOR,
             )
             raise click.Abort()
         else:
             try:
                 cluster_data["version"] = all_stream_versions["latest"]
             except KeyError:
-                click.secho(f"{err_msg}", fg="red")
+                click.secho(f"{err_msg}", fg=ERROR_LOG_COLOR)
                 raise click.Abort()
 
         if platform == AWS_STR:
@@ -63,7 +65,7 @@ def set_clusters_versions(clusters, base_available_versions):
                 click.secho(
                     f"Cluster version url not found for {cluster_version} in"
                     f" {base_available_versions.keys()}",
-                    fg="red",
+                    fg=ERROR_LOG_COLOR,
                 )
                 raise click.Abort()
 
@@ -119,7 +121,8 @@ def filter_versions(version, base_versions_dict, platform, stream):
 
     if not versions_dict[stream][version_key]["versions"]:
         click.secho(
-            f"Cluster version {version} not found for stream {stream}", fg="red"
+            f"Cluster version {version} not found for stream {stream}",
+            fg=ERROR_LOG_COLOR,
         )
         raise click.Abort()
     return versions_dict
