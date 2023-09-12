@@ -6,6 +6,7 @@ from openshift_cli_installer.utils.clusters import (
     dump_cluster_data_to_file,
     set_cluster_auth,
 )
+from openshift_cli_installer.utils.const import ERROR_LOG_COLOR, SUCCESS_LOG_COLOR
 from openshift_cli_installer.utils.general import zip_and_upload_to_s3
 
 
@@ -37,12 +38,14 @@ def osd_create_cluster(cluster_data):
         dump_cluster_data_to_file(cluster_data=cluster_data)
         set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
 
-        click.echo(f"Cluster {cluster_data['name']} created successfully")
+        click.secho(
+            f"Cluster {cluster_data['name']} created successfully", fg=SUCCESS_LOG_COLOR
+        )
 
     except Exception as ex:
         click.secho(
             f"Failed to run cluster create for cluster {cluster_data['name']}\n{ex}",
-            fg="red",
+            fg=ERROR_LOG_COLOR,
         )
 
         osd_delete_cluster(cluster_data=cluster_data)
@@ -67,10 +70,10 @@ def osd_delete_cluster(cluster_data):
             client=cluster_data["ocm-client"],
             name=name,
         ).delete(timeout=cluster_data["timeout"])
-        click.echo(f"Cluster {name} destroyed successfully")
+        click.secho(f"Cluster {name} destroyed successfully", fg=SUCCESS_LOG_COLOR)
     except Exception as ex:
         click.secho(
             f"Failed to run cluster delete cluster {name}\n{ex}",
-            fg="red",
+            fg=ERROR_LOG_COLOR,
         )
         raise click.Abort()

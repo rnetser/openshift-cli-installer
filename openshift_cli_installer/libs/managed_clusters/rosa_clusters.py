@@ -15,7 +15,9 @@ from openshift_cli_installer.utils.clusters import (
 )
 from openshift_cli_installer.utils.const import (
     CLUSTER_DATA_YAML_FILENAME,
+    ERROR_LOG_COLOR,
     HYPERSHIFT_STR,
+    SUCCESS_LOG_COLOR,
 )
 from openshift_cli_installer.utils.general import (
     get_manifests_path,
@@ -57,7 +59,8 @@ def create_oidc(cluster_data):
     oidc_id = re.search(r'"id": "([a-z0-9]+)",', res["out"])
     if not oidc_id:
         click.secho(
-            f"Failed to get OIDC config for cluster {cluster_data['name']}", fg="red"
+            f"Failed to get OIDC config for cluster {cluster_data['name']}",
+            fg=ERROR_LOG_COLOR,
         )
         raise click.Abort()
 
@@ -202,12 +205,14 @@ def rosa_create_cluster(cluster_data):
         )
         dump_cluster_data_to_file(cluster_data=cluster_data)
 
-        click.echo(f"Cluster {cluster_data['name']} created successfully")
+        click.secho(
+            f"Cluster {cluster_data['name']} created successfully", fg=SUCCESS_LOG_COLOR
+        )
 
     except Exception as ex:
         click.secho(
             f"Failed to run cluster create for cluster {cluster_data['name']}\n{ex}",
-            fg="red",
+            fg=ERROR_LOG_COLOR,
         )
 
         rosa_delete_cluster(cluster_data=cluster_data)
@@ -259,7 +264,9 @@ def rosa_delete_cluster(cluster_data):
         delete_oidc(cluster_data=_cluster_data)
 
     if should_raise:
-        click.secho(f"Failed to run cluster destroy\n{should_raise}", fg="red")
+        click.secho(
+            f"Failed to run cluster destroy\n{should_raise}", fg=ERROR_LOG_COLOR
+        )
         raise click.Abort()
 
-    click.echo(f"Cluster {name} destroyed successfully")
+    click.secho(f"Cluster {name} destroyed successfully", fg=SUCCESS_LOG_COLOR)

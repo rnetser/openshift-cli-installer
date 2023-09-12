@@ -17,6 +17,7 @@ from openshift_cli_installer.utils.const import (
     AWS_OSD_STR,
     AWS_STR,
     CLUSTER_DATA_YAML_FILENAME,
+    ERROR_LOG_COLOR,
     HYPERSHIFT_STR,
     PRODUCTION_STR,
     ROSA_STR,
@@ -154,7 +155,7 @@ def check_existing_clusters(clusters):
     if existing_clusters_list:
         click.secho(
             f"At least one cluster already exists: {existing_clusters_list}",
-            fg="red",
+            fg=ERROR_LOG_COLOR,
         )
         raise click.Abort()
 
