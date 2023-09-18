@@ -120,17 +120,19 @@ def destroy_hypershift_vpc(cluster_data):
 
 
 def prepare_hypershift_vpc(cluster_data):
+    cluster_name = cluster_data["name"]
     shutil.copy(
         os.path.join(get_manifests_path(), "setup-vpc.tf"), cluster_data["install-dir"]
     )
-    click.echo(f"Preparing hypershift VPCs for cluster {cluster_data['name']}")
+    click.echo(f"Preparing hypershift VPCs for cluster {cluster_name}")
     terraform = terraform_init(cluster_data=cluster_data)
     terraform.plan(dir_or_plan="hypershift.plan")
     rc, _, err = terraform.apply(capture_output=True, skip_plan=True, auto_approve=True)
     if rc != 0:
         click.secho(
-            f"Create hypershift VPC for cluster {cluster_data['name']} failed with"
-            f" error: {err}, rolling back."
+            f"Create hypershift VPC for cluster {cluster_name} failed with"
+            f" error: {err}, rolling back.",
+            fg=ERROR_LOG_COLOR,
         )
         delete_oidc(cluster_data=cluster_data)
         # Clean up already created resources from the plan
@@ -167,6 +169,9 @@ def rosa_create_cluster(cluster_data):
         "s3-object-name",
         "s3-bucket-name",
         "s3-bucket-path",
+        "acm",
+        "acm-clusters",
+        "timeout-watch",
     )
     command = "create cluster --sts "
 
@@ -196,7 +201,8 @@ def rosa_create_cluster(cluster_data):
             aws_region=cluster_data["region"],
         )
 
-        cluster_object = Cluster(name=cluster_data["name"], client=ocm_client)
+        cluster_name = cluster_data["name"]
+        cluster_object = Cluster(name=cluster_name, client=ocm_client)
         cluster_object.wait_for_cluster_ready(wait_timeout=cluster_data["timeout"])
         set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
 
@@ -206,7 +212,7 @@ def rosa_create_cluster(cluster_data):
         dump_cluster_data_to_file(cluster_data=cluster_data)
 
         click.secho(
-            f"Cluster {cluster_data['name']} created successfully", fg=SUCCESS_LOG_COLOR
+            f"Cluster {cluster_name} created successfully", fg=SUCCESS_LOG_COLOR
         )
 
     except Exception as ex:
@@ -227,6 +233,8 @@ def rosa_create_cluster(cluster_data):
                 s3_bucket_name=s3_bucket_name,
                 s3_bucket_path=cluster_data["s3-bucket-path"],
             )
+
+    return cluster_data
 
 
 def rosa_delete_cluster(cluster_data):
@@ -270,3 +278,4 @@ def rosa_delete_cluster(cluster_data):
         raise click.Abort()
 
     click.secho(f"Cluster {name} destroyed successfully", fg=SUCCESS_LOG_COLOR)
+    return cluster_data
