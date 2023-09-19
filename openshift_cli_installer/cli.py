@@ -228,7 +228,7 @@ def main(**kwargs):
     )
 
     if destroy_clusters_from_s3_config_files or destroy_all_clusters:
-        destroy_clusters(
+        return destroy_clusters(
             s3_bucket_name=s3_bucket_name,
             s3_bucket_path=s3_bucket_path,
             clusters_install_data_directory=clusters_install_data_directory,
@@ -237,7 +237,6 @@ def main(**kwargs):
             destroy_all_clusters=destroy_all_clusters,
             ocm_token=ocm_token,
         )
-        return
 
     clusters = add_ocm_client_and_env_to_cluster_dict(
         clusters=clusters, ocm_token=ocm_token
