@@ -329,7 +329,7 @@ def destroy_s3_or_all_clusters(
         )
         raise click.Abort()
 
-    return destroy_clusters(
+    destroy_clusters(
         s3_bucket_name=s3_bucket_name,
         s3_bucket_path=s3_bucket_path,
         clusters_install_data_directory=clusters_install_data_directory,
