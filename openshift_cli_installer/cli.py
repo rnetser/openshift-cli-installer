@@ -4,11 +4,11 @@ import click
 from clouds.aws.aws_utils import set_and_verify_aws_credentials
 from pyaml_env import parse_config
 
+from openshift_cli_installer.libs.destroy_clusters import destroy_clusters
 from openshift_cli_installer.libs.managed_clusters.acm_clusters import (
     install_and_attach_for_acm,
 )
 from openshift_cli_installer.utils.cli_utils import (
-    destroy_s3_or_all_clusters,
     get_clusters_by_type,
     is_region_support_hypershift,
     prepare_aws_ipi_clusters,
@@ -211,16 +211,6 @@ def main(**kwargs):
     aws_secret_access_key = user_kwargs.get("aws_secret_access_key")
     aws_account_id = user_kwargs.get("aws_account_id")
 
-    destroy_s3_or_all_clusters(
-        destroy_clusters_from_s3_config_files=destroy_clusters_from_s3_config_files,
-        s3_bucket_name=s3_bucket_name,
-        s3_bucket_path=s3_bucket_path,
-        clusters_install_data_directory=clusters_install_data_directory,
-        registry_config_file=registry_config_file,
-        destroy_all_clusters=destroy_all_clusters,
-        ocm_token=ocm_token,
-    )
-
     verify_user_input(
         action=action,
         clusters=clusters,
@@ -232,7 +222,20 @@ def main(**kwargs):
         aws_secret_access_key=aws_secret_access_key,
         aws_account_id=aws_account_id,
         ocm_token=ocm_token,
+        destroy_clusters_from_s3_config_files=destroy_clusters_from_s3_config_files,
+        s3_bucket_name=s3_bucket_name,
     )
+
+    if destroy_clusters_from_s3_config_files or destroy_all_clusters:
+        return destroy_clusters(
+            s3_bucket_name=s3_bucket_name,
+            s3_bucket_path=s3_bucket_path,
+            clusters_install_data_directory=clusters_install_data_directory,
+            registry_config_file=registry_config_file,
+            clusters_yaml_files=destroy_clusters_from_s3_config_files,
+            destroy_all_clusters=destroy_all_clusters,
+            ocm_token=ocm_token,
+        )
 
     clusters = add_ocm_client_and_env_to_cluster_dict(
         clusters=clusters, ocm_token=ocm_token
