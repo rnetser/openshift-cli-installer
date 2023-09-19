@@ -211,15 +211,19 @@ def main(**kwargs):
     aws_secret_access_key = user_kwargs.get("aws_secret_access_key")
     aws_account_id = user_kwargs.get("aws_account_id")
 
-    destroy_s3_or_all_clusters(
-        destroy_clusters_from_s3_config_files=destroy_clusters_from_s3_config_files,
-        s3_bucket_name=s3_bucket_name,
-        s3_bucket_path=s3_bucket_path,
-        clusters_install_data_directory=clusters_install_data_directory,
-        registry_config_file=registry_config_file,
-        destroy_all_clusters=destroy_all_clusters,
-        ocm_token=ocm_token,
-    )
+    if user_kwargs.get("destroy_clusters_from_s3_config_files") or user_kwargs.get(
+        "destroy_all_clusters"
+    ):
+        destroy_s3_or_all_clusters(
+            destroy_clusters_from_s3_config_files=destroy_clusters_from_s3_config_files,
+            s3_bucket_name=s3_bucket_name,
+            s3_bucket_path=s3_bucket_path,
+            clusters_install_data_directory=clusters_install_data_directory,
+            registry_config_file=registry_config_file,
+            destroy_all_clusters=destroy_all_clusters,
+            ocm_token=ocm_token,
+        )
+        return
 
     verify_user_input(
         action=action,

@@ -329,16 +329,15 @@ def destroy_s3_or_all_clusters(
         )
         raise click.Abort()
 
-    if destroy_all_clusters or destroy_clusters_from_s3_config_files:
-        return destroy_clusters(
-            s3_bucket_name=s3_bucket_name,
-            s3_bucket_path=s3_bucket_path,
-            clusters_install_data_directory=clusters_install_data_directory,
-            registry_config_file=registry_config_file,
-            clusters_yaml_files=destroy_clusters_from_s3_config_files,
-            destroy_all_clusters=destroy_all_clusters,
-            ocm_token=ocm_token,
-        )
+    return destroy_clusters(
+        s3_bucket_name=s3_bucket_name,
+        s3_bucket_path=s3_bucket_path,
+        clusters_install_data_directory=clusters_install_data_directory,
+        registry_config_file=registry_config_file,
+        clusters_yaml_files=destroy_clusters_from_s3_config_files,
+        destroy_all_clusters=destroy_all_clusters,
+        ocm_token=ocm_token,
+    )
 
 
 def prepare_aws_ipi_clusters(
