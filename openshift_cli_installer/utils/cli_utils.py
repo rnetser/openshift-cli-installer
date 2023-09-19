@@ -209,16 +209,17 @@ def verify_user_input(
     ocm_token,
     destroy_clusters_from_s3_config_files,
     s3_bucket_name,
-    destroy_all_clusters,
 ):
     abort_no_ocm_token(ocm_token=ocm_token)
 
-    if destroy_clusters_from_s3_config_files or destroy_all_clusters:
-        assert_destroy_clusters_user_input(
-            registry_config_file=registry_config_file,
-            destroy_clusters_from_s3_config_files=destroy_clusters_from_s3_config_files,
-            s3_bucket_name=s3_bucket_name,
-        )
+    if destroy_clusters_from_s3_config_files:
+        if not s3_bucket_name:
+            click.secho(
+                "`--s3-bucket-name` must be provided when running with"
+                " `--destroy-clusters-from-s3-config-files`",
+                fg=ERROR_LOG_COLOR,
+            )
+            raise click.Abort()
 
     else:
         if not action:
@@ -257,21 +258,6 @@ def verify_user_input(
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
         )
-
-
-def assert_destroy_clusters_user_input(
-    registry_config_file,
-    destroy_clusters_from_s3_config_files=None,
-    s3_bucket_name=None,
-):
-    assert_registry_config_file_exists(registry_config_file=registry_config_file)
-    if destroy_clusters_from_s3_config_files and not s3_bucket_name:
-        click.secho(
-            "`--s3-bucket-name` must be provided when running with"
-            " `--destroy-clusters-from-s3-config-files`",
-            fg=ERROR_LOG_COLOR,
-        )
-        raise click.Abort()
 
 
 def assert_aws_ipi_user_input(

@@ -223,7 +223,6 @@ def main(**kwargs):
         aws_account_id=aws_account_id,
         ocm_token=ocm_token,
         destroy_clusters_from_s3_config_files=destroy_clusters_from_s3_config_files,
-        destroy_all_clusters=destroy_all_clusters,
         s3_bucket_name=s3_bucket_name,
     )
 
