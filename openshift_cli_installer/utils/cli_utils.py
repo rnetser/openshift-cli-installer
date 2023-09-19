@@ -6,7 +6,6 @@ import click
 import rosa.cli
 from ocp_resources.utils import TimeoutWatch
 
-from openshift_cli_installer.libs.destroy_clusters import destroy_clusters
 from openshift_cli_installer.libs.managed_clusters.helpers import (
     prepare_managed_clusters_data,
 )
@@ -208,44 +207,71 @@ def verify_user_input(
     aws_secret_access_key,
     aws_account_id,
     ocm_token,
+    destroy_clusters_from_s3_config_files,
+    s3_bucket_name,
+    destroy_all_clusters,
 ):
-    if not action:
+    abort_no_ocm_token(ocm_token=ocm_token)
+
+    if destroy_clusters_from_s3_config_files or destroy_all_clusters:
+        assert_destroy_clusters_user_input(
+            registry_config_file=registry_config_file,
+            destroy_clusters_from_s3_config_files=destroy_clusters_from_s3_config_files,
+            s3_bucket_name=s3_bucket_name,
+        )
+
+    else:
+        if not action:
+            click.secho(
+                f"'action' must be provided, supported actions: `{CREATE_STR}`,"
+                f" `{DESTROY_STR}`",
+                fg=ERROR_LOG_COLOR,
+            )
+            raise click.Abort()
+
+        if not clusters:
+            click.secho(
+                "At least one '--cluster' option must be provided.", fg=ERROR_LOG_COLOR
+            )
+            raise click.Abort()
+
+        is_platform_supported(clusters=clusters)
+        assert_aws_ipi_user_input(
+            clusters=clusters,
+            ssh_key_file=ssh_key_file,
+            docker_config_file=docker_config_file,
+            registry_config_file=registry_config_file,
+        )
+        assert_osd_user_input(
+            clusters=clusters,
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            aws_account_id=aws_account_id,
+        )
+        assert_acm_clusters_user_input(
+            action=action,
+            clusters=clusters,
+            ssh_key_file=ssh_key_file,
+            private_ssh_key_file=private_ssh_key_file,
+            registry_config_file=registry_config_file,
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+        )
+
+
+def assert_destroy_clusters_user_input(
+    registry_config_file,
+    destroy_clusters_from_s3_config_files=None,
+    s3_bucket_name=None,
+):
+    assert_registry_config_file_exists(registry_config_file=registry_config_file)
+    if destroy_clusters_from_s3_config_files and not s3_bucket_name:
         click.secho(
-            f"'action' must be provided, supported actions: `{CREATE_STR}`,"
-            f" `{DESTROY_STR}`",
+            "`--s3-bucket-name` must be provided when running with"
+            " `--destroy-clusters-from-s3-config-files`",
             fg=ERROR_LOG_COLOR,
         )
         raise click.Abort()
-
-    if not clusters:
-        click.secho(
-            "At least one '--cluster' option must be provided.", fg=ERROR_LOG_COLOR
-        )
-        raise click.Abort()
-
-    abort_no_ocm_token(ocm_token=ocm_token)
-    is_platform_supported(clusters=clusters)
-    assert_aws_ipi_user_input(
-        clusters=clusters,
-        ssh_key_file=ssh_key_file,
-        docker_config_file=docker_config_file,
-        registry_config_file=registry_config_file,
-    )
-    assert_osd_user_input(
-        clusters=clusters,
-        aws_access_key_id=aws_access_key_id,
-        aws_secret_access_key=aws_secret_access_key,
-        aws_account_id=aws_account_id,
-    )
-    assert_acm_clusters_user_input(
-        action=action,
-        clusters=clusters,
-        ssh_key_file=ssh_key_file,
-        private_ssh_key_file=private_ssh_key_file,
-        registry_config_file=registry_config_file,
-        aws_access_key_id=aws_access_key_id,
-        aws_secret_access_key=aws_secret_access_key,
-    )
 
 
 def assert_aws_ipi_user_input(
@@ -310,34 +336,6 @@ def assert_acm_clusters_user_input(
                 fg=ERROR_LOG_COLOR,
             )
             raise click.Abort()
-
-
-def destroy_s3_or_all_clusters(
-    destroy_clusters_from_s3_config_files,
-    s3_bucket_name,
-    s3_bucket_path,
-    clusters_install_data_directory,
-    registry_config_file,
-    destroy_all_clusters,
-    ocm_token,
-):
-    if destroy_clusters_from_s3_config_files and not s3_bucket_name:
-        click.secho(
-            "`--s3-bucket-name` must be provided when running with"
-            " `--destroy-clusters-from-s3-config-files`",
-            fg=ERROR_LOG_COLOR,
-        )
-        raise click.Abort()
-
-    destroy_clusters(
-        s3_bucket_name=s3_bucket_name,
-        s3_bucket_path=s3_bucket_path,
-        clusters_install_data_directory=clusters_install_data_directory,
-        registry_config_file=registry_config_file,
-        clusters_yaml_files=destroy_clusters_from_s3_config_files,
-        destroy_all_clusters=destroy_all_clusters,
-        ocm_token=ocm_token,
-    )
 
 
 def prepare_aws_ipi_clusters(
