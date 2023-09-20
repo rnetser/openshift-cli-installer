@@ -49,11 +49,10 @@ Action also can be passed to the CLI as `--action create/destroy` instead of spe
 * GCP OSD clusters:
   * `platform=gcp-osd`: Must pass in cluster parameters
   * `--gcp-service-account-file`: Path to GCP service account json.  
-    To create the file:  
-    1. Go to https://console.cloud.google.com/apis/credentials
-    2. Select the relevant project
-    3. On the top left there is a blue "create credentials" button click it and select "service account key."
-    4. Choose the service account you want, and select "JSON" as the key type.
+    To create the file, create a service account and download it:  
+    1. Go to https://console.cloud.google.com/iam-admin/serviceaccounts?project=<project>
+    2. Select the service account -> "Create Key"
+    3. Select the Key Type as `JSON` and click Create
 
 ### Cluster parameters
 Every call to the openshift installer cli must have at least one `--cluster` option.  

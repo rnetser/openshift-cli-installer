@@ -173,7 +173,7 @@ def destroy_openshift_cluster(cluster_data):
     elif cluster_platform in (ROSA_STR, HYPERSHIFT_STR):
         return rosa_delete_cluster(cluster_data=cluster_data)
 
-    elif cluster_platform == AWS_OSD_STR:
+    elif cluster_platform in [AWS_OSD_STR, GCP_OSD_STR]:
         return osd_delete_cluster(cluster_data=cluster_data)
 
 

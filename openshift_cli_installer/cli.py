@@ -26,7 +26,9 @@ from openshift_cli_installer.utils.const import (
     CLUSTER_DATA_YAML_FILENAME,
     CREATE_STR,
     DESTROY_STR,
+    ERROR_LOG_COLOR,
 )
+from openshift_cli_installer.utils.gcp import get_gcp_regions
 
 
 @click.command("installer")
@@ -281,6 +283,24 @@ def main(**kwargs):
 
         for _region in _regions_to_verify:
             set_and_verify_aws_credentials(region_name=_region)
+
+    if gcp_osd_clusters:
+        supported_regions = get_gcp_regions(gcp_service_account_file)
+        unsupported_regions = set()
+        for cluster_data in gcp_osd_clusters:
+            cluster_region = cluster_data["region"]
+            if cluster_region not in supported_regions:
+                unsupported_regions.add(
+                    f"cluster: {cluster_data['name']}, region: {cluster_region}"
+                )
+
+        if unsupported_regions:
+            click.secho(
+                "The following clusters regions are not supported in GCP:"
+                f" {unsupported_regions}",
+                fg=ERROR_LOG_COLOR,
+            )
+            raise click.Abort()
 
     aws_ipi_clusters = prepare_aws_ipi_clusters(
         aws_ipi_clusters=aws_ipi_clusters,
