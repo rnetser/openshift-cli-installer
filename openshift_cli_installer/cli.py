@@ -180,6 +180,14 @@ For example:
     """,
     type=click.Path(exists=True),
 )
+@click.option(
+    "----gcp-service-account-file",
+    help="""
+\b
+Path to GCP service account json file.
+""",
+    type=click.Path(),
+)
 def main(**kwargs):
     """
     Create/Destroy Openshift cluster/s
