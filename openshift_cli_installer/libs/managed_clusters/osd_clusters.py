@@ -37,7 +37,7 @@ def osd_create_cluster(cluster_data):
         if cluster_platform == AWS_OSD_STR:
             provision_osd_kwargs.update(
                 {
-                    "aws_access_key_id": "aws-access-key-id",
+                    "aws_access_key_id": cluster_data["aws-access-key-id"],
                     "aws_account_id": cluster_data["aws-account-id"],
                     "aws_secret_access_key": cluster_data["aws-secret-access-key"],
                 }
