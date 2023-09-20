@@ -1,7 +1,6 @@
 import os
 
 import click
-from clouds.aws.aws_utils import set_and_verify_aws_credentials
 from pyaml_env import parse_config
 
 from openshift_cli_installer.libs.destroy_clusters import destroy_clusters
@@ -10,6 +9,8 @@ from openshift_cli_installer.libs.managed_clusters.acm_clusters import (
 )
 from openshift_cli_installer.utils.cli_utils import (
     get_clusters_by_type,
+    is_region_support_aws,
+    is_region_support_gcp,
     is_region_support_hypershift,
     prepare_aws_ipi_clusters,
     prepare_ocm_managed_clusters,
@@ -23,12 +24,15 @@ from openshift_cli_installer.utils.clusters import (
     check_ocm_managed_existing_clusters,
 )
 from openshift_cli_installer.utils.const import (
+    AWS_OSD_STR,
+    AWS_STR,
     CLUSTER_DATA_YAML_FILENAME,
     CREATE_STR,
     DESTROY_STR,
-    ERROR_LOG_COLOR,
+    GCP_OSD_STR,
+    HYPERSHIFT_STR,
+    ROSA_STR,
 )
-from openshift_cli_installer.utils.gcp import get_gcp_regions
 
 
 @click.command("installer")
@@ -188,7 +192,7 @@ For example:
 \b
 Path to GCP service account json file.
 """,
-    type=click.Path(),
+    type=click.Path(exists=True),
 )
 def main(**kwargs):
     """
@@ -235,7 +239,6 @@ def main(**kwargs):
         ocm_token=ocm_token,
         destroy_clusters_from_s3_config_files=destroy_clusters_from_s3_config_files,
         s3_bucket_name=s3_bucket_name,
-        gcp_service_account_file=gcp_service_account_file,
     )
 
     if destroy_clusters_from_s3_config_files or destroy_all_clusters:
@@ -260,47 +263,23 @@ def main(**kwargs):
             s3_bucket_path=s3_bucket_path,
         )
 
-    (
-        aws_ipi_clusters,
-        rosa_clusters,
-        hypershift_clusters,
-        aws_osd_clusters,
-        gcp_osd_clusters,
-    ) = get_clusters_by_type(clusters=clusters)
+    clusters_dict = get_clusters_by_type(clusters=clusters)
+    aws_ipi_clusters = clusters_dict.get(AWS_STR)
+    rosa_clusters = clusters_dict.get(ROSA_STR)
+    hypershift_clusters = clusters_dict.get(HYPERSHIFT_STR)
+    aws_osd_clusters = clusters_dict.get(AWS_OSD_STR)
+    gcp_osd_clusters = clusters_dict.get(GCP_OSD_STR)
+
     aws_managed_clusters = rosa_clusters + hypershift_clusters + aws_osd_clusters
     ocm_managed_clusters = aws_managed_clusters + gcp_osd_clusters
 
-    if ocm_managed_clusters and create:
-        check_ocm_managed_existing_clusters(clusters=ocm_managed_clusters)
-
-    if hypershift_clusters:
-        is_region_support_hypershift(hypershift_clusters=hypershift_clusters)
-
-    if aws_ipi_clusters or aws_managed_clusters:
-        _regions_to_verify = set()
-        for cluster_data in aws_ipi_clusters + aws_managed_clusters:
-            _regions_to_verify.add(cluster_data["region"])
-
-        for _region in _regions_to_verify:
-            set_and_verify_aws_credentials(region_name=_region)
-
-    if gcp_osd_clusters:
-        supported_regions = get_gcp_regions(gcp_service_account_file)
-        unsupported_regions = set()
-        for cluster_data in gcp_osd_clusters:
-            cluster_region = cluster_data["region"]
-            if cluster_region not in supported_regions:
-                unsupported_regions.add(
-                    f"cluster: {cluster_data['name']}, region: {cluster_region}"
-                )
-
-        if unsupported_regions:
-            click.secho(
-                "The following clusters regions are not supported in GCP:"
-                f" {unsupported_regions}",
-                fg=ERROR_LOG_COLOR,
-            )
-            raise click.Abort()
+    check_ocm_managed_existing_clusters(clusters=ocm_managed_clusters, create=create)
+    is_region_support_hypershift(hypershift_clusters=hypershift_clusters)
+    is_region_support_aws(clusters=aws_ipi_clusters + aws_managed_clusters)
+    is_region_support_gcp(
+        gcp_osd_clusters=gcp_osd_clusters,
+        gcp_service_account_file=gcp_service_account_file,
+    )
 
     aws_ipi_clusters = prepare_aws_ipi_clusters(
         aws_ipi_clusters=aws_ipi_clusters,

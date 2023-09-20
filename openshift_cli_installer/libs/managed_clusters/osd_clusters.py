@@ -42,10 +42,11 @@ def osd_create_cluster(cluster_data):
                     "aws_secret_access_key": cluster_data["aws-secret-access-key"],
                 }
             )
-        if cluster_platform == GCP_OSD_STR:
+        elif cluster_platform == GCP_OSD_STR:
             provision_osd_kwargs.update(
                 {"gcp_service_account": cluster_data["gcp_service_account"]}
             )
+
         cluster_object.provision_osd(**provision_osd_kwargs)
 
         cluster_data = add_cluster_info_to_cluster_data(

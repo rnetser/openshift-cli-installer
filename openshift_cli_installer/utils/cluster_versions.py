@@ -2,7 +2,6 @@ import re
 
 import click
 import semver
-from simple_logger.logger import get_logger
 
 from openshift_cli_installer.utils.const import (
     AWS_OSD_STR,
@@ -12,8 +11,6 @@ from openshift_cli_installer.utils.const import (
     HYPERSHIFT_STR,
     ROSA_STR,
 )
-
-LOGGER = get_logger(name=__name__)
 
 
 def set_clusters_versions(clusters, base_available_versions):
@@ -78,7 +75,7 @@ def set_clusters_versions(clusters, base_available_versions):
                 )
                 raise click.Abort()
 
-        LOGGER.info(f"{cluster_name}: Cluster version set to {cluster_data['version']}")
+        click.echo(f"{cluster_name}: Cluster version set to {cluster_data['version']}")
 
     return clusters
 

@@ -4,6 +4,7 @@ from pathlib import Path
 
 import click
 import rosa.cli
+from clouds.aws.aws_utils import set_and_verify_aws_credentials
 from ocp_resources.utils import TimeoutWatch
 
 from openshift_cli_installer.libs.managed_clusters.helpers import (
@@ -35,45 +36,36 @@ from openshift_cli_installer.utils.const import (
     PRODUCTION_STR,
     ROSA_STR,
     STAGE_STR,
+    SUPPORTED_PLATFORMS,
 )
+from openshift_cli_installer.utils.gcp import get_gcp_regions
 
 
 def get_clusters_by_type(clusters):
-    aws_ipi_clusters = [
-        _cluster for _cluster in clusters if _cluster["platform"] == AWS_STR
-    ]
-    rosa_clusters = [
-        _cluster for _cluster in clusters if _cluster["platform"] == ROSA_STR
-    ]
-    hypershift_clusters = [
-        _cluster for _cluster in clusters if _cluster["platform"] == HYPERSHIFT_STR
-    ]
-    aws_osd_clusters = [
-        _cluster for _cluster in clusters if _cluster["platform"] == AWS_OSD_STR
-    ]
-    gcp_osd_clusters = [
-        _cluster for _cluster in clusters if _cluster["platform"] == GCP_OSD_STR
-    ]
+    clusters_dict = {}
+    for platform in SUPPORTED_PLATFORMS:
+        clusters_dict[platform] = [
+            _cluster for _cluster in clusters if _cluster["platform"] == platform
+        ]
 
-    return (
-        aws_ipi_clusters,
-        rosa_clusters,
-        hypershift_clusters,
-        aws_osd_clusters,
-        gcp_osd_clusters,
-    )
+    return clusters_dict
 
 
 def is_platform_supported(clusters):
-    supported_platform = (AWS_STR, ROSA_STR, HYPERSHIFT_STR, AWS_OSD_STR, GCP_OSD_STR)
+    unsupported_platforms = []
     for _cluster in clusters:
         _platform = _cluster["platform"]
-        if _platform not in supported_platform:
-            click.secho(
-                f"Cluster platform '{_platform}' is not supported.\n{_cluster}",
-                fg=ERROR_LOG_COLOR,
+        if _platform not in SUPPORTED_PLATFORMS:
+            unsupported_platforms.append(
+                f"Cluster {_cluster['name']} platform '{_platform}' is not supported.\n"
             )
-            raise click.Abort()
+
+    if unsupported_platforms:
+        click.secho(
+            unsupported_platforms,
+            fg=ERROR_LOG_COLOR,
+        )
+        raise click.Abort()
 
 
 def rosa_regions(ocm_client):
@@ -94,6 +86,7 @@ def hypershift_regions(ocm_client):
 
 def is_region_support_hypershift(hypershift_clusters):
     hypershift_regions_dict = {PRODUCTION_STR: None, STAGE_STR: None}
+    unsupported_regions = []
     for _cluster in hypershift_clusters:
         cluster_ocm_env = _cluster["ocm-env"]
         _hypershift_regions = hypershift_regions_dict[cluster_ocm_env]
@@ -103,10 +96,15 @@ def is_region_support_hypershift(hypershift_clusters):
 
         _region = _cluster["region"]
         if _region not in _hypershift_regions:
+            unsupported_regions.append(
+                f"Cluster {_cluster['name']}, region: {_region}\n"
+            )
+
+        if unsupported_regions:
             click.secho(
-                f"region '{_region}' does not supported {HYPERSHIFT_STR}."
-                f"\nSupported hypershift regions are: {_hypershift_regions}"
-                f"\n{_cluster}",
+                f"The following {HYPERSHIFT_STR} clusters regions are no supported:"
+                f" {unsupported_regions}.\nSupported hypershift regions are:"
+                f" {_hypershift_regions}",
                 fg=ERROR_LOG_COLOR,
             )
             raise click.Abort()
@@ -159,7 +157,7 @@ def create_openshift_cluster(
         return rosa_create_cluster(
             cluster_data=cluster_data,
         )
-    elif cluster_platform in [AWS_OSD_STR, GCP_OSD_STR]:
+    elif cluster_platform in (AWS_OSD_STR, GCP_OSD_STR):
         return osd_create_cluster(cluster_data=cluster_data)
 
 
@@ -173,7 +171,7 @@ def destroy_openshift_cluster(cluster_data):
     elif cluster_platform in (ROSA_STR, HYPERSHIFT_STR):
         return rosa_delete_cluster(cluster_data=cluster_data)
 
-    elif cluster_platform in [AWS_OSD_STR, GCP_OSD_STR]:
+    elif cluster_platform in (AWS_OSD_STR, GCP_OSD_STR):
         return osd_delete_cluster(cluster_data=cluster_data)
 
 
@@ -220,7 +218,6 @@ def verify_user_input(
     ocm_token,
     destroy_clusters_from_s3_config_files,
     s3_bucket_name,
-    gcp_service_account_file,
 ):
     abort_no_ocm_token(ocm_token=ocm_token)
 
@@ -270,10 +267,6 @@ def verify_user_input(
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
         )
-        assert_gcp_osd_user_input(
-            clusters=clusters,
-            gcp_service_account_file=gcp_service_account_file,
-        )
 
 
 def assert_aws_ipi_user_input(
@@ -295,7 +288,7 @@ def assert_aws_ipi_user_input(
 def assert_aws_osd_user_input(
     clusters, aws_access_key_id, aws_secret_access_key, aws_account_id
 ):
-    if any([_cluster["platform"] == GCP_OSD_STR for _cluster in clusters]):
+    if any([_cluster["platform"] == AWS_OSD_STR for _cluster in clusters]):
         assert_aws_credentials_exist(
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
@@ -441,12 +434,30 @@ def run_create_or_destroy_clusters(clusters, create, action, parallel):
     return processed_clusters
 
 
-def assert_gcp_osd_user_input(clusters, gcp_service_account_file):
-    if any([_cluster["platform"] == GCP_OSD_STR for _cluster in clusters]):
-        if not gcp_service_account_file or not os.path.exists(gcp_service_account_file):
+def is_region_support_gcp(gcp_osd_clusters, gcp_service_account_file):
+    if gcp_osd_clusters:
+        supported_regions = get_gcp_regions(gcp_service_account_file)
+        unsupported_regions = []
+        for cluster_data in gcp_osd_clusters:
+            cluster_region = cluster_data["region"]
+            if cluster_region not in supported_regions:
+                unsupported_regions.append(
+                    f"cluster: {cluster_data['name']}, region: {cluster_region}"
+                )
+
+        if unsupported_regions:
             click.secho(
-                "GCP service account file is required for GCP OSD cluster"
-                f" installations. {gcp_service_account_file} file does not exist.",
+                "The following clusters regions are not supported in GCP:"
+                f" {unsupported_regions}",
                 fg=ERROR_LOG_COLOR,
             )
             raise click.Abort()
+
+
+def is_region_support_aws(clusters):
+    _regions_to_verify = set()
+    for cluster_data in clusters:
+        _regions_to_verify.add(cluster_data["region"])
+
+    for _region in _regions_to_verify:
+        set_and_verify_aws_credentials(region_name=_region)

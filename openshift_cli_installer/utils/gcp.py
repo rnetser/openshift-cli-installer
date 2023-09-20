@@ -2,6 +2,7 @@ from google.cloud import compute_v1
 from google.oauth2 import service_account
 
 
+# TODO: Move to https://github.com/RedHatQE/cloud-tools
 def get_gcp_regions(gcp_service_account_file):
     credentials = service_account.Credentials.from_service_account_file(
         gcp_service_account_file
