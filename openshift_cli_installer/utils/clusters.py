@@ -18,6 +18,7 @@ from openshift_cli_installer.utils.const import (
     AWS_STR,
     CLUSTER_DATA_YAML_FILENAME,
     ERROR_LOG_COLOR,
+    GCP_OSD_STR,
     HYPERSHIFT_STR,
     PRODUCTION_STR,
     ROSA_STR,
@@ -54,7 +55,7 @@ def update_rosa_osd_clusters_versions(clusters, _test=False, _test_versions_dict
     else:
         base_available_versions_dict = {}
         for cluster_data in clusters:
-            if cluster_data["platform"] == AWS_OSD_STR:
+            if cluster_data["platform"] in [AWS_OSD_STR, GCP_OSD_STR]:
                 base_available_versions_dict = Versions(
                     client=cluster_data["ocm-client"]
                 ).get(channel_group=cluster_data["channel-group"])
@@ -151,7 +152,7 @@ def set_cluster_auth(cluster_data, cluster_object):
         fd.write(cluster_object.kubeadmin_password)
 
 
-def check_existing_clusters(clusters):
+def check_ocm_managed_existing_clusters(clusters):
     ocm_clients_list = []
     ocm_token = clusters[0]["ocm-client"].api_client.token
     for env in [PRODUCTION_STR, STAGE_STR]:

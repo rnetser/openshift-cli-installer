@@ -12,7 +12,7 @@ from openshift_cli_installer.utils.cli_utils import (
     get_clusters_by_type,
     is_region_support_hypershift,
     prepare_aws_ipi_clusters,
-    prepare_aws_managed_clusters,
+    prepare_ocm_managed_clusters,
     run_create_or_destroy_clusters,
     verify_user_input,
 )
@@ -20,7 +20,7 @@ from openshift_cli_installer.utils.click_dict_type import DictParamType
 from openshift_cli_installer.utils.clusters import (
     add_ocm_client_and_env_to_cluster_dict,
     add_s3_bucket_data,
-    check_existing_clusters,
+    check_ocm_managed_existing_clusters,
 )
 from openshift_cli_installer.utils.const import (
     CLUSTER_DATA_YAML_FILENAME,
@@ -210,6 +210,7 @@ def main(**kwargs):
     aws_access_key_id = user_kwargs.get("aws_access_key_id")
     aws_secret_access_key = user_kwargs.get("aws_secret_access_key")
     aws_account_id = user_kwargs.get("aws_account_id")
+    gcp_service_account_file = user_kwargs.get("gcp-service-account-file")
 
     verify_user_input(
         action=action,
@@ -224,6 +225,7 @@ def main(**kwargs):
         ocm_token=ocm_token,
         destroy_clusters_from_s3_config_files=destroy_clusters_from_s3_config_files,
         s3_bucket_name=s3_bucket_name,
+        gcp_service_account_file=gcp_service_account_file,
     )
 
     if destroy_clusters_from_s3_config_files or destroy_all_clusters:
@@ -253,11 +255,13 @@ def main(**kwargs):
         rosa_clusters,
         hypershift_clusters,
         aws_osd_clusters,
+        gcp_osd_clusters,
     ) = get_clusters_by_type(clusters=clusters)
     aws_managed_clusters = rosa_clusters + hypershift_clusters + aws_osd_clusters
+    ocm_managed_clusters = aws_managed_clusters + gcp_osd_clusters
 
-    if aws_managed_clusters and create:
-        check_existing_clusters(clusters=aws_managed_clusters)
+    if ocm_managed_clusters and create:
+        check_ocm_managed_existing_clusters(clusters=ocm_managed_clusters)
 
     if hypershift_clusters:
         is_region_support_hypershift(hypershift_clusters=hypershift_clusters)
@@ -280,17 +284,18 @@ def main(**kwargs):
         aws_access_key_id=aws_access_key_id,
         aws_secret_access_key=aws_secret_access_key,
     )
-    aws_managed_clusters = prepare_aws_managed_clusters(
-        aws_managed_clusters=aws_managed_clusters,
+    ocm_managed_clusters = prepare_ocm_managed_clusters(
+        osd_managed_clusters=ocm_managed_clusters,
         clusters_install_data_directory=clusters_install_data_directory,
         aws_access_key_id=aws_access_key_id,
         aws_secret_access_key=aws_secret_access_key,
         aws_account_id=aws_account_id,
         create=create,
+        gcp_service_account_file=gcp_service_account_file,
     )
 
     processed_clusters = run_create_or_destroy_clusters(
-        clusters=aws_ipi_clusters + aws_managed_clusters,
+        clusters=aws_ipi_clusters + ocm_managed_clusters,
         create=create,
         action=action,
         parallel=parallel,

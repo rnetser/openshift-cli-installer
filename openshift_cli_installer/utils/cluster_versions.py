@@ -2,14 +2,18 @@ import re
 
 import click
 import semver
+from simple_logger.logger import get_logger
 
 from openshift_cli_installer.utils.const import (
     AWS_OSD_STR,
     AWS_STR,
     ERROR_LOG_COLOR,
+    GCP_OSD_STR,
     HYPERSHIFT_STR,
     ROSA_STR,
 )
+
+LOGGER = get_logger(name=__name__)
 
 
 def set_clusters_versions(clusters, base_available_versions):
@@ -74,7 +78,7 @@ def set_clusters_versions(clusters, base_available_versions):
                 )
                 raise click.Abort()
 
-        click.echo(f"{cluster_name}: Cluster version set to {cluster_data['version']}")
+        LOGGER.info(f"{cluster_name}: Cluster version set to {cluster_data['version']}")
 
     return clusters
 
@@ -86,7 +90,10 @@ def filter_versions(version, base_versions_dict, platform, stream):
     versions_dict[stream] = {version_key: {"versions": set(), "latest": ""}}
 
     for _source, versions in base_versions_dict.items():
-        if platform in (HYPERSHIFT_STR, ROSA_STR, AWS_OSD_STR) and stream != _source:
+        if (
+            platform in (HYPERSHIFT_STR, ROSA_STR, AWS_OSD_STR, GCP_OSD_STR)
+            and stream != _source
+        ):
             continue
 
         reg_stream = get_regex_str_for_version_match(

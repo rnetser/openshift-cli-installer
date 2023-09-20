@@ -30,6 +30,7 @@ from openshift_cli_installer.utils.const import (
     CREATE_STR,
     DESTROY_STR,
     ERROR_LOG_COLOR,
+    GCP_OSD_STR,
     HYPERSHIFT_STR,
     PRODUCTION_STR,
     ROSA_STR,
@@ -50,11 +51,21 @@ def get_clusters_by_type(clusters):
     aws_osd_clusters = [
         _cluster for _cluster in clusters if _cluster["platform"] == AWS_OSD_STR
     ]
-    return aws_ipi_clusters, rosa_clusters, hypershift_clusters, aws_osd_clusters
+    gcp_osd_clusters = [
+        _cluster for _cluster in clusters if _cluster["platform"] == GCP_OSD_STR
+    ]
+
+    return (
+        aws_ipi_clusters,
+        rosa_clusters,
+        hypershift_clusters,
+        aws_osd_clusters,
+        gcp_osd_clusters,
+    )
 
 
 def is_platform_supported(clusters):
-    supported_platform = (AWS_STR, ROSA_STR, HYPERSHIFT_STR, AWS_OSD_STR)
+    supported_platform = (AWS_STR, ROSA_STR, HYPERSHIFT_STR, AWS_OSD_STR, GCP_OSD_STR)
     for _cluster in clusters:
         _platform = _cluster["platform"]
         if _platform not in supported_platform:
@@ -148,7 +159,7 @@ def create_openshift_cluster(
         return rosa_create_cluster(
             cluster_data=cluster_data,
         )
-    elif cluster_platform == AWS_OSD_STR:
+    elif cluster_platform in [AWS_OSD_STR, GCP_OSD_STR]:
         return osd_create_cluster(cluster_data=cluster_data)
 
 
@@ -209,6 +220,7 @@ def verify_user_input(
     ocm_token,
     destroy_clusters_from_s3_config_files,
     s3_bucket_name,
+    gcp_service_account_file,
 ):
     abort_no_ocm_token(ocm_token=ocm_token)
 
@@ -243,7 +255,7 @@ def verify_user_input(
             docker_config_file=docker_config_file,
             registry_config_file=registry_config_file,
         )
-        assert_osd_user_input(
+        assert_aws_osd_user_input(
             clusters=clusters,
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
@@ -257,6 +269,10 @@ def verify_user_input(
             registry_config_file=registry_config_file,
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
+        )
+        assert_gcp_osd_user_input(
+            clusters=clusters,
+            gcp_service_account_file=gcp_service_account_file,
         )
 
 
@@ -276,10 +292,10 @@ def assert_aws_ipi_user_input(
         assert_registry_config_file_exists(registry_config_file=registry_config_file)
 
 
-def assert_osd_user_input(
+def assert_aws_osd_user_input(
     clusters, aws_access_key_id, aws_secret_access_key, aws_account_id
 ):
-    if any([_cluster["platform"] == AWS_OSD_STR for _cluster in clusters]):
+    if any([_cluster["platform"] == GCP_OSD_STR for _cluster in clusters]):
         assert_aws_credentials_exist(
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
@@ -363,31 +379,33 @@ def prepare_aws_ipi_clusters(
     return aws_ipi_clusters
 
 
-def prepare_aws_managed_clusters(
-    aws_managed_clusters,
+def prepare_ocm_managed_clusters(
+    osd_managed_clusters,
     clusters_install_data_directory,
     aws_access_key_id,
     aws_secret_access_key,
     aws_account_id,
     create,
+    gcp_service_account_file,
 ):
-    if aws_managed_clusters:
-        aws_managed_clusters = generate_cluster_dirs_path(
-            clusters=aws_managed_clusters,
+    if osd_managed_clusters:
+        osd_managed_clusters = generate_cluster_dirs_path(
+            clusters=osd_managed_clusters,
             base_directory=clusters_install_data_directory,
         )
-        aws_managed_clusters = prepare_managed_clusters_data(
-            clusters=aws_managed_clusters,
+        osd_managed_clusters = prepare_managed_clusters_data(
+            clusters=osd_managed_clusters,
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
             aws_account_id=aws_account_id,
+            gcp_service_account_file=gcp_service_account_file,
         )
         if create:
-            aws_managed_clusters = update_rosa_osd_clusters_versions(
-                clusters=aws_managed_clusters,
+            osd_managed_clusters = update_rosa_osd_clusters_versions(
+                clusters=osd_managed_clusters,
             )
 
-    return aws_managed_clusters
+    return osd_managed_clusters
 
 
 def run_create_or_destroy_clusters(clusters, create, action, parallel):
@@ -421,3 +439,14 @@ def run_create_or_destroy_clusters(clusters, create, action, parallel):
             processed_clusters.append(result.result())
 
     return processed_clusters
+
+
+def assert_gcp_osd_user_input(clusters, gcp_service_account_file):
+    if any([_cluster["platform"] == GCP_OSD_STR for _cluster in clusters]):
+        if not gcp_service_account_file or not os.path.exists(gcp_service_account_file):
+            click.secho(
+                "GCP service account file is required for GCP OSD cluster"
+                f" installations. {gcp_service_account_file} file does not exist.",
+                fg=ERROR_LOG_COLOR,
+            )
+            raise click.Abort()
