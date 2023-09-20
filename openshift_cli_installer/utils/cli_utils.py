@@ -218,6 +218,7 @@ def verify_user_input(
     ocm_token,
     destroy_clusters_from_s3_config_files,
     s3_bucket_name,
+    gcp_service_account_file,
 ):
     abort_no_ocm_token(ocm_token=ocm_token)
 
@@ -266,6 +267,11 @@ def verify_user_input(
             registry_config_file=registry_config_file,
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
+        )
+        assert_gcp_osd_user_input(
+            action=action,
+            clusters=clusters,
+            gcp_service_account_file=gcp_service_account_file,
         )
 
 
@@ -461,3 +467,17 @@ def is_region_support_aws(clusters):
 
     for _region in _regions_to_verify:
         set_and_verify_aws_credentials(region_name=_region)
+
+
+def assert_gcp_osd_user_input(action, clusters, gcp_service_account_file):
+    if (
+        action == CREATE_STR
+        and any([cluster["platform"] == GCP_OSD_STR for cluster in clusters])
+        and not gcp_service_account_file
+    ):
+        click.secho(
+            "`--gcp-service-account-file` option must be provided for"
+            f" {GCP_OSD_STR} clusters",
+            fg=ERROR_LOG_COLOR,
+        )
+        raise click.Abort()

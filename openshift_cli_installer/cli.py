@@ -187,7 +187,7 @@ For example:
     type=click.Path(exists=True),
 )
 @click.option(
-    "----gcp-service-account-file",
+    "--gcp-service-account-file",
     help="""
 \b
 Path to GCP service account json file.
@@ -239,6 +239,7 @@ def main(**kwargs):
         ocm_token=ocm_token,
         destroy_clusters_from_s3_config_files=destroy_clusters_from_s3_config_files,
         s3_bucket_name=s3_bucket_name,
+        gcp_service_account_file=gcp_service_account_file,
     )
 
     if destroy_clusters_from_s3_config_files or destroy_all_clusters:
