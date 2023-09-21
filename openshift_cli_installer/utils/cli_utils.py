@@ -222,6 +222,7 @@ def verify_user_input(
     destroy_clusters_from_s3_config_files,
     s3_bucket_name,
     gcp_service_account_file,
+    create,
 ):
     abort_no_ocm_token(ocm_token=ocm_token)
 
@@ -274,6 +275,7 @@ def verify_user_input(
         assert_gcp_osd_user_input(
             clusters=clusters,
             gcp_service_account_file=gcp_service_account_file,
+            create=create,
         )
 
 
@@ -473,9 +475,10 @@ def is_region_support_aws(clusters, create):
             set_and_verify_aws_credentials(region_name=_region)
 
 
-def assert_gcp_osd_user_input(clusters, gcp_service_account_file):
+def assert_gcp_osd_user_input(action, clusters, gcp_service_account_file):
     if (
-        any([cluster["platform"] == GCP_OSD_STR for cluster in clusters])
+        action == CREATE_STR
+        and any([cluster["platform"] == GCP_OSD_STR for cluster in clusters])
         and not gcp_service_account_file
     ):
         click.secho(

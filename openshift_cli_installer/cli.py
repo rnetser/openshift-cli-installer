@@ -226,6 +226,7 @@ def main(**kwargs):
     aws_account_id = user_kwargs.get("aws_account_id")
     gcp_service_account_file = user_kwargs.get("gcp_service_account_file")
 
+    create = action == CREATE_STR
     verify_user_input(
         action=action,
         clusters=clusters,
@@ -240,6 +241,7 @@ def main(**kwargs):
         destroy_clusters_from_s3_config_files=destroy_clusters_from_s3_config_files,
         s3_bucket_name=s3_bucket_name,
         gcp_service_account_file=gcp_service_account_file,
+        create=create,
     )
 
     if destroy_clusters_from_s3_config_files or destroy_all_clusters:
@@ -256,7 +258,7 @@ def main(**kwargs):
     clusters = add_ocm_client_and_env_to_cluster_dict(
         clusters=clusters, ocm_token=ocm_token
     )
-    create = action == CREATE_STR
+
     if create and s3_bucket_name:
         clusters = add_s3_bucket_data(
             clusters=clusters,
