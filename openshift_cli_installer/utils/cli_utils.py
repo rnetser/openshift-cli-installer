@@ -269,7 +269,6 @@ def verify_user_input(
             aws_secret_access_key=aws_secret_access_key,
         )
         assert_gcp_osd_user_input(
-            action=action,
             clusters=clusters,
             gcp_service_account_file=gcp_service_account_file,
         )
@@ -469,10 +468,9 @@ def is_region_support_aws(clusters):
         set_and_verify_aws_credentials(region_name=_region)
 
 
-def assert_gcp_osd_user_input(action, clusters, gcp_service_account_file):
+def assert_gcp_osd_user_input(clusters, gcp_service_account_file):
     if (
-        action == CREATE_STR
-        and any([cluster["platform"] == GCP_OSD_STR for cluster in clusters])
+        any([cluster["platform"] == GCP_OSD_STR for cluster in clusters])
         and not gcp_service_account_file
     ):
         click.secho(

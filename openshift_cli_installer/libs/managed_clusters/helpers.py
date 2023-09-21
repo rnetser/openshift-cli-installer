@@ -18,9 +18,11 @@ def prepare_managed_clusters_data(
     aws_access_key_id,
     gcp_service_account_file,
 ):
-    gcp_service_account_dict = get_service_account_dict_from_file(
-        gcp_service_account_file=gcp_service_account_file
-    )
+    gcp_service_account_dict = None
+    if gcp_service_account_file:
+        gcp_service_account_dict = get_service_account_dict_from_file(
+            gcp_service_account_file=gcp_service_account_file
+        )
 
     for _cluster in clusters:
         cluster_platform = _cluster["platform"]
