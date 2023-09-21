@@ -276,16 +276,14 @@ def main(**kwargs):
     aws_managed_clusters = rosa_clusters + hypershift_clusters + aws_osd_clusters
     ocm_managed_clusters = aws_managed_clusters + gcp_osd_clusters
 
-    check_ocm_managed_existing_clusters(clusters=ocm_managed_clusters, create=create)
-    is_region_support_hypershift(hypershift_clusters=hypershift_clusters, create=create)
-    is_region_support_aws(
-        clusters=aws_ipi_clusters + aws_managed_clusters, create=create
-    )
-    is_region_support_gcp(
-        gcp_osd_clusters=gcp_osd_clusters,
-        gcp_service_account_file=gcp_service_account_file,
-        create=create,
-    )
+    if create:
+        check_ocm_managed_existing_clusters(clusters=ocm_managed_clusters)
+        is_region_support_hypershift(hypershift_clusters=hypershift_clusters)
+        is_region_support_aws(clusters=aws_ipi_clusters + aws_managed_clusters)
+        is_region_support_gcp(
+            gcp_osd_clusters=gcp_osd_clusters,
+            gcp_service_account_file=gcp_service_account_file,
+        )
 
     aws_ipi_clusters = prepare_aws_ipi_clusters(
         aws_ipi_clusters=aws_ipi_clusters,

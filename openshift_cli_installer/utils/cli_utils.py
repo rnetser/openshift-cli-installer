@@ -84,8 +84,9 @@ def hypershift_regions(ocm_client):
     ]
 
 
-def is_region_support_hypershift(hypershift_clusters, create):
-    if create:
+def is_region_support_hypershift(hypershift_clusters):
+    if hypershift_clusters:
+        click.echo(f"Check if regions are {HYPERSHIFT_STR}-supported.")
         hypershift_regions_dict = {PRODUCTION_STR: None, STAGE_STR: None}
         unsupported_regions = []
         for _cluster in hypershift_clusters:
@@ -445,8 +446,9 @@ def run_create_or_destroy_clusters(clusters, create, action, parallel):
     return processed_clusters
 
 
-def is_region_support_gcp(gcp_osd_clusters, gcp_service_account_file, create):
-    if gcp_osd_clusters and create:
+def is_region_support_gcp(gcp_osd_clusters, gcp_service_account_file):
+    if gcp_osd_clusters:
+        click.echo("Check if regions are GCP-supported.")
         supported_regions = get_gcp_regions(gcp_service_account_file)
         unsupported_regions = []
         for cluster_data in gcp_osd_clusters:
@@ -465,8 +467,9 @@ def is_region_support_gcp(gcp_osd_clusters, gcp_service_account_file, create):
             raise click.Abort()
 
 
-def is_region_support_aws(clusters, create):
-    if create:
+def is_region_support_aws(clusters):
+    if clusters:
+        click.echo(f"Check if regions are {AWS_STR}-supported.")
         _regions_to_verify = set()
         for cluster_data in clusters:
             _regions_to_verify.add(cluster_data["region"])

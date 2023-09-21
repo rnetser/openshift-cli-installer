@@ -240,7 +240,8 @@ def destroy_clusters(
     clusters_yaml_files=None,
     destroy_all_clusters=False,
 ):
-    clusters_data_dict = dict.fromkeys(SUPPORTED_PLATFORMS, [])
+    clusters_data_dict = {platform: None for platform in SUPPORTED_PLATFORMS}
+
     cluster_dirs = []
     s3_target_dirs = []
     if destroy_all_clusters:
