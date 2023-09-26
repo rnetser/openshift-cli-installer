@@ -144,7 +144,7 @@ def download_openshift_install_binary(clusters, registry_config_file):
     return clusters
 
 
-def create_aws_ipi_cluster(
+def aws_ipi_create_cluster(
     cluster_data,
 ):
     name = cluster_data["name"]
@@ -179,7 +179,7 @@ def create_aws_ipi_cluster(
             fg=ERROR_LOG_COLOR,
         )
         click.echo("Cleaning leftovers.")
-        destroy_aws_ipi_cluster(
+        aws_ipi_destroy_cluster(
             cluster_data=cluster_data,
         )
 
@@ -188,7 +188,7 @@ def create_aws_ipi_cluster(
     return cluster_data
 
 
-def destroy_aws_ipi_cluster(
+def aws_ipi_destroy_cluster(
     cluster_data,
 ):
     name = cluster_data["name"]

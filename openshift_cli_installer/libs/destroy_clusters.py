@@ -15,7 +15,7 @@ from openshift_cli_installer.libs.managed_clusters.rosa_clusters import (
     rosa_delete_cluster,
 )
 from openshift_cli_installer.libs.unmanaged_clusters.aws_ipi_clusters import (
-    destroy_aws_ipi_cluster,
+    aws_ipi_destroy_cluster,
     download_openshift_install_binary,
 )
 from openshift_cli_installer.utils.cli_utils import (
@@ -94,7 +94,7 @@ def destroy_clusters_from_data_dict(cluster_data_dict, parallel):
 def _destroy_cluster(cluster_data, cluster_type):
     try:
         if cluster_type == AWS_STR:
-            destroy_aws_ipi_cluster(
+            aws_ipi_destroy_cluster(
                 cluster_data=cluster_data,
             )
         elif cluster_type in (AWS_OSD_STR, GCP_OSD_STR):

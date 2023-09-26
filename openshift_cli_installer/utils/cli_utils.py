@@ -19,9 +19,9 @@ from openshift_cli_installer.libs.managed_clusters.rosa_clusters import (
     rosa_delete_cluster,
 )
 from openshift_cli_installer.libs.unmanaged_clusters.aws_ipi_clusters import (
-    create_aws_ipi_cluster,
+    aws_ipi_create_cluster,
+    aws_ipi_destroy_cluster,
     create_install_config_file,
-    destroy_aws_ipi_cluster,
     download_openshift_install_binary,
     update_aws_clusters_versions,
 )
@@ -158,7 +158,7 @@ def create_openshift_cluster(
 ):
     cluster_platform = cluster_data["platform"]
     if cluster_platform == AWS_STR:
-        return create_aws_ipi_cluster(
+        return aws_ipi_create_cluster(
             cluster_data=cluster_data,
         )
 
@@ -173,7 +173,7 @@ def create_openshift_cluster(
 def destroy_openshift_cluster(cluster_data):
     cluster_platform = cluster_data["platform"]
     if cluster_platform == AWS_STR:
-        return destroy_aws_ipi_cluster(
+        return aws_ipi_destroy_cluster(
             cluster_data=cluster_data,
         )
 
