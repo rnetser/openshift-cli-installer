@@ -147,7 +147,9 @@ def download_openshift_install_binary(clusters, registry_config_file):
 def aws_ipi_create_cluster(
     cluster_data,
 ):
-    res, _, _ = run_aws_installer_command(cluster_data=cluster_data, action=CREATE_STR)
+    res, _, _ = run_aws_installer_command(
+        cluster_data=cluster_data, action=CREATE_STR, raise_on_failure=False
+    )
 
     if res:
         cluster_data = add_cluster_info_to_cluster_data(
@@ -182,16 +184,15 @@ def aws_ipi_create_cluster(
 def aws_ipi_destroy_cluster(
     cluster_data,
 ):
-    res, _, _ = run_aws_installer_command(cluster_data=cluster_data, action=DESTROY_STR)
+    run_aws_installer_command(
+        cluster_data=cluster_data, action=DESTROY_STR, raise_on_failure=True
+    )
 
-    if res:
-        click.secho(
-            f"Cluster {cluster_data['name']} destroyed successfully",
-            fg=SUCCESS_LOG_COLOR,
-        )
-        return cluster_data
-
-    raise click.Abort()
+    click.secho(
+        f"Cluster {cluster_data['name']} destroyed successfully",
+        fg=SUCCESS_LOG_COLOR,
+    )
+    return cluster_data
 
 
 @functools.cache
@@ -231,7 +232,7 @@ def get_all_versions(_test=None):
     return base_available_versions
 
 
-def run_aws_installer_command(cluster_data, action):
+def run_aws_installer_command(cluster_data, action, raise_on_failure):
     res, out, err = run_command(
         command=shlex.split(
             f"{cluster_data['openshift-install-binary']} {action} cluster --dir"
@@ -247,5 +248,7 @@ def run_aws_installer_command(cluster_data, action):
             f" {err}\n\tOUT: {out}.",
             fg=ERROR_LOG_COLOR,
         )
+        if raise_on_failure:
+            raise click.Abort()
 
     return res, out, err
