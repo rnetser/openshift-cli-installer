@@ -144,56 +144,70 @@ def download_openshift_install_binary(clusters, registry_config_file):
     return clusters
 
 
-def create_or_destroy_aws_ipi_cluster(
+def create_aws_ipi_cluster(
     cluster_data,
-    action,
-    cleanup=False,
 ):
     name = cluster_data["name"]
     install_dir = cluster_data["install-dir"]
     binary_path = cluster_data["openshift-install-binary"]
     res, out, err = run_command(
-        command=shlex.split(f"{binary_path} {action} cluster --dir {install_dir}"),
+        command=shlex.split(f"{binary_path} {CREATE_STR} cluster --dir {install_dir}"),
         capture_output=False,
         check=False,
     )
 
-    if action == CREATE_STR:
-        if res:
-            cluster_data = add_cluster_info_to_cluster_data(
-                cluster_data=cluster_data,
-            )
-            dump_cluster_data_to_file(cluster_data=cluster_data)
+    if res:
+        cluster_data = add_cluster_info_to_cluster_data(
+            cluster_data=cluster_data,
+        )
+        dump_cluster_data_to_file(cluster_data=cluster_data)
 
-            click.secho(f"Cluster {name} created successfully", fg=SUCCESS_LOG_COLOR)
+        click.secho(f"Cluster {name} created successfully", fg=SUCCESS_LOG_COLOR)
 
-        s3_bucket_name = cluster_data.get("s3-bucket-name")
-        if s3_bucket_name:
-            zip_and_upload_to_s3(
-                install_dir=install_dir,
-                s3_bucket_name=s3_bucket_name,
-                s3_bucket_path=cluster_data["s3-bucket-path"],
-                uuid=cluster_data["shortuuid"],
-            )
+    s3_bucket_name = cluster_data.get("s3-bucket-name")
+    if s3_bucket_name:
+        zip_and_upload_to_s3(
+            install_dir=install_dir,
+            s3_bucket_name=s3_bucket_name,
+            s3_bucket_path=cluster_data["s3-bucket-path"],
+            uuid=cluster_data["shortuuid"],
+        )
 
     if not res:
-        if not cleanup:
-            click.secho(
-                f"Failed to run cluster {action}\n\tERR: {err}\n\tOUT: {out}.",
-                fg=ERROR_LOG_COLOR,
-            )
-            if action == CREATE_STR:
-                click.echo("Cleaning leftovers.")
-                create_or_destroy_aws_ipi_cluster(
-                    cluster_data=cluster_data,
-                    action=DESTROY_STR,
-                    cleanup=True,
-                )
+        click.secho(
+            f"Failed to run cluster {CREATE_STR}\n\tERR: {err}\n\tOUT: {out}.",
+            fg=ERROR_LOG_COLOR,
+        )
+        click.echo("Cleaning leftovers.")
+        destroy_aws_ipi_cluster(
+            cluster_data=cluster_data,
+        )
 
         raise click.Abort()
-    else:
-        if action == DESTROY_STR:
-            click.secho(f"Cluster {name} destroyed successfully", fg=SUCCESS_LOG_COLOR)
+
+    return cluster_data
+
+
+def destroy_aws_ipi_cluster(
+    cluster_data,
+):
+    name = cluster_data["name"]
+    install_dir = cluster_data["install-dir"]
+    binary_path = cluster_data["openshift-install-binary"]
+    res, out, err = run_command(
+        command=shlex.split(f"{binary_path} {DESTROY_STR} cluster --dir {install_dir}"),
+        capture_output=False,
+        check=False,
+    )
+
+    if not res:
+        click.secho(
+            f"Failed to run cluster {DESTROY_STR}\n\tERR: {err}\n\tOUT: {out}.",
+            fg=ERROR_LOG_COLOR,
+        )
+        raise click.Abort()
+
+    click.secho(f"Cluster {name} destroyed successfully", fg=SUCCESS_LOG_COLOR)
 
     return cluster_data
 
