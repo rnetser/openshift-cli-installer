@@ -215,7 +215,6 @@ def rosa_create_cluster(cluster_data, must_gather_output_dir=None):
         click.secho(
             f"Cluster {cluster_name} created successfully", fg=SUCCESS_LOG_COLOR
         )
-        raise
 
     except Exception as ex:
         click.secho(
