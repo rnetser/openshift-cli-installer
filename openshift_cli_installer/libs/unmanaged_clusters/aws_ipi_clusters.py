@@ -14,6 +14,7 @@ from openshift_cli_installer.utils.clusters import (
     dump_cluster_data_to_file,
 )
 from openshift_cli_installer.utils.const import (
+    AWS_STR,
     CREATE_STR,
     DESTROY_STR,
     ERROR_LOG_COLOR,
@@ -144,57 +145,53 @@ def download_openshift_install_binary(clusters, registry_config_file):
     return clusters
 
 
-def create_or_destroy_aws_ipi_cluster(
+def aws_ipi_create_cluster(
     cluster_data,
-    action,
-    cleanup=False,
 ):
-    name = cluster_data["name"]
-    install_dir = cluster_data["install-dir"]
-    binary_path = cluster_data["openshift-install-binary"]
-    res, out, err = run_command(
-        command=shlex.split(f"{binary_path} {action} cluster --dir {install_dir}"),
-        capture_output=False,
-        check=False,
+    res, _, _ = run_aws_installer_command(
+        cluster_data=cluster_data, action=CREATE_STR, raise_on_failure=False
     )
+    name = cluster_data["name"]
 
-    if action == CREATE_STR:
-        if res:
-            cluster_data = add_cluster_info_to_cluster_data(
-                cluster_data=cluster_data,
-            )
-            dump_cluster_data_to_file(cluster_data=cluster_data)
+    if res:
+        cluster_data = add_cluster_info_to_cluster_data(
+            cluster_data=cluster_data,
+        )
+        dump_cluster_data_to_file(cluster_data=cluster_data)
 
-            click.secho(f"Cluster {name} created successfully", fg=SUCCESS_LOG_COLOR)
+        click.secho(f"Cluster {name} created successfully", fg=SUCCESS_LOG_COLOR)
 
-        s3_bucket_name = cluster_data.get("s3-bucket-name")
-        if s3_bucket_name:
-            zip_and_upload_to_s3(
-                install_dir=install_dir,
-                s3_bucket_name=s3_bucket_name,
-                s3_bucket_path=cluster_data["s3-bucket-path"],
-                uuid=cluster_data["shortuuid"],
-            )
+    s3_bucket_name = cluster_data.get("s3-bucket-name")
+    if s3_bucket_name:
+        zip_and_upload_to_s3(
+            install_dir=cluster_data["install-dir"],
+            s3_bucket_name=s3_bucket_name,
+            s3_bucket_path=cluster_data["s3-bucket-path"],
+            uuid=cluster_data["shortuuid"],
+        )
 
     if not res:
-        if not cleanup:
-            click.secho(
-                f"Failed to run cluster {action}\n\tERR: {err}\n\tOUT: {out}.",
-                fg=ERROR_LOG_COLOR,
-            )
-            if action == CREATE_STR:
-                click.echo("Cleaning leftovers.")
-                create_or_destroy_aws_ipi_cluster(
-                    cluster_data=cluster_data,
-                    action=DESTROY_STR,
-                    cleanup=True,
-                )
+        click.echo(f"Cleaning {AWS_STR} cluster {name} leftovers.")
+        aws_ipi_destroy_cluster(
+            cluster_data=cluster_data,
+        )
 
         raise click.Abort()
-    else:
-        if action == DESTROY_STR:
-            click.secho(f"Cluster {name} destroyed successfully", fg=SUCCESS_LOG_COLOR)
 
+    return cluster_data
+
+
+def aws_ipi_destroy_cluster(
+    cluster_data,
+):
+    run_aws_installer_command(
+        cluster_data=cluster_data, action=DESTROY_STR, raise_on_failure=True
+    )
+
+    click.secho(
+        f"Cluster {cluster_data['name']} destroyed successfully",
+        fg=SUCCESS_LOG_COLOR,
+    )
     return cluster_data
 
 
@@ -233,3 +230,25 @@ def get_all_versions(_test=None):
         base_available_versions = get_aws_versions()
 
     return base_available_versions
+
+
+def run_aws_installer_command(cluster_data, action, raise_on_failure):
+    res, out, err = run_command(
+        command=shlex.split(
+            f"{cluster_data['openshift-install-binary']} {action} cluster --dir"
+            f" {cluster_data['install-dir']}"
+        ),
+        capture_output=False,
+        check=False,
+    )
+
+    if not res:
+        click.secho(
+            f"Failed to run cluster {action} for cluster {cluster_data['name']}\n\tERR:"
+            f" {err}\n\tOUT: {out}.",
+            fg=ERROR_LOG_COLOR,
+        )
+        if raise_on_failure:
+            raise click.Abort()
+
+    return res, out, err
