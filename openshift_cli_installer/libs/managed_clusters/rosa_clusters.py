@@ -6,7 +6,6 @@ import click
 import rosa.cli
 import yaml
 from ocm_python_wrapper.cluster import Cluster
-from ocp_resources.utils import TimeoutExpiredError
 from python_terraform import IsNotFlagged, Terraform
 
 from openshift_cli_installer.utils.clusters import (
@@ -223,7 +222,7 @@ def rosa_create_cluster(cluster_data, must_gather_output_dir=None):
             fg=ERROR_LOG_COLOR,
         )
 
-        if isinstance(ex, TimeoutExpiredError) and must_gather_output_dir:
+        if must_gather_output_dir:
             collect_must_gather(
                 must_gather_output_dir=must_gather_output_dir,
                 cluster_data=cluster_data,

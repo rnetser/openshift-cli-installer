@@ -1,6 +1,5 @@
 import click
 from ocm_python_wrapper.cluster import Cluster
-from ocp_resources.utils import TimeoutExpiredError
 
 from openshift_cli_installer.utils.clusters import (
     add_cluster_info_to_cluster_data,
@@ -74,7 +73,7 @@ def osd_create_cluster(cluster_data, must_gather_output_dir=None):
             fg=ERROR_LOG_COLOR,
         )
 
-        if isinstance(ex, TimeoutExpiredError) and must_gather_output_dir:
+        if must_gather_output_dir:
             collect_must_gather(
                 must_gather_output_dir=must_gather_output_dir,
                 cluster_data=cluster_data,
