@@ -169,22 +169,29 @@ def add_s3_bucket_data(clusters, s3_bucket_name, s3_bucket_path=None):
 def collect_must_gather(must_gather_output_dir, cluster_data, cluster_object=None):
     name = cluster_data["name"]
     platform = cluster_data["platform"]
-    target_dir = os.path.join(must_gather_output_dir, platform, name)
-    click.echo(f"Prepare target extracted directory {target_dir}.")
-    Path(target_dir).mkdir(parents=True, exist_ok=True)
+    try:
+        target_dir = os.path.join(must_gather_output_dir, platform, name)
+        click.echo(f"Prepare target extracted directory {target_dir}.")
+        Path(target_dir).mkdir(parents=True, exist_ok=True)
 
-    if cluster_object:
-        set_cluster_auth(
-            cluster_data=cluster_data,
-            cluster_object=cluster_object,
-            write_password_file=False,
+        if cluster_object:
+            set_cluster_auth(
+                cluster_data=cluster_data,
+                cluster_object=cluster_object,
+                write_password_file=False,
+            )
+
+        click.echo(f"Collect must-gather for cluster {name} running on {platform}")
+        run_must_gather(
+            target_base_dir=target_dir,
+            kubeconfig=get_kubeconfig_path(cluster_data=cluster_data),
         )
-
-    click.echo(f"Collect must-gather for cluster {name} running on {platform}")
-    run_must_gather(
-        target_base_dir=target_dir,
-        kubeconfig=get_kubeconfig_path(cluster_data=cluster_data),
-    )
+    except Exception as ex:
+        click.secho(
+            f"Failed to run must-gather for cluster {name} on"
+            f" {platform} platform\n{ex}",
+            fg=ERROR_LOG_COLOR,
+        )
 
 
 def get_kubeconfig_path(cluster_data):
