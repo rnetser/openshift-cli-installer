@@ -119,15 +119,16 @@ def add_cluster_info_to_cluster_data(cluster_data, cluster_object=None):
     return cluster_data
 
 
-def set_cluster_auth(cluster_data, cluster_object):
+def set_cluster_auth(cluster_data, cluster_object, write_password_file=True):
     auth_path = os.path.join(cluster_data["install-dir"], "auth")
     Path(auth_path).mkdir(parents=True, exist_ok=True)
 
     with open(os.path.join(auth_path, "kubeconfig"), "w") as fd:
         fd.write(yaml.dump(cluster_object.kubeconfig))
 
-    with open(os.path.join(auth_path, "kubeadmin-password"), "w") as fd:
-        fd.write(cluster_object.kubeadmin_password)
+    if write_password_file:
+        with open(os.path.join(auth_path, "kubeadmin-password"), "w") as fd:
+            fd.write(cluster_object.kubeadmin_password)
 
 
 def check_ocm_managed_existing_clusters(clusters):
@@ -173,7 +174,11 @@ def collect_must_gather(must_gather_output_dir, cluster_data, cluster_object=Non
     Path(target_dir).mkdir(parents=True, exist_ok=True)
 
     if cluster_object:
-        set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
+        set_cluster_auth(
+            cluster_data=cluster_data,
+            cluster_object=cluster_object,
+            write_password_file=False,
+        )
 
     click.echo(f"Collect must-gather for cluster {name} running on {platform}")
     run_must_gather(
