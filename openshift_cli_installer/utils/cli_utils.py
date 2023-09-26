@@ -152,22 +152,23 @@ def verify_processes_passed(processes, action):
         raise click.Abort()
 
 
-def create_openshift_cluster(
-    cluster_data,
-):
+def create_openshift_cluster(cluster_data, must_gather_output_dir):
     cluster_platform = cluster_data["platform"]
     if cluster_platform == AWS_STR:
         return create_or_destroy_aws_ipi_cluster(
             cluster_data=cluster_data,
             action=CREATE_STR,
+            must_gather_output_dir=must_gather_output_dir,
         )
 
     elif cluster_platform in (ROSA_STR, HYPERSHIFT_STR):
         return rosa_create_cluster(
-            cluster_data=cluster_data,
+            cluster_data=cluster_data, must_gather_output_dir=must_gather_output_dir
         )
     elif cluster_platform in (AWS_OSD_STR, GCP_OSD_STR):
-        return osd_create_cluster(cluster_data=cluster_data)
+        return osd_create_cluster(
+            cluster_data=cluster_data, must_gather_output_dir=must_gather_output_dir
+        )
 
 
 def destroy_openshift_cluster(cluster_data):
@@ -418,10 +419,16 @@ def prepare_ocm_managed_clusters(
     return osd_managed_clusters
 
 
-def run_create_or_destroy_clusters(clusters, create, action, parallel):
+def run_create_or_destroy_clusters(
+    clusters, create, action, parallel, must_gather_output_dir
+):
     futures = []
     action_func = create_openshift_cluster if create else destroy_openshift_cluster
     processed_clusters = []
+    action_kwargs = {}
+
+    if must_gather_output_dir:
+        action_kwargs["must_gather_output_dir"] = must_gather_output_dir
 
     with ThreadPoolExecutor() as executor:
         for cluster_data in clusters:
@@ -429,7 +436,7 @@ def run_create_or_destroy_clusters(clusters, create, action, parallel):
                 timeout=cluster_data["timeout"]
             )
             _cluster_name = cluster_data["name"]
-            action_kwargs = {"cluster_data": cluster_data}
+            action_kwargs["cluster_data"] = cluster_data
             click.echo(
                 f"Executing {action} cluster {_cluster_name} [parallel: {parallel}]"
             )

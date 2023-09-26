@@ -1,8 +1,10 @@
 import click
 from ocm_python_wrapper.cluster import Cluster
+from ocp_resources.utils import TimeoutExpiredError
 
 from openshift_cli_installer.utils.clusters import (
     add_cluster_info_to_cluster_data,
+    collect_must_gather,
     dump_cluster_data_to_file,
     set_cluster_auth,
 )
@@ -15,10 +17,11 @@ from openshift_cli_installer.utils.const import (
 from openshift_cli_installer.utils.general import zip_and_upload_to_s3
 
 
-def osd_create_cluster(cluster_data):
+def osd_create_cluster(cluster_data, must_gather_output_dir=None):
+    cluster_name = cluster_data["name"]
     cluster_object = Cluster(
         client=cluster_data["ocm-client"],
-        name=cluster_data["name"],
+        name=cluster_name,
     )
     try:
         cluster_platform = cluster_data["platform"]
@@ -62,14 +65,21 @@ def osd_create_cluster(cluster_data):
         set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
 
         click.secho(
-            f"Cluster {cluster_data['name']} created successfully", fg=SUCCESS_LOG_COLOR
+            f"Cluster {cluster_name} created successfully", fg=SUCCESS_LOG_COLOR
         )
 
     except Exception as ex:
         click.secho(
-            f"Failed to run cluster create for cluster {cluster_data['name']}\n{ex}",
+            f"Failed to run cluster create for cluster {cluster_name}\n{ex}",
             fg=ERROR_LOG_COLOR,
         )
+
+        if isinstance(ex, TimeoutExpiredError) and must_gather_output_dir:
+            collect_must_gather(
+                must_gather_output_dir=must_gather_output_dir,
+                cluster_data=cluster_data,
+                cluster_object=cluster_object,
+            )
 
         osd_delete_cluster(cluster_data=cluster_data)
         raise click.Abort()

@@ -11,6 +11,7 @@ from ocm_python_wrapper.ocm_client import OCMPythonClient
 from ocm_python_wrapper.versions import Versions
 from ocp_resources.route import Route
 from ocp_utilities.infra import get_client
+from ocp_utilities.must_gather import run_must_gather
 
 from openshift_cli_installer.utils.cluster_versions import set_clusters_versions
 from openshift_cli_installer.utils.const import (
@@ -162,3 +163,21 @@ def add_s3_bucket_data(clusters, s3_bucket_name, s3_bucket_path=None):
         )
 
     return clusters
+
+
+def collect_must_gather(must_gather_output_dir, cluster_data, cluster_object=None):
+    target_dir = os.path.join(must_gather_output_dir, cluster_data["name"])
+    click.echo(f"Prepare target extracted directory {target_dir}.")
+    Path(target_dir).mkdir(parents=True, exist_ok=True)
+
+    if cluster_object:
+        set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
+
+    run_must_gather(
+        target_base_dir=target_dir,
+        kubeconfig=get_kubeconfig_path(cluster_data=cluster_data),
+    )
+
+
+def get_kubeconfig_path(cluster_data):
+    return os.path.join(cluster_data["auth-dir"], "kubeconfig")

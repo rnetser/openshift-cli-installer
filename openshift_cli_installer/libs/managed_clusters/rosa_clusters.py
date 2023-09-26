@@ -6,10 +6,12 @@ import click
 import rosa.cli
 import yaml
 from ocm_python_wrapper.cluster import Cluster
+from ocp_resources.utils import TimeoutExpiredError
 from python_terraform import IsNotFlagged, Terraform
 
 from openshift_cli_installer.utils.clusters import (
     add_cluster_info_to_cluster_data,
+    collect_must_gather,
     dump_cluster_data_to_file,
     set_cluster_auth,
 )
@@ -146,7 +148,7 @@ def prepare_hypershift_vpc(cluster_data):
     return cluster_data
 
 
-def rosa_create_cluster(cluster_data):
+def rosa_create_cluster(cluster_data, must_gather_output_dir=None):
     hosted_cp_arg = "--hosted-cp"
     _platform = cluster_data["platform"]
     ignore_keys = (
@@ -192,17 +194,17 @@ def rosa_create_cluster(cluster_data):
             command += f"{cmd} "
 
     dump_cluster_data_to_file(cluster_data=cluster_data)
+    cluster_name = cluster_data["name"]
+    ocm_client = cluster_data["ocm-client"]
+    cluster_object = Cluster(name=cluster_name, client=ocm_client)
 
     try:
-        ocm_client = cluster_data["ocm-client"]
         rosa.cli.execute(
             command=command,
             ocm_client=ocm_client,
             aws_region=cluster_data["region"],
         )
 
-        cluster_name = cluster_data["name"]
-        cluster_object = Cluster(name=cluster_name, client=ocm_client)
         cluster_object.wait_for_cluster_ready(wait_timeout=cluster_data["timeout"])
         set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
 
@@ -217,9 +219,16 @@ def rosa_create_cluster(cluster_data):
 
     except Exception as ex:
         click.secho(
-            f"Failed to run cluster create for cluster {cluster_data['name']}\n{ex}",
+            f"Failed to run cluster create for cluster {cluster_name}\n{ex}",
             fg=ERROR_LOG_COLOR,
         )
+
+        if isinstance(ex, TimeoutExpiredError) and must_gather_output_dir:
+            collect_must_gather(
+                must_gather_output_dir=must_gather_output_dir,
+                cluster_data=cluster_data,
+                cluster_object=cluster_object,
+            )
 
         rosa_delete_cluster(cluster_data=cluster_data)
         raise click.Abort()

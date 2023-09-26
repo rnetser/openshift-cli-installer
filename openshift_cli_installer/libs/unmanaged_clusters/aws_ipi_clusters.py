@@ -11,6 +11,7 @@ from ocp_utilities.utils import run_command
 from openshift_cli_installer.utils.cluster_versions import set_clusters_versions
 from openshift_cli_installer.utils.clusters import (
     add_cluster_info_to_cluster_data,
+    collect_must_gather,
     dump_cluster_data_to_file,
 )
 from openshift_cli_installer.utils.const import (
@@ -145,11 +146,9 @@ def download_openshift_install_binary(clusters, registry_config_file):
 
 
 def create_or_destroy_aws_ipi_cluster(
-    cluster_data,
-    action,
-    cleanup=False,
+    cluster_data, action, cleanup=False, must_gather_output_dir=None
 ):
-    name = cluster_data["name"]
+    cluster_name = cluster_data["name"]
     install_dir = cluster_data["install-dir"]
     binary_path = cluster_data["openshift-install-binary"]
     res, out, err = run_command(
@@ -165,7 +164,9 @@ def create_or_destroy_aws_ipi_cluster(
             )
             dump_cluster_data_to_file(cluster_data=cluster_data)
 
-            click.secho(f"Cluster {name} created successfully", fg=SUCCESS_LOG_COLOR)
+            click.secho(
+                f"Cluster {cluster_name} created successfully", fg=SUCCESS_LOG_COLOR
+            )
 
         s3_bucket_name = cluster_data.get("s3-bucket-name")
         if s3_bucket_name:
@@ -183,17 +184,26 @@ def create_or_destroy_aws_ipi_cluster(
                 fg=ERROR_LOG_COLOR,
             )
             if action == CREATE_STR:
+                if must_gather_output_dir:
+                    collect_must_gather(
+                        must_gather_output_dir=must_gather_output_dir,
+                        cluster_data=cluster_data,
+                    )
+
                 click.echo("Cleaning leftovers.")
                 create_or_destroy_aws_ipi_cluster(
                     cluster_data=cluster_data,
                     action=DESTROY_STR,
                     cleanup=True,
+                    must_gather_output_dir=must_gather_output_dir,
                 )
 
         raise click.Abort()
     else:
         if action == DESTROY_STR:
-            click.secho(f"Cluster {name} destroyed successfully", fg=SUCCESS_LOG_COLOR)
+            click.secho(
+                f"Cluster {cluster_name} destroyed successfully", fg=SUCCESS_LOG_COLOR
+            )
 
     return cluster_data
 
