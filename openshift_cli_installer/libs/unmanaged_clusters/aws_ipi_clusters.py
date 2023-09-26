@@ -14,6 +14,7 @@ from openshift_cli_installer.utils.clusters import (
     dump_cluster_data_to_file,
 )
 from openshift_cli_installer.utils.const import (
+    AWS_STR,
     CREATE_STR,
     DESTROY_STR,
     ERROR_LOG_COLOR,
@@ -150,6 +151,7 @@ def aws_ipi_create_cluster(
     res, _, _ = run_aws_installer_command(
         cluster_data=cluster_data, action=CREATE_STR, raise_on_failure=False
     )
+    name = cluster_data["name"]
 
     if res:
         cluster_data = add_cluster_info_to_cluster_data(
@@ -157,9 +159,7 @@ def aws_ipi_create_cluster(
         )
         dump_cluster_data_to_file(cluster_data=cluster_data)
 
-        click.secho(
-            f"Cluster {cluster_data['name']} created successfully", fg=SUCCESS_LOG_COLOR
-        )
+        click.secho(f"Cluster {name} created successfully", fg=SUCCESS_LOG_COLOR)
 
     s3_bucket_name = cluster_data.get("s3-bucket-name")
     if s3_bucket_name:
@@ -171,7 +171,7 @@ def aws_ipi_create_cluster(
         )
 
     if not res:
-        click.echo("Cleaning leftovers.")
+        click.echo(f"Cleaning {AWS_STR} cluster {name} leftovers.")
         aws_ipi_destroy_cluster(
             cluster_data=cluster_data,
         )
