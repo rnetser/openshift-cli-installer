@@ -1,5 +1,6 @@
 import copy
 import os
+import shutil
 from pathlib import Path
 
 import click
@@ -169,8 +170,9 @@ def add_s3_bucket_data(clusters, s3_bucket_name, s3_bucket_path=None):
 def collect_must_gather(must_gather_output_dir, cluster_data, cluster_object=None):
     name = cluster_data["name"]
     platform = cluster_data["platform"]
+    target_dir = os.path.join(must_gather_output_dir, "must-gather", platform, name)
+
     try:
-        target_dir = os.path.join(must_gather_output_dir, "must-gather", platform, name)
         click.echo(f"Prepare target extracted directory {target_dir}.")
         Path(target_dir).mkdir(parents=True, exist_ok=True)
 
@@ -186,12 +188,16 @@ def collect_must_gather(must_gather_output_dir, cluster_data, cluster_object=Non
             target_base_dir=target_dir,
             kubeconfig=get_kubeconfig_path(cluster_data=cluster_data),
         )
+
     except Exception as ex:
         click.secho(
             f"Failed to run must-gather for cluster {name} on"
             f" {platform} platform\n{ex}",
             fg=ERROR_LOG_COLOR,
         )
+
+        click.echo(f"Delete target directory {target_dir}.")
+        shutil.rmtree(target_dir)
 
 
 def get_kubeconfig_path(cluster_data):
