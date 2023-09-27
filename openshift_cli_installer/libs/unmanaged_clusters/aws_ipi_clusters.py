@@ -170,11 +170,12 @@ def aws_ipi_create_cluster(cluster_data, must_gather_output_dir=None):
         )
 
     if not res:
-        click.echo(f"Cleaning {AWS_STR} cluster {name} leftovers.")
         if must_gather_output_dir:
             collect_must_gather(
                 must_gather_output_dir=must_gather_output_dir, cluster_data=cluster_data
             )
+
+        click.echo(f"Cleaning {AWS_STR} cluster {name} leftovers.")
         aws_ipi_destroy_cluster(
             cluster_data=cluster_data,
         )
