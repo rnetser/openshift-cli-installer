@@ -170,7 +170,7 @@ def collect_must_gather(must_gather_output_dir, cluster_data, cluster_object=Non
     name = cluster_data["name"]
     platform = cluster_data["platform"]
     try:
-        target_dir = os.path.join(must_gather_output_dir, platform, name)
+        target_dir = os.path.join(must_gather_output_dir, "must-gather", platform, name)
         click.echo(f"Prepare target extracted directory {target_dir}.")
         Path(target_dir).mkdir(parents=True, exist_ok=True)
 
