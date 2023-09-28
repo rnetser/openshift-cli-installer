@@ -80,7 +80,7 @@ def update_rosa_osd_clusters_versions(clusters, _test=False, _test_versions_dict
     )
 
 
-def add_cluster_info_to_cluster_data(cluster_data, cluster_object=None):
+def add_cluster_info_to_cluster_data(cluster_data):
     """
     Adds cluster information to the given clusters data dictionary.
 
@@ -88,8 +88,6 @@ def add_cluster_info_to_cluster_data(cluster_data, cluster_object=None):
 
     Args:
         cluster_data (dict): A dictionary containing cluster data.
-        cluster_object (ClusterObject, optional): An object representing a cluster.
-            Relevant for ROSA, Hypershift and OSD clusters.
 
     Returns:
         dict: The updated cluster data dictionary.
@@ -99,10 +97,12 @@ def add_cluster_info_to_cluster_data(cluster_data, cluster_object=None):
             f"{HYPERSHIFT_STR} clusters do not have console URL", fg=WARNING_LOG_COLOR
         )
 
+    cluster_object = cluster_data.get("cluster-object")
     if cluster_object:
         ocp_client = cluster_object.ocp_client
         cluster_data["cluster-id"] = cluster_object.cluster_id
         cluster_data["cluster-object"] = cluster_object
+
     else:
         ocp_client = get_client(config_file=f"{cluster_data['auth-dir']}/kubeconfig")
 
@@ -120,16 +120,15 @@ def add_cluster_info_to_cluster_data(cluster_data, cluster_object=None):
     return cluster_data
 
 
-def set_cluster_auth(cluster_data, cluster_object, write_password_file=True):
+def set_cluster_auth(cluster_data, cluster_object):
     auth_path = os.path.join(cluster_data["install-dir"], "auth")
     Path(auth_path).mkdir(parents=True, exist_ok=True)
 
     with open(os.path.join(auth_path, "kubeconfig"), "w") as fd:
         fd.write(yaml.dump(cluster_object.kubeconfig))
 
-    if write_password_file:
-        with open(os.path.join(auth_path, "kubeadmin-password"), "w") as fd:
-            fd.write(cluster_object.kubeadmin_password)
+    with open(os.path.join(auth_path, "kubeadmin-password"), "w") as fd:
+        fd.write(cluster_object.kubeadmin_password)
 
 
 def check_ocm_managed_existing_clusters(clusters):
@@ -167,26 +166,36 @@ def add_s3_bucket_data(clusters, s3_bucket_name, s3_bucket_path=None):
     return clusters
 
 
-def collect_must_gather(must_gather_output_dir, cluster_data, cluster_object=None):
-    name = cluster_data["name"]
-    platform = cluster_data["platform"]
-    target_dir = os.path.join(must_gather_output_dir, "must-gather", platform, name)
+def collect_must_gather(must_gather_output_dir, cluster_data):
+    try:
+        name = cluster_data["name"]
+        platform = cluster_data["platform"]
+        target_dir = os.path.join(must_gather_output_dir, "must-gather", platform, name)
+    except Exception:
+        click.secho(
+            f"Failed to get data from {cluster_data}; must-gather could not be"
+            " executed.",
+            fg=ERROR_LOG_COLOR,
+        )
+        return
 
     try:
+        kubeconfig_path = get_kubeconfig_path(cluster_data=cluster_data)
+        if not os.path.exists(kubeconfig_path):
+            click.secho(
+                f"kubeconfig for cluster {name} does not exist; cannot run"
+                " must-gather.",
+                fg=ERROR_LOG_COLOR,
+            )
+            return
+
         click.echo(f"Prepare target extracted directory {target_dir}.")
         Path(target_dir).mkdir(parents=True, exist_ok=True)
-
-        if cluster_object:
-            set_cluster_auth(
-                cluster_data=cluster_data,
-                cluster_object=cluster_object,
-                write_password_file=False,
-            )
 
         click.echo(f"Collect must-gather for cluster {name} running on {platform}")
         run_must_gather(
             target_base_dir=target_dir,
-            kubeconfig=get_kubeconfig_path(cluster_data=cluster_data),
+            kubeconfig=kubeconfig_path,
         )
 
     except Exception as ex:

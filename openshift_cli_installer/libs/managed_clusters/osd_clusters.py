@@ -22,6 +22,8 @@ def osd_create_cluster(cluster_data, must_gather_output_dir=None):
         client=cluster_data["ocm-client"],
         name=cluster_name,
     )
+    cluster_data["cluster-object"] = cluster_object
+
     try:
         cluster_platform = cluster_data["platform"]
         ocp_version = (
@@ -58,7 +60,6 @@ def osd_create_cluster(cluster_data, must_gather_output_dir=None):
 
         cluster_data = add_cluster_info_to_cluster_data(
             cluster_data=cluster_data,
-            cluster_object=cluster_object,
         )
         dump_cluster_data_to_file(cluster_data=cluster_data)
         set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
@@ -72,12 +73,12 @@ def osd_create_cluster(cluster_data, must_gather_output_dir=None):
             f"Failed to run cluster create for cluster {cluster_name}\n{ex}",
             fg=ERROR_LOG_COLOR,
         )
+        set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
 
         if must_gather_output_dir:
             collect_must_gather(
                 must_gather_output_dir=must_gather_output_dir,
                 cluster_data=cluster_data,
-                cluster_object=cluster_object,
             )
 
         osd_delete_cluster(cluster_data=cluster_data)

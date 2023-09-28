@@ -199,7 +199,7 @@ Path to GCP service account json file.
     help="""
 \b
 Path to must-gather output directory.
-must-gather will be collected when cluster installation fails.
+must-gather will try be collect data when cluster installation fails and cluster can be accessed.
 """,
     type=click.Path(exists=True),
 )

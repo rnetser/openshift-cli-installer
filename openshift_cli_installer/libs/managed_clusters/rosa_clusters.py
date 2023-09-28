@@ -196,6 +196,7 @@ def rosa_create_cluster(cluster_data, must_gather_output_dir=None):
     cluster_name = cluster_data["name"]
     ocm_client = cluster_data["ocm-client"]
     cluster_object = Cluster(name=cluster_name, client=ocm_client)
+    cluster_data["cluster-object"] = cluster_object
 
     try:
         rosa.cli.execute(
@@ -207,9 +208,7 @@ def rosa_create_cluster(cluster_data, must_gather_output_dir=None):
         cluster_object.wait_for_cluster_ready(wait_timeout=cluster_data["timeout"])
         set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
 
-        cluster_data = add_cluster_info_to_cluster_data(
-            cluster_data=cluster_data, cluster_object=cluster_object
-        )
+        cluster_data = add_cluster_info_to_cluster_data(cluster_data=cluster_data)
         dump_cluster_data_to_file(cluster_data=cluster_data)
 
         click.secho(
@@ -221,12 +220,12 @@ def rosa_create_cluster(cluster_data, must_gather_output_dir=None):
             f"Failed to run cluster create for cluster {cluster_name}\n{ex}",
             fg=ERROR_LOG_COLOR,
         )
+        set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
 
         if must_gather_output_dir:
             collect_must_gather(
                 must_gather_output_dir=must_gather_output_dir,
                 cluster_data=cluster_data,
-                cluster_object=cluster_object,
             )
 
         rosa_delete_cluster(cluster_data=cluster_data)
