@@ -38,6 +38,7 @@ from openshift_cli_installer.utils.const import (
     ERROR_LOG_COLOR,
     GCP_OSD_STR,
     HYPERSHIFT_STR,
+    OCM_MANAGED_PLATFORMS,
     PRODUCTION_STR,
     ROSA_STR,
     STAGE_STR,
@@ -508,8 +509,9 @@ def prepare_clusters(clusters, ocm_token):
     supported_envs = (PRODUCTION_STR, STAGE_STR)
     for _cluster in clusters:
         name = _cluster["name"]
+        platform = _cluster["platform"]
         _cluster["timeout"] = tts(ts=_cluster.get("timeout", TIMEOUT_60MIN))
-        if _cluster["platform"] == AWS_STR:
+        if platform == AWS_STR:
             ocm_env = PRODUCTION_STR
         else:
             ocm_env = _cluster.get("ocm-env", STAGE_STR)
@@ -523,10 +525,11 @@ def prepare_clusters(clusters, ocm_token):
             raise click.Abort()
 
         ocm_client = get_ocm_client(ocm_token=ocm_token, ocm_env=ocm_env)
-        _cluster["ocm-client"] = ocm_client
-        _cluster["cluster-object"] = Cluster(
-            client=ocm_client,
-            name=name,
-        )
+        if platform in OCM_MANAGED_PLATFORMS:
+            _cluster["ocm-client"] = ocm_client
+            _cluster["cluster-object"] = Cluster(
+                client=ocm_client,
+                name=name,
+            )
 
     return clusters

@@ -12,11 +12,9 @@ from ocp_utilities.utils import run_command
 
 from openshift_cli_installer.utils.clusters import get_kubeconfig_path
 from openshift_cli_installer.utils.const import (
-    AWS_OSD_STR,
     AWS_STR,
     ERROR_LOG_COLOR,
-    HYPERSHIFT_STR,
-    ROSA_STR,
+    OCM_MANAGED_PLATFORMS,
     SUCCESS_LOG_COLOR,
 )
 from openshift_cli_installer.utils.general import tts
@@ -166,7 +164,7 @@ def get_managed_acm_cluster_kubeconfig(
 ):
     # In case we deployed the cluster we have the kubeconfig
     managed_acm_cluster_kubeconfig = None
-    if managed_cluster_platform in (ROSA_STR, HYPERSHIFT_STR, AWS_OSD_STR):
+    if managed_cluster_platform in OCM_MANAGED_PLATFORMS:
         managed_acm_cluster_object = Cluster(
             client=ocm_client, name=managed_acm_cluster_name
         )
