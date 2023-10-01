@@ -203,7 +203,7 @@ must-gather will try to collect data when cluster installation fails and cluster
 """,
     type=click.Path(exists=True),
 )
-def main(must_gather_output_dir=None, **kwargs):
+def main(**kwargs):
     """
     Create/Destroy Openshift cluster/s
     """
@@ -234,7 +234,7 @@ def main(must_gather_output_dir=None, **kwargs):
     aws_secret_access_key = user_kwargs.get("aws_secret_access_key")
     aws_account_id = user_kwargs.get("aws_account_id")
     gcp_service_account_file = user_kwargs.get("gcp_service_account_file")
-    user_kwargs.get("must_gather_output_dir")
+    must_gather_output_dir = user_kwargs.get("must_gather_output_dir")
 
     create = action == CREATE_STR
     verify_user_input(
