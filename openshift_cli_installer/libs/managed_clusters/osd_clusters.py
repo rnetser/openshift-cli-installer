@@ -17,7 +17,6 @@ from openshift_cli_installer.utils.general import zip_and_upload_to_s3
 
 def osd_create_cluster(cluster_data, must_gather_output_dir=None):
     cluster_name = cluster_data["name"]
-    cluster_object = cluster_data["cluster-object"]
 
     try:
         cluster_platform = cluster_data["platform"]
@@ -51,13 +50,13 @@ def osd_create_cluster(cluster_data, must_gather_output_dir=None):
                 {"gcp_service_account": cluster_data["gcp_service_account"]}
             )
 
-        cluster_object.provision_osd(**provision_osd_kwargs)
+        cluster_data["cluster-object"].provision_osd(**provision_osd_kwargs)
 
         cluster_data = add_cluster_info_to_cluster_data(
             cluster_data=cluster_data,
         )
         dump_cluster_data_to_file(cluster_data=cluster_data)
-        set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
+        set_cluster_auth(cluster_data=cluster_data)
 
         click.secho(
             f"Cluster {cluster_name} created successfully", fg=SUCCESS_LOG_COLOR
@@ -68,7 +67,7 @@ def osd_create_cluster(cluster_data, must_gather_output_dir=None):
             f"Failed to run cluster create for cluster {cluster_name}\n{ex}",
             fg=ERROR_LOG_COLOR,
         )
-        set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
+        set_cluster_auth(cluster_data=cluster_data)
 
         if must_gather_output_dir:
             collect_must_gather(

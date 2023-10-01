@@ -194,18 +194,18 @@ def rosa_create_cluster(cluster_data, must_gather_output_dir=None):
 
     dump_cluster_data_to_file(cluster_data=cluster_data)
     cluster_name = cluster_data["name"]
-    ocm_client = cluster_data["ocm-client"]
-    cluster_object = cluster_data["cluster-object"]
 
     try:
         rosa.cli.execute(
             command=command,
-            ocm_client=ocm_client,
+            ocm_client=cluster_data["ocm-client"],
             aws_region=cluster_data["region"],
         )
 
-        cluster_object.wait_for_cluster_ready(wait_timeout=cluster_data["timeout"])
-        set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
+        cluster_data["cluster-object"].wait_for_cluster_ready(
+            wait_timeout=cluster_data["timeout"]
+        )
+        set_cluster_auth(cluster_data=cluster_data)
 
         cluster_data = add_cluster_info_to_cluster_data(cluster_data=cluster_data)
         dump_cluster_data_to_file(cluster_data=cluster_data)
@@ -219,7 +219,7 @@ def rosa_create_cluster(cluster_data, must_gather_output_dir=None):
             f"Failed to run cluster create for cluster {cluster_name}\n{ex}",
             fg=ERROR_LOG_COLOR,
         )
-        set_cluster_auth(cluster_data=cluster_data, cluster_object=cluster_object)
+        set_cluster_auth(cluster_data=cluster_data)
 
         if must_gather_output_dir:
             collect_must_gather(

@@ -98,7 +98,6 @@ def add_cluster_info_to_cluster_data(cluster_data):
     if cluster_object:
         ocp_client = cluster_object.ocp_client
         cluster_data["cluster-id"] = cluster_object.cluster_id
-        cluster_data["cluster-object"] = cluster_object
 
     else:
         ocp_client = get_client(config_file=f"{cluster_data['auth-dir']}/kubeconfig")
@@ -117,10 +116,11 @@ def add_cluster_info_to_cluster_data(cluster_data):
     return cluster_data
 
 
-def set_cluster_auth(cluster_data, cluster_object):
+def set_cluster_auth(cluster_data):
     auth_path = os.path.join(cluster_data["install-dir"], "auth")
     Path(auth_path).mkdir(parents=True, exist_ok=True)
 
+    cluster_object = cluster_data["cluster-object"]
     with open(os.path.join(auth_path, "kubeconfig"), "w") as fd:
         fd.write(yaml.dump(cluster_object.kubeconfig))
 
