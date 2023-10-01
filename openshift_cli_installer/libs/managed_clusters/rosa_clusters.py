@@ -5,7 +5,6 @@ import shutil
 import click
 import rosa.cli
 import yaml
-from ocm_python_wrapper.cluster import Cluster
 from python_terraform import IsNotFlagged, Terraform
 
 from openshift_cli_installer.utils.clusters import (
@@ -195,8 +194,7 @@ def rosa_create_cluster(cluster_data, must_gather_output_dir=None):
     dump_cluster_data_to_file(cluster_data=cluster_data)
     cluster_name = cluster_data["name"]
     ocm_client = cluster_data["ocm-client"]
-    cluster_object = Cluster(name=cluster_name, client=ocm_client)
-    cluster_data["cluster-object"] = cluster_object
+    cluster_object = cluster_data["cluster-object"]
 
     try:
         rosa.cli.execute(
@@ -267,8 +265,9 @@ def rosa_delete_cluster(cluster_data):
             ocm_client=ocm_client,
             aws_region=_cluster_data["region"],
         )
-        cluster_object = Cluster(name=name, client=ocm_client)
-        cluster_object.wait_for_cluster_deletion(wait_timeout=_cluster_data["timeout"])
+        _cluster_data["cluster-object"].wait_for_cluster_deletion(
+            wait_timeout=_cluster_data["timeout"]
+        )
         remove_leftovers(res=res, cluster_data=_cluster_data)
 
     except rosa.cli.CommandExecuteError as ex:

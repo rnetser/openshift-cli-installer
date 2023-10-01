@@ -7,7 +7,6 @@ import click
 import rosa.cli
 import shortuuid
 import yaml
-from ocm_python_wrapper.cluster import Cluster
 from ocm_python_wrapper.ocm_client import OCMPythonClient
 from ocm_python_wrapper.versions import Versions
 from ocp_resources.route import Route
@@ -21,9 +20,7 @@ from openshift_cli_installer.utils.const import (
     ERROR_LOG_COLOR,
     GCP_OSD_STR,
     HYPERSHIFT_STR,
-    PRODUCTION_STR,
     ROSA_STR,
-    STAGE_STR,
     WARNING_LOG_COLOR,
 )
 from openshift_cli_installer.utils.general import bucket_object_name
@@ -134,17 +131,11 @@ def set_cluster_auth(cluster_data, cluster_object):
 def check_ocm_managed_existing_clusters(clusters):
     if clusters:
         click.echo("Check for existing OCM-managed clusters.")
-        ocm_clients_list = []
-        ocm_token = clusters[0]["ocm-client"].api_client.token
-        for env in (PRODUCTION_STR, STAGE_STR):
-            ocm_clients_list.append(get_ocm_client(ocm_token=ocm_token, ocm_env=env))
-
         existing_clusters_list = []
         for _cluster in clusters:
             cluster_name = _cluster["name"]
-            for ocm_client in ocm_clients_list:
-                if Cluster(client=ocm_client, name=cluster_name).exists:
-                    existing_clusters_list.append(cluster_name)
+            if _cluster["cluster_object"].exists:
+                existing_clusters_list.append(cluster_name)
 
         if existing_clusters_list:
             click.secho(
@@ -171,10 +162,10 @@ def collect_must_gather(must_gather_output_dir, cluster_data):
         name = cluster_data["name"]
         platform = cluster_data["platform"]
         target_dir = os.path.join(must_gather_output_dir, "must-gather", platform, name)
-    except Exception:
+    except Exception as ex:
         click.secho(
-            f"Failed to get data from {cluster_data}; must-gather could not be"
-            " executed.",
+            f"Failed to get data from {cluster_data}; must-gather could not be executed"
+            f" on: {ex}",
             fg=ERROR_LOG_COLOR,
         )
         return
@@ -189,7 +180,7 @@ def collect_must_gather(must_gather_output_dir, cluster_data):
             )
             return
 
-        click.echo(f"Prepare target extracted directory {target_dir}.")
+        click.echo(f"Prepare must-gather target extracted directory {target_dir}.")
         Path(target_dir).mkdir(parents=True, exist_ok=True)
 
         click.echo(f"Collect must-gather for cluster {name} running on {platform}")

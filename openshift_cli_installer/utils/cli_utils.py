@@ -5,6 +5,7 @@ from pathlib import Path
 import click
 import rosa.cli
 from clouds.aws.aws_utils import set_and_verify_aws_credentials
+from ocm_python_wrapper.cluster import Cluster
 from ocp_resources.utils import TimeoutWatch
 
 from openshift_cli_installer.libs.managed_clusters.helpers import (
@@ -506,6 +507,7 @@ def assert_gcp_osd_user_input(create, clusters, gcp_service_account_file):
 def prepare_clusters(clusters, ocm_token):
     supported_envs = (PRODUCTION_STR, STAGE_STR)
     for _cluster in clusters:
+        name = _cluster["name"]
         _cluster["timeout"] = tts(ts=_cluster.get("timeout", TIMEOUT_60MIN))
         if _cluster["platform"] == AWS_STR:
             ocm_env = PRODUCTION_STR
@@ -515,11 +517,16 @@ def prepare_clusters(clusters, ocm_token):
 
         if ocm_env not in supported_envs:
             click.secho(
-                f"{_cluster['name']} got unsupported OCM env - {ocm_env}, supported"
+                f"{name} got unsupported OCM env - {ocm_env}, supported"
                 f" envs: {supported_envs}"
             )
             raise click.Abort()
 
-        _cluster["ocm-client"] = get_ocm_client(ocm_token=ocm_token, ocm_env=ocm_env)
+        ocm_client = get_ocm_client(ocm_token=ocm_token, ocm_env=ocm_env)
+        _cluster["ocm-client"] = ocm_client
+        _cluster["cluster-object"] = Cluster(
+            client=ocm_client,
+            name=name,
+        )
 
     return clusters

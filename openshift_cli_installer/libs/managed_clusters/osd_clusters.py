@@ -1,5 +1,4 @@
 import click
-from ocm_python_wrapper.cluster import Cluster
 
 from openshift_cli_installer.utils.clusters import (
     add_cluster_info_to_cluster_data,
@@ -18,11 +17,7 @@ from openshift_cli_installer.utils.general import zip_and_upload_to_s3
 
 def osd_create_cluster(cluster_data, must_gather_output_dir=None):
     cluster_name = cluster_data["name"]
-    cluster_object = Cluster(
-        client=cluster_data["ocm-client"],
-        name=cluster_name,
-    )
-    cluster_data["cluster-object"] = cluster_object
+    cluster_object = cluster_data["cluster-object"]
 
     try:
         cluster_platform = cluster_data["platform"]
@@ -101,10 +96,7 @@ def osd_delete_cluster(cluster_data):
     name = cluster_data["name"]
 
     try:
-        Cluster(
-            client=cluster_data["ocm-client"],
-            name=name,
-        ).delete(timeout=cluster_data["timeout"])
+        cluster_data["cluster-object"].delete(timeout=cluster_data["timeout"])
         click.secho(f"Cluster {name} destroyed successfully", fg=SUCCESS_LOG_COLOR)
         return cluster_data
     except Exception as ex:
