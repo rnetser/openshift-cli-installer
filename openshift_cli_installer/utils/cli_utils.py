@@ -525,8 +525,8 @@ def prepare_clusters(clusters, ocm_token):
             raise click.Abort()
 
         ocm_client = get_ocm_client(ocm_token=ocm_token, ocm_env=ocm_env)
+        _cluster["ocm-client"] = ocm_client
         if platform in OCM_MANAGED_PLATFORMS:
-            _cluster["ocm-client"] = ocm_client
             _cluster["cluster-object"] = Cluster(
                 client=ocm_client,
                 name=name,
