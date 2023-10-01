@@ -172,6 +172,7 @@ def rosa_create_cluster(cluster_data, must_gather_output_dir=None):
         "acm",
         "acm-clusters",
         "timeout-watch",
+        "cluster-object",
     )
     command = "create cluster --sts "
 
