@@ -196,7 +196,7 @@ def collect_must_gather(must_gather_output_dir, cluster_data):
             fg=ERROR_LOG_COLOR,
         )
 
-        click.echo(f"Delete target directory {target_dir}.")
+        click.echo(f"Delete must-gather target directory {target_dir}.")
         shutil.rmtree(target_dir)
 
 
