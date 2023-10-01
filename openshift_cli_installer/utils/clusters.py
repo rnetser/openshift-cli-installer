@@ -134,7 +134,7 @@ def check_ocm_managed_existing_clusters(clusters):
         existing_clusters_list = []
         for _cluster in clusters:
             cluster_name = _cluster["name"]
-            if _cluster["cluster_object"].exists:
+            if _cluster["cluster-object"].exists:
                 existing_clusters_list.append(cluster_name)
 
         if existing_clusters_list:
