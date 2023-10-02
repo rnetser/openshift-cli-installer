@@ -54,9 +54,11 @@ def update_rosa_osd_clusters_versions(clusters, _test=False, _test_versions_dict
         base_available_versions_dict = {}
         for cluster_data in clusters:
             if cluster_data["platform"] in (AWS_OSD_STR, GCP_OSD_STR):
-                base_available_versions_dict = Versions(
-                    client=cluster_data["ocm-client"]
-                ).get(channel_group=cluster_data["channel-group"])
+                base_available_versions_dict.update(
+                    Versions(client=cluster_data["ocm-client"]).get(
+                        channel_group=cluster_data["channel-group"]
+                    )
+                )
 
             elif cluster_data["platform"] in (ROSA_STR, HYPERSHIFT_STR):
                 channel_group = cluster_data["channel-group"]
@@ -69,7 +71,9 @@ def update_rosa_osd_clusters_versions(clusters, _test=False, _test_versions_dict
                     ocm_client=cluster_data["ocm-client"],
                 )["out"]
                 _all_versions = [ver["raw_id"] for ver in base_available_versions]
-                base_available_versions_dict[channel_group] = _all_versions
+                base_available_versions_dict.setdefault(channel_group, []).extend(
+                    _all_versions
+                )
 
     return set_clusters_versions(
         clusters=clusters,
