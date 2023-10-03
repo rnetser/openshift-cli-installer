@@ -2,8 +2,6 @@ import os
 import shlex
 
 import click
-import yaml
-from ocm_python_wrapper.cluster import Cluster
 from ocp_resources.managed_cluster import ManagedCluster
 from ocp_resources.multi_cluster_hub import MultiClusterHub
 from ocp_resources.secret import Secret
@@ -14,7 +12,6 @@ from openshift_cli_installer.utils.clusters import get_kubeconfig_path
 from openshift_cli_installer.utils.const import (
     AWS_STR,
     ERROR_LOG_COLOR,
-    OCM_MANAGED_PLATFORMS,
     SUCCESS_LOG_COLOR,
 )
 from openshift_cli_installer.utils.general import tts
@@ -120,7 +117,6 @@ def install_and_attach_for_acm(
             "timeout-watch", TimeoutWatch(timeout=tts(ts="15m"))
         )
         ocp_client = hub_cluster_data["ocp-client"]
-        ocm_client = hub_cluster_data["ocm-client"]
         acm_cluster_kubeconfig = get_kubeconfig_path(cluster_data=hub_cluster_data)
 
         if hub_cluster_data.get("acm"):
@@ -136,12 +132,9 @@ def install_and_attach_for_acm(
 
         for _managed_acm_clusters in hub_cluster_data.get("acm-clusters", []):
             _managed_cluster_name = _managed_acm_clusters["name"]
-            _managed_cluster_platform = _managed_acm_clusters["platform"]
             managed_acm_cluster_kubeconfig = get_managed_acm_cluster_kubeconfig(
-                hub_cluster_data=hub_cluster_data,
                 managed_acm_cluster_name=_managed_cluster_name,
-                managed_cluster_platform=_managed_cluster_platform,
-                ocm_client=ocm_client,
+                managed_cluster_platform=_managed_acm_clusters["platform"],
                 clusters_install_data_directory=clusters_install_data_directory,
             )
 
@@ -156,31 +149,15 @@ def install_and_attach_for_acm(
 
 
 def get_managed_acm_cluster_kubeconfig(
-    hub_cluster_data,
     managed_acm_cluster_name,
     managed_cluster_platform,
-    ocm_client,
     clusters_install_data_directory,
 ):
-    # In case we deployed the cluster we have the kubeconfig
-    managed_acm_cluster_kubeconfig = None
-    if managed_cluster_platform in OCM_MANAGED_PLATFORMS:
-        managed_acm_cluster_object = Cluster(
-            client=ocm_client, name=managed_acm_cluster_name
-        )
-        managed_acm_cluster_kubeconfig = os.path.join(
-            hub_cluster_data["install-dir"],
-            f"{managed_acm_cluster_name}-kubeconfig",
-        )
-        with open(managed_acm_cluster_kubeconfig, "w") as fd:
-            fd.write(yaml.safe_dump(managed_acm_cluster_object.kubeconfig))
-
-    elif managed_cluster_platform == AWS_STR:
-        managed_acm_cluster_kubeconfig = get_cluster_kubeconfig_from_install_dir(
-            clusters_install_data_directory=clusters_install_data_directory,
-            cluster_name=managed_acm_cluster_name,
-            cluster_platform=managed_cluster_platform,
-        )
+    managed_acm_cluster_kubeconfig = get_cluster_kubeconfig_from_install_dir(
+        clusters_install_data_directory=clusters_install_data_directory,
+        cluster_name=managed_acm_cluster_name,
+        cluster_platform=managed_cluster_platform,
+    )
 
     if not managed_acm_cluster_kubeconfig:
         click.secho(
