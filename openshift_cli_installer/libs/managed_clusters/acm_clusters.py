@@ -88,7 +88,7 @@ def install_acm(
         msg="ACM installed successfully",
         success=True,
     )
-    if hub_cluster_data.get("acm-observability"):
+    if hub_cluster_data.get("acm-observability") is True:
         enable_observability(
             hub_cluster_data=hub_cluster_data,
             timeout_watch=timeout_watch,
@@ -147,7 +147,7 @@ def install_and_attach_for_acm(
     parallel,
 ):
     for hub_cluster_data in managed_clusters:
-        if hub_cluster_data.get("acm"):
+        if hub_cluster_data.get("acm") is True:
             timeout_watch = hub_cluster_data.get(
                 "timeout-watch", TimeoutWatch(timeout=tts(ts="15m"))
             )

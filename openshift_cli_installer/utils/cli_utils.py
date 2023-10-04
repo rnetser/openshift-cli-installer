@@ -1,3 +1,4 @@
+import ast
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -33,6 +34,7 @@ from openshift_cli_installer.utils.clusters import (
 from openshift_cli_installer.utils.const import (
     AWS_OSD_STR,
     AWS_STR,
+    CLUSTER_BOOLEAN_KEYS,
     ERROR_LOG_COLOR,
     GCP_OSD_STR,
     HYPERSHIFT_STR,
@@ -311,6 +313,7 @@ def verify_user_input(**kwargs):
             gcp_service_account_file=gcp_service_account_file,
             create=create,
         )
+        assert_boolean_values(clusters=clusters, create=create)
 
 
 def assert_aws_ipi_user_input(
@@ -355,7 +358,7 @@ def assert_acm_clusters_user_input(
     aws_secret_access_key,
 ):
     supported_platforms = (ROSA_STR, AWS_STR, AWS_OSD_STR)
-    acm_clusters = [_cluster for _cluster in clusters if _cluster.get("acm")]
+    acm_clusters = [_cluster for _cluster in clusters if _cluster.get("acm") is True]
     if acm_clusters and create:
         for _cluster in acm_clusters:
             cluster_platform = _cluster["platform"]
@@ -417,7 +420,7 @@ def prepare_aws_ipi_clusters(
                 docker_config_file=docker_config_file,
             )
             acm_clusters = [
-                _cluster for _cluster in aws_ipi_clusters if _cluster.get("acm")
+                _cluster for _cluster in aws_ipi_clusters if _cluster.get("acm") is True
             ]
             for _acm_cluster in acm_clusters:
                 _acm_cluster["aws-access-key-id"] = aws_access_key_id
@@ -621,10 +624,17 @@ def get_managed_acm_clusters_from_user_input(cluster):
     return [_cluster for _cluster in managed_acm_clusters if _cluster]
 
 
-def get_clusters_from_user_input(**kwargs):
+def get_updated_clusters_from_user_input(**kwargs):
     # From CLI, we get `cluster`, from YAML file we get `clusters`
     clusters = kwargs.get("cluster")
-    if not clusters:
+    # From CLI, key values are passed as strings, setting to booleans where needed
+    if clusters:
+        for _cluster in clusters:
+            for key in CLUSTER_BOOLEAN_KEYS:
+                cluster_key_value = _cluster.get(key)
+                if cluster_key_value and isinstance(cluster_key_value, str):
+                    _cluster[key] = ast.literal_eval(cluster_key_value)
+    else:
         clusters = kwargs.get("clusters")
 
     return clusters
@@ -647,3 +657,23 @@ def assert_unique_cluster_names(clusters):
             msg=f"Cluster names must be unique: clusters {cluster_names}",
         )
         raise click.Abort()
+
+
+def assert_boolean_values(clusters, create):
+    if create:
+        for cluster in clusters:
+            if any(
+                [
+                    isinstance(key, bool)
+                    for key in cluster
+                    if key in CLUSTER_BOOLEAN_KEYS
+                ]
+            ):
+                click_echo(
+                    name=None,
+                    platform="All",
+                    section="verify_user_input",
+                    error=True,
+                    msg=f"The following keys are boolean: {CLUSTER_BOOLEAN_KEYS}",
+                )
+                raise click.Abort()
