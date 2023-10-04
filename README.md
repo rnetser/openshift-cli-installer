@@ -83,8 +83,12 @@ Every call to the openshift installer cli must have at least one `--cluster` opt
 
 ### ACM (Advanced Cluster Management)
 Managed clusters (Rosa, AWS and OSD) can be deployed with ACM and attached to ACM hub.
-To deploy ACM on cluster pass `--cluster ..... acm=True`
-To attach cluster to this ACM hub pass `--cluster ...... acm-clusters=mycluser1,mycluster2`
+To deploy ACM on cluster pass `--cluster ... acm=True`
+To enable observability on the ACM enabled cluster pass `--cluster ... acm-observability=True`
+Attach clusters to ACM cluster hub:
+  * Support only clusters that created during the run
+  * To attach cluster to this ACM hub pass `--cluster ... acm-clusters=mycluser1,mycluster2`
+    * `mycluser1,mycluster2` needs to be sent with `--cluster ...` for the script to create them.
 
 ### Usages
 
@@ -184,9 +188,9 @@ podman run quay.io/redhat_msi/openshift-cli-installer \
     --action create \
     --registry-config-file=registry-config.json \
     --s3-bucket-name=openshift-cli-installer \
-    --s3-bucket-path=install-folders \  
+    --s3-bucket-path=install-folders \  --cluster 'name=hyper1;platform=hypershift;region=us-west-2;version=4.13.4;compute-machine-type=m5.4xlarge;replicas=6;channel-group=candidate;expiration-time=2h;timeout=1h' \
     --ocm-token=$OCM_TOKEN \
-    --cluster 'name=hyper1;platform=hypershift;region=us-west-2;version=4.13.4;compute-machine-type=m5.4xlarge;replicas=6;channel-group=candidate;expiration-time=2h;timeout=1h' \
+
     --cluster 'name=ipi1;base_domain=aws.interop.ccitredhat.com;platform=aws;region=us-east-2;version=4.14.0-ec.2;worker_flavor=m5.xlarge' \
     --cluster 'name=rosa1;platform=rosa;region=us-east-2;version=4.13.4;compute-machine-type=m5.xlarge;replicas=2;channel-group=candidate;expiration-time=4h;timeout=1h' \
     --parallel
