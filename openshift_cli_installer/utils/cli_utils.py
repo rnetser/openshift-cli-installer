@@ -664,16 +664,16 @@ def assert_boolean_values(clusters, create):
         for cluster in clusters:
             if any(
                 [
-                    isinstance(key, bool)
-                    for key in cluster
-                    if key in CLUSTER_BOOLEAN_KEYS
+                    not isinstance(cluster_data_value, bool)
+                    for cluster_data_key, cluster_data_value in cluster.items()
+                    if cluster_data_key in CLUSTER_BOOLEAN_KEYS
                 ]
             ):
                 click_echo(
-                    name=None,
-                    platform="All",
+                    name=cluster["name"],
+                    platform=cluster["platform"],
                     section="verify_user_input",
                     error=True,
-                    msg=f"The following keys are boolean: {CLUSTER_BOOLEAN_KEYS}",
+                    msg=f"The following keys must be booleans: {CLUSTER_BOOLEAN_KEYS}",
                 )
                 raise click.Abort()
