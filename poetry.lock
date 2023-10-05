@@ -740,12 +740,12 @@ rosa-python-client = ">=1.0.28,<2.0.0"
 
 [[package]]
 name = "openshift-python-utilities"
-version = "5.0.4"
+version = "5.0.5"
 description = "A utilities repository for https://github.com/RedHatQE/openshift-python-wrapper"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "openshift_python_utilities-5.0.4.tar.gz", hash = "sha256:b66c987f18bce94384ee43c5f64968daeccd17dc5e05dfc2cb8b7a0070289350"},
+    {file = "openshift_python_utilities-5.0.5.tar.gz", hash = "sha256:fa338225dceefe0d2b2a8a9c47d1abc0126d8f9d32d6d21b89cd40fcf8d4dcaf"},
 ]
 
 [package.dependencies]
@@ -1178,12 +1178,12 @@ files = [
 
 [[package]]
 name = "redhat-qe-cloud-tools"
-version = "1.0.15"
+version = "1.0.17"
 description = "Python utilities to manage cloud services, such as AWS."
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "redhat_qe_cloud_tools-1.0.15.tar.gz", hash = "sha256:46ad47b638bd78d2528c90c16dcb8bfbfd8c110c8322cf9974d7d5bf30917ffb"},
+    {file = "redhat_qe_cloud_tools-1.0.17.tar.gz", hash = "sha256:749d97c0ba196fb639e7e8ced003e64a92643e29188244cc30e56257338d7e42"},
 ]
 
 [package.dependencies]
