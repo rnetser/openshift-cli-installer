@@ -1,5 +1,6 @@
 # General
 CLUSTER_DATA_YAML_FILENAME = "cluster_data.yaml"
+USER_INPUT_CLUSTER_BOOLEAN_KEYS = ("acm", "acm-observability")
 
 # Cluster types
 AWS_STR = "aws"
