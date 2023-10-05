@@ -39,7 +39,6 @@ from openshift_cli_installer.utils.clusters import (
 from openshift_cli_installer.utils.const import (
     AWS_OSD_STR,
     AWS_STR,
-    CLUSTER_BOOLEAN_KEYS,
     ERROR_LOG_COLOR,
     GCP_OSD_STR,
     HYPERSHIFT_STR,
@@ -51,6 +50,7 @@ from openshift_cli_installer.utils.const import (
     SUPPORTED_ACTIONS,
     SUPPORTED_PLATFORMS,
     TIMEOUT_60MIN,
+    USER_INPUT_CLUSTER_BOOLEAN_KEYS,
 )
 from openshift_cli_installer.utils.gcp import get_gcp_regions
 from openshift_cli_installer.utils.general import tts
@@ -629,18 +629,20 @@ def get_managed_acm_clusters_from_user_input(cluster):
     return [_cluster for _cluster in managed_acm_clusters if _cluster]
 
 
-def get_updated_clusters_from_user_input(**kwargs):
+def get_clusters_from_user_input(**kwargs):
     # From CLI, we get `cluster`, from YAML file we get `clusters`
-    clusters = kwargs.get("cluster")
-    # From CLI, key values are passed as strings, setting to booleans where needed
-    if clusters:
-        for _cluster in clusters:
-            for key in CLUSTER_BOOLEAN_KEYS:
-                cluster_key_value = _cluster.get(key)
-                if cluster_key_value and isinstance(cluster_key_value, str):
+    clusters = kwargs.get("cluster", [])
+    if not clusters:
+        clusters = kwargs.get("clusters", [])
+
+    for _cluster in clusters:
+        for key in USER_INPUT_CLUSTER_BOOLEAN_KEYS:
+            cluster_key_value = _cluster.get(key)
+            if cluster_key_value and isinstance(cluster_key_value, str):
+                try:
                     _cluster[key] = ast.literal_eval(cluster_key_value)
-    else:
-        clusters = kwargs.get("clusters")
+                except ValueError:
+                    continue
 
     return clusters
 
@@ -699,18 +701,18 @@ def save_kubeadmin_token_to_clusters_install_data(clusters):
 def assert_boolean_values(clusters, create):
     if create:
         for cluster in clusters:
-            if any(
-                [
-                    not isinstance(cluster_data_value, bool)
-                    for cluster_data_key, cluster_data_value in cluster.items()
-                    if cluster_data_key in CLUSTER_BOOLEAN_KEYS
-                ]
-            ):
+            non_bool_keys = [
+                cluster_data_key
+                for cluster_data_key, cluster_data_value in cluster.items()
+                if cluster_data_key in USER_INPUT_CLUSTER_BOOLEAN_KEYS
+                and not isinstance(cluster_data_value, bool)
+            ]
+            if non_bool_keys:
                 click_echo(
                     name=cluster["name"],
                     platform=cluster["platform"],
                     section="verify_user_input",
                     error=True,
-                    msg=f"The following keys must be booleans: {CLUSTER_BOOLEAN_KEYS}",
+                    msg=f"The following keys must be booleans: {non_bool_keys}",
                 )
                 raise click.Abort()

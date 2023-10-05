@@ -11,7 +11,7 @@ from openshift_cli_installer.libs.managed_clusters.acm_clusters import (
 )
 from openshift_cli_installer.utils.cli_utils import (
     get_clusters_by_type,
-    get_updated_clusters_from_user_input,
+    get_clusters_from_user_input,
     is_region_support_aws,
     is_region_support_gcp,
     is_region_support_hypershift,
@@ -219,7 +219,7 @@ def main(**kwargs):
         user_kwargs.update(parse_config(path=clusters_yaml_config_file))
 
     action = user_kwargs.get("action")
-    clusters = get_updated_clusters_from_user_input(**user_kwargs)
+    clusters = get_clusters_from_user_input(**user_kwargs)
     ocm_token = user_kwargs.get("ocm_token")
     parallel = False if clusters and len(clusters) == 1 else user_kwargs.get("parallel")
     clusters_install_data_directory = user_kwargs.get(
