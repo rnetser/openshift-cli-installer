@@ -668,32 +668,34 @@ def assert_unique_cluster_names(clusters):
 
 def save_kubeadmin_token_to_clusters_install_data(clusters):
     for cluster_data in clusters:
-        oauth_url = Route(
-            client=cluster_data["ocp-client"],
-            name="oauth-openshift",
-            namespace="openshift-authentication",
-        ).instance.spec.host
-        full_oauth_url = (
-            f"https://{oauth_url}/oauth/authorize?response_type=token"
-            "&client_id=openshift-challenging-client"
-        )
-        with open(
-            os.path.join(cluster_data["install-dir"], "auth", "kubeadmin-password")
-        ) as fd:
-            kubeadmin_password = fd.read()
+        # HCP clusters do not have `oauth-openshift` route
+        if cluster_data["platform"] != HYPERSHIFT_STR:
+            oauth_url = Route(
+                client=cluster_data["ocp-client"],
+                name="oauth-openshift",
+                namespace="openshift-authentication",
+            ).instance.spec.host
+            full_oauth_url = (
+                f"https://{oauth_url}/oauth/authorize?response_type=token"
+                "&client_id=openshift-challenging-client"
+            )
+            with open(
+                os.path.join(cluster_data["install-dir"], "auth", "kubeadmin-password")
+            ) as fd:
+                kubeadmin_password = fd.read()
 
-        res = requests.get(
-            full_oauth_url,
-            auth=HTTPBasicAuth("kubeadmin", kubeadmin_password),
-            headers={"X-CSRF-Token": "xxx"},
-            allow_redirects=False,
-        )
+            res = requests.get(
+                full_oauth_url,
+                auth=HTTPBasicAuth("kubeadmin", kubeadmin_password),
+                headers={"X-CSRF-Token": "xxx"},
+                allow_redirects=False,
+            )
 
-        cluster_data["kubeadmin-token"] = re.findall(
-            r"sha256~.*?(?=&)", res.headers["Location"]
-        )[0]
+            cluster_data["kubeadmin-token"] = re.findall(
+                r"sha256~.*?(?=&)", res.headers["Location"]
+            )[0]
 
-        dump_cluster_data_to_file(cluster_data=cluster_data)
+            dump_cluster_data_to_file(cluster_data=cluster_data)
 
     return clusters
 
