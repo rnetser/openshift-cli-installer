@@ -1,4 +1,5 @@
 import ast
+import contextlib
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -8,6 +9,7 @@ import rosa.cli
 from clouds.aws.aws_utils import set_and_verify_aws_credentials
 from ocm_python_wrapper.cluster import Cluster
 from ocp_resources.utils import TimeoutWatch
+from simple_logger.logger import get_logger
 
 from openshift_cli_installer.libs.managed_clusters.helpers import (
     prepare_managed_clusters_data,
@@ -51,6 +53,8 @@ from openshift_cli_installer.utils.const import (
 )
 from openshift_cli_installer.utils.gcp import get_gcp_regions
 from openshift_cli_installer.utils.general import tts
+
+LOGGER = get_logger(name=__name__)
 
 
 def get_clusters_by_type(clusters):
@@ -665,11 +669,12 @@ def assert_unique_cluster_names(clusters):
 
 def save_kubeadmin_token_to_clusters_install_data(clusters):
     # Do not run this function in parallel, get_kubeadmin_token() do `oc login`.
-    for cluster_data in clusters:
-        with get_kubeadmin_token(cluster_data=cluster_data) as kubeadmin_token:
-            cluster_data["kubeadmin-token"] = kubeadmin_token
+    with change_home_environment():
+        for cluster_data in clusters:
+            with get_kubeadmin_token(cluster_data=cluster_data) as kubeadmin_token:
+                cluster_data["kubeadmin-token"] = kubeadmin_token
 
-        dump_cluster_data_to_file(cluster_data=cluster_data)
+            dump_cluster_data_to_file(cluster_data=cluster_data)
 
     return clusters
 
@@ -692,3 +697,17 @@ def assert_boolean_values(clusters, create):
                     msg=f"The following keys must be booleans: {non_bool_keys}",
                 )
                 raise click.Abort()
+
+
+@contextlib.contextmanager
+def change_home_environment():
+    home_atr = "HOME"
+    tmp_home_dir = "/tmp/"
+    LOGGER.info(f"Changing {home_atr} environment variable to {tmp_home_dir}")
+    current_home = os.environ.get(home_atr)
+    os.environ[home_atr] = tmp_home_dir
+    yield
+    LOGGER.info(
+        f"Changing {home_atr} environment variable to previous value. {current_home}"
+    )
+    os.environ[home_atr] = current_home
