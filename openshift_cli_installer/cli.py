@@ -216,7 +216,9 @@ def main(**kwargs):
     if clusters_yaml_config_file:
         # Update CLI user input from YAML file if exists
         # Since CLI user input has some defaults, YAML file will override them
-        user_kwargs.update(parse_config(path=clusters_yaml_config_file))
+        user_kwargs.update(
+            parse_config(path=clusters_yaml_config_file, default_value="")
+        )
 
     action = user_kwargs.get("action")
     clusters = get_clusters_from_user_input(**user_kwargs)
