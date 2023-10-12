@@ -210,7 +210,7 @@ def enable_observability(
 
     if hub_cluster_platform in AWS_BASED_PLATFORMS:
         aws_region = hub_cluster_data["region"]
-        _s3_client = s3_client(region=aws_region)
+        _s3_client = s3_client(region_name=aws_region)
         aws_access_key_id = hub_cluster_data["aws-access-key-id"]
         aws_secret_access_key = hub_cluster_data["aws-secret-access-key"]
         s3_secret_data = f"""
