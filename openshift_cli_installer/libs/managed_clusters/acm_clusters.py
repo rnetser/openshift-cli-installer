@@ -226,7 +226,10 @@ def enable_observability(
         thanos_secret_data = {
             "thanos.yaml": base64.b64encode(s3_secret_data_bytes).decode("utf-8")
         }
-        _s3_client.create_bucket(Bucket=bucket_name.lower())
+        _s3_client.create_bucket(
+            Bucket=bucket_name.lower(),
+            CreateBucketConfiguration={"LocationConstraint": aws_region},
+        )
 
     elif hub_cluster_platform == GCP_OSD_STR:
         # TODO: Add GCP support
