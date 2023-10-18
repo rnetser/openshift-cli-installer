@@ -149,45 +149,14 @@ def prepare_hypershift_vpc(cluster_data):
 def rosa_create_cluster(cluster_data, must_gather_output_dir=None):
     hosted_cp_arg = "--hosted-cp"
     _platform = cluster_data["platform"]
-    ignore_keys = (
-        "name",
-        "platform",
-        "ocm-env",
-        "ocm-token",
-        "install-dir",
-        "timeout",
-        "auth-dir",
-        "cidr",
-        "private_subnets",
-        "public_subnets",
-        "aws-access-key-id",
-        "aws-secret-access-key",
-        "aws-account-id",
-        "multi-az",
-        "ocm-client",
-        "shortuuid",
-        "s3-object-name",
-        "s3-bucket-name",
-        "s3-bucket-path",
-        "acm",
-        "acm-clusters",
-        "timeout-watch",
-        "cluster-object",
-        "acm-observability",
-    )
     command = "create cluster --sts "
 
     if _platform == HYPERSHIFT_STR:
         cluster_data = create_oidc(cluster_data=cluster_data)
         cluster_data = prepare_hypershift_vpc(cluster_data=cluster_data)
 
-    command_kwargs = {
-        f"--{_key}={_val}"
-        for _key, _val in cluster_data.items()
-        if _key not in ignore_keys
-    }
-
-    for cmd in command_kwargs:
+    command_params = build_rosa_command_params(cluster_data=cluster_data)
+    for cmd in command_params:
         if hosted_cp_arg in cmd:
             command += f"{hosted_cp_arg} "
         else:
@@ -287,3 +256,41 @@ def rosa_delete_cluster(cluster_data):
 
     click.secho(f"Cluster {name} destroyed successfully", fg=SUCCESS_LOG_COLOR)
     return cluster_data
+
+
+def build_rosa_command_params(cluster_data):
+    ignore_keys = (
+        "name",
+        "platform",
+        "ocm-env",
+        "ocm-token",
+        "install-dir",
+        "timeout",
+        "auth-dir",
+        "cidr",
+        "private_subnets",
+        "public_subnets",
+        "aws-access-key-id",
+        "aws-secret-access-key",
+        "aws-account-id",
+        "multi-az",
+        "ocm-client",
+        "shortuuid",
+        "s3-object-name",
+        "s3-bucket-name",
+        "s3-bucket-path",
+        "acm",
+        "acm-clusters",
+        "timeout-watch",
+        "cluster-object",
+    )
+
+    ignore_prefix = ("acm-observability",)
+
+    command_params = {
+        f"--{_key}={_val}"
+        for _key, _val in cluster_data.items()
+        if _key not in ignore_keys and not _key.startswith(ignore_prefix)
+    }
+
+    return command_params
