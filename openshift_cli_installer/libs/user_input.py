@@ -289,7 +289,7 @@ class UserInput:
                 continue
 
             cluster_name = cluster["name"]
-            storage_type = cluster.get("acm-observability-storage-type")
+            storage_type = cluster.get("acm-observability-storage-type", "")
             base_error_str = f"cluster: {cluster_name} - storage type: {storage_type}"
             if storage_type not in OBSERVABILITY_SUPPORTED_STORAGE_TYPES:
                 not_supported_clusters.append(base_error_str)
