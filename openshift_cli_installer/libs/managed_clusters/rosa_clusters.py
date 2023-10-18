@@ -155,9 +155,8 @@ def rosa_create_cluster(cluster_data, must_gather_output_dir=None):
         cluster_data = create_oidc(cluster_data=cluster_data)
         cluster_data = prepare_hypershift_vpc(cluster_data=cluster_data)
 
-    command_kwargs = extract_rosa_params(cluster_data=cluster_data)
-
-    for cmd in command_kwargs:
+    command_params = build_rosa_command_params(cluster_data=cluster_data)
+    for cmd in command_params:
         if hosted_cp_arg in cmd:
             command += f"{hosted_cp_arg} "
         else:
@@ -259,7 +258,7 @@ def rosa_delete_cluster(cluster_data):
     return cluster_data
 
 
-def extract_rosa_params(cluster_data):
+def build_rosa_command_params(cluster_data):
     ignore_keys = (
         "name",
         "platform",
@@ -288,10 +287,10 @@ def extract_rosa_params(cluster_data):
 
     ignore_prefix = ("acm-observability",)
 
-    command_kwargs = {
+    command_params = {
         f"--{_key}={_val}"
         for _key, _val in cluster_data.items()
         if _key not in ignore_keys and not _key.startswith(ignore_prefix)
     }
 
-    return command_kwargs
+    return command_params
