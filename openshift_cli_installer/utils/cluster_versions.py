@@ -1,7 +1,12 @@
+import functools
 import re
+import shlex
 
 import click
+import rosa.cli
 import semver
+from ocm_python_wrapper.versions import Versions
+from ocp_utilities.utils import run_command
 
 from openshift_cli_installer.utils.const import (
     AWS_OSD_STR,
@@ -167,4 +172,53 @@ def get_cluster_stream(cluster_data):
         cluster_data["stream"]
         if _platform == AWS_STR
         else cluster_data["channel-group"]
+    )
+
+
+@functools.cache
+def get_aws_versions():
+    versions_dict = {}
+    for source_repo in (
+        "quay.io/openshift-release-dev/ocp-release",
+        "registry.ci.openshift.org/ocp/release",
+    ):
+        versions_dict[source_repo] = run_command(
+            command=shlex.split(f"regctl tag ls {source_repo}"),
+            check=False,
+        )[1].splitlines()
+
+    return versions_dict
+
+
+def update_rosa_osd_clusters_versions(clusters, _test=False, _test_versions_dict=None):
+    if _test:
+        base_available_versions_dict = _test_versions_dict
+    else:
+        base_available_versions_dict = {}
+        for cluster_data in clusters:
+            if cluster_data["platform"] in (AWS_OSD_STR, GCP_OSD_STR):
+                base_available_versions_dict.update(
+                    Versions(client=cluster_data["ocm-client"]).get(
+                        channel_group=cluster_data["channel-group"]
+                    )
+                )
+
+            elif cluster_data["platform"] in (ROSA_STR, HYPERSHIFT_STR):
+                channel_group = cluster_data["channel-group"]
+                base_available_versions = rosa.cli.execute(
+                    command=(
+                        f"list versions --channel-group={channel_group} "
+                        f"{'--hosted-cp' if cluster_data['platform'] == HYPERSHIFT_STR else ''}"
+                    ),
+                    aws_region=cluster_data["region"],
+                    ocm_client=cluster_data["ocm-client"],
+                )["out"]
+                _all_versions = [ver["raw_id"] for ver in base_available_versions]
+                base_available_versions_dict.setdefault(channel_group, []).extend(
+                    _all_versions
+                )
+
+    return set_clusters_versions(
+        clusters=clusters,
+        base_available_versions=base_available_versions_dict,
     )

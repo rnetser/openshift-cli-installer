@@ -3,38 +3,17 @@ import os
 import time
 
 import click
+from simple_logger.logger import get_logger
 
-from openshift_cli_installer.libs.destroy_clusters import destroy_clusters
-from openshift_cli_installer.libs.managed_clusters.acm_clusters import (
-    install_and_attach_for_acm,
-)
+from openshift_cli_installer.libs.clusters.ocp_clusters import OCPClusters
 from openshift_cli_installer.libs.user_input import UserInput
-from openshift_cli_installer.utils.cli_utils import (
-    get_clusters_by_type,
-    is_region_support_aws,
-    is_region_support_gcp,
-    is_region_support_hypershift,
-    prepare_aws_ipi_clusters,
-    prepare_clusters,
-    prepare_ocm_managed_clusters,
-    run_create_or_destroy_clusters,
-    save_kubeadmin_token_to_clusters_install_data,
-)
 from openshift_cli_installer.utils.click_dict_type import DictParamType
 from openshift_cli_installer.utils.clusters import (
-    add_s3_bucket_data,
-    check_ocm_managed_existing_clusters,
+    clusters_from_directories,
+    get_destroy_clusters_kwargs,
+    prepare_clusters_directory_from_s3_bucket,
 )
-from openshift_cli_installer.utils.const import (
-    AWS_OSD_STR,
-    AWS_STR,
-    CLUSTER_DATA_YAML_FILENAME,
-    CREATE_STR,
-    DESTROY_STR,
-    GCP_OSD_STR,
-    HYPERSHIFT_STR,
-    ROSA_STR,
-)
+from openshift_cli_installer.utils.const import CREATE_STR, DESTROY_STR
 
 
 @click.command("installer")
@@ -149,28 +128,31 @@ For example:
     multiple=True,
 )
 @click.option(
-    "--destroy-all-clusters",
+    "--destroy-clusters-from-s3-bucket",
     help="""
 \b
-Destroy all clusters under `--clusters-install-data-directory` and/or
-saved in S3 bucket (`--s3-bucket-path` `--s3-bucket-name`).
-S3 objects will be deleted upon successful deletion.
+Destroy clusters from S3 bucket, --s3-bucket-name is required and optional --s3-bucket-path.
+.
     """,
+    show_default=True,
     is_flag=True,
+)
+@click.option(
+    "--destroy-clusters-from-s3-bucket-query",
+    help="""
+\b
+Option to pass query to --destroy-clusters-from-s3-bucket, match only files that have it.
+    """,
     show_default=True,
 )
 @click.option(
-    "--destroy-clusters-from-s3-config-files",
-    help=f"""
+    "--destroy-clusters-from-install-data-directory",
+    help="""
 \b
-Destroy clusters from a list of paths to `{CLUSTER_DATA_YAML_FILENAME}` files.
-The yaml file must include `s3-object-name` with s3 objet name.
-`--s3-bucket-name` and optionally `--s3-bucket-path` must be provided.
-S3 objects will be deleted upon successful deletion.
-For example:
-    '/tmp/cluster1/,/tmp/cluster2/'
+Destroy clusters from cluster data files located at --clusters-install-data-directory
     """,
     show_default=True,
+    is_flag=True,
 )
 @click.option(
     "--clusters-yaml-config-file",
@@ -204,105 +186,77 @@ must-gather will try to collect data when cluster installation fails and cluster
     is_flag=True,
     show_default=True,
 )
+@click.option(
+    "--pdb",
+    help="Drop to `ipdb` shell on exception",
+    is_flag=True,
+    show_default=True,
+)
 def main(**kwargs):
     """
     Create/Destroy Openshift cluster/s
     """
-    user_input = UserInput(**kwargs)
-    if user_input.dry_run:
+    kwargs.pop("pdb", None)
+    if kwargs["dry_run"]:
+        UserInput(**kwargs)
         return
 
-    if (
-        user_input.destroy_clusters_from_s3_config_files
-        or user_input.destroy_all_clusters
-    ):
-        return destroy_clusters(
-            s3_bucket_name=user_input.s3_bucket_name,
-            s3_bucket_path=user_input.s3_bucket_path,
-            clusters_install_data_directory=user_input.clusters_install_data_directory,
-            registry_config_file=user_input.registry_config_file,
-            clusters_dir_paths=user_input.destroy_clusters_from_s3_config_files,
-            destroy_all_clusters=user_input.destroy_all_clusters,
-            ocm_token=user_input.ocm_token,
-            parallel=user_input.parallel,
+    cluster_install_data_directory = kwargs["clusters_install_data_directory"]
+    destroy_clusters_from_s3_bucket = kwargs["destroy_clusters_from_s3_bucket"]
+    destroy_clusters_from_install_data_directory = kwargs[
+        "destroy_clusters_from_install_data_directory"
+    ]
+    if destroy_clusters_from_s3_bucket or destroy_clusters_from_install_data_directory:
+        clusters_data_list = []
+        if destroy_clusters_from_s3_bucket:
+            clusters_data_list.extend(
+                prepare_clusters_directory_from_s3_bucket(**kwargs)
+            )
+
+        if destroy_clusters_from_install_data_directory:
+            clusters_data_list.extend(
+                clusters_from_directories(directories=[cluster_install_data_directory])
+            )
+
+        clusters_kwargs = get_destroy_clusters_kwargs(
+            clusters_data_list=clusters_data_list
         )
+        clusters = OCPClusters(**clusters_kwargs)
+        clusters.run_create_or_destroy_clusters()
 
-    # General prepare for all clusters
-    clusters = prepare_clusters(
-        clusters=user_input.clusters,
-        ocm_token=user_input.ocm_token,
-    )
+    else:
+        clusters = OCPClusters(**kwargs)
+        clusters.run_create_or_destroy_clusters()
 
-    if user_input.create and user_input.s3_bucket_name:
-        clusters = add_s3_bucket_data(
-            clusters=clusters,
-            s3_bucket_name=user_input.s3_bucket_name,
-            s3_bucket_path=user_input.s3_bucket_path,
-        )
-
-    clusters_dict = get_clusters_by_type(clusters=clusters)
-    aws_ipi_clusters = clusters_dict.get(AWS_STR)
-    rosa_clusters = clusters_dict.get(ROSA_STR)
-    hypershift_clusters = clusters_dict.get(HYPERSHIFT_STR)
-    aws_osd_clusters = clusters_dict.get(AWS_OSD_STR)
-    gcp_osd_clusters = clusters_dict.get(GCP_OSD_STR)
-
-    aws_managed_clusters = rosa_clusters + hypershift_clusters + aws_osd_clusters
-    ocm_managed_clusters = aws_managed_clusters + gcp_osd_clusters
-
-    if user_input.create:
-        check_ocm_managed_existing_clusters(clusters=ocm_managed_clusters)
-        is_region_support_hypershift(hypershift_clusters=hypershift_clusters)
-        is_region_support_aws(clusters=aws_ipi_clusters + aws_managed_clusters)
-        is_region_support_gcp(
-            gcp_osd_clusters=gcp_osd_clusters,
-            gcp_service_account_file=user_input.gcp_service_account_file,
-        )
-
-    aws_ipi_clusters = prepare_aws_ipi_clusters(
-        aws_ipi_clusters=aws_ipi_clusters,
-        clusters_install_data_directory=user_input.clusters_install_data_directory,
-        registry_config_file=user_input.registry_config_file,
-        ssh_key_file=user_input.ssh_key_file,
-        docker_config_file=user_input.docker_config_file,
-        create=user_input.create,
-    )
-    ocm_managed_clusters = prepare_ocm_managed_clusters(
-        osd_managed_clusters=ocm_managed_clusters,
-        clusters_install_data_directory=user_input.clusters_install_data_directory,
-        aws_access_key_id=user_input.aws_access_key_id,
-        aws_secret_access_key=user_input.aws_secret_access_key,
-        aws_account_id=user_input.aws_account_id,
-        create=user_input.create,
-        gcp_service_account_file=user_input.gcp_service_account_file,
-    )
-
-    processed_clusters = run_create_or_destroy_clusters(
-        clusters=aws_ipi_clusters + ocm_managed_clusters,
-        create=user_input.create,
-        action=user_input.action,
-        parallel=user_input.parallel,
-        must_gather_output_dir=user_input.must_gather_output_dir,
-    )
-
-    if user_input.create:
-        processed_clusters = save_kubeadmin_token_to_clusters_install_data(
-            clusters=processed_clusters,
-        )
-
-        processed_clusters = install_and_attach_for_acm(
-            managed_clusters=processed_clusters,
-            clusters_install_data_directory=user_input.clusters_install_data_directory,
-            parallel=user_input.parallel,
-        )
-
-    return processed_clusters
+        if kwargs["action"] == CREATE_STR:
+            clusters.install_acm_on_clusters()
+            clusters.enable_observability_on_acm_clusters()
+            clusters.attach_clusters_to_acm_cluster_hub()
 
 
 if __name__ == "__main__":
     start_time = time.time()
+    should_raise = False
+    _logger = get_logger(name="main-openshift-cli-installer")
     try:
         main()
+    except Exception as ex:
+        import sys
+        import traceback
+
+        ipdb = __import__("ipdb")  # Bypass debug-statements pre-commit hook
+
+        if "--pdb" in sys.argv:
+            extype, value, tb = sys.exc_info()
+            traceback.print_exc()
+            ipdb.post_mortem(tb)
+        else:
+            _logger.error(ex)
+            should_raise = True
     finally:
-        elapsed_time = datetime.timedelta(seconds=time.time() - start_time)
-        click.secho(f"Total execution time: {elapsed_time}", fg="green", bold=True)
+        _logger.info(
+            "Total execution time:"
+            f" {datetime.timedelta(seconds=time.time() - start_time)}"
+        )
+        if should_raise:
+            sys.exit(1)

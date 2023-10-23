@@ -59,13 +59,29 @@ class UserInput:
         )
         self.s3_bucket_name = self.user_kwargs.get("s3_bucket_name")
         self.s3_bucket_path = self.user_kwargs.get("s3_bucket_path")
-        self.destroy_all_clusters = self.user_kwargs.get("destroy_all_clusters")
+        self.destroy_clusters_from_s3_bucket = self.user_kwargs.get(
+            "destroy_clusters_from_s3_bucket"
+        )
+        self.destroy_clusters_from_install_data_directory = self.user_kwargs.get(
+            "destroy_clusters_from_install_data_directory"
+        )
         self.registry_config_file = self.user_kwargs.get("registry_config_file")
         self.ssh_key_file = self.user_kwargs.get("ssh_key_file")
         self.docker_config_file = self.user_kwargs.get("docker_config_file")
         self.gcp_service_account_file = self.user_kwargs.get("gcp_service_account_file")
         self.must_gather_output_dir = self.user_kwargs.get("must_gather_output_dir")
         self.create = self.action == CREATE_STR
+
+        # We need to make sure that we don't process the same input twice
+        self._already_processed = "__openshift_cli_installer_user_input_processed__"
+        if globals().get(self._already_processed):
+            self.logger.info("User Input already processed")
+            return
+
+        if not self.dry_run:
+            globals()[self._already_processed] = True
+
+        self.logger.info("Initializing User Input")
         self.verify_user_input()
 
     def get_clusters_from_user_input(self):
@@ -99,13 +115,16 @@ class UserInput:
     def verify_user_input(self):
         self.abort_no_ocm_token()
 
-        if self.destroy_clusters_from_s3_config_files:
+        if self.destroy_clusters_from_s3_bucket:
             if not self.s3_bucket_name:
                 self.logger.error(
                     "`--s3-bucket-name` must be provided when running with"
-                    " `--destroy-clusters-from-s3-config-files`",
+                    " `--destroy-clusters-from-s3-bucket`",
                 )
                 raise click.Abort()
+
+        elif self.destroy_clusters_from_install_data_directory:
+            return
 
         else:
             if not self.action:
@@ -336,8 +355,8 @@ class UserInput:
                 )
             raise click.Abort()
 
+    @staticmethod
     def check_missing_observability_storage_data(
-        self,
         cluster,
         storage_type,
     ):

@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import shutil
@@ -6,8 +7,12 @@ from importlib.util import find_spec
 from time import sleep
 
 import click
+import yaml
 from clouds.aws.session_clients import s3_client
+from jinja2 import DebugUndefined, Environment, FileSystemLoader, meta
 from simple_logger.logger import get_logger
+
+from openshift_cli_installer.utils.const import ERROR_LOG_COLOR
 
 LOGGER = get_logger(name=__name__)
 
@@ -76,12 +81,6 @@ def zip_and_upload_to_s3(
     return _base_name
 
 
-def bucket_object_name(cluster_data, s3_bucket_path=None):
-    return (
-        f"{f'{s3_bucket_path}/' if s3_bucket_path else ''}{cluster_data['name']}-{cluster_data['shortuuid']}.zip"
-    )
-
-
 def get_manifests_path():
     manifests_path = os.path.join("openshift_cli_installer", "manifests")
     if not os.path.isdir(manifests_path):
@@ -127,18 +126,40 @@ def tts(ts):
         return int(ts)
 
 
-def delete_cluster_s3_buckets(cluster_data):
-    cluster_name = cluster_data["name"]
-    LOGGER.info(f"Deleting S3 bucket for cluster {cluster_name}")
-    buckets_to_delete = []
-    _s3_client = s3_client()
-    for _bucket in _s3_client.list_buckets()["Buckets"]:
-        if _bucket["Name"].startswith(cluster_name):
-            buckets_to_delete.append(_bucket["Name"])
+def get_install_config_j2_template(cluster_dict):
+    env = Environment(
+        loader=FileSystemLoader(get_manifests_path()),
+        trim_blocks=True,
+        lstrip_blocks=True,
+        undefined=DebugUndefined,
+    )
 
-    for _bucket in buckets_to_delete:
-        LOGGER.info(f"{cluster_name}: Deleting S3 bucket {_bucket}")
-        for _object in _s3_client.list_objects(Bucket=_bucket)["Contents"]:
-            _s3_client.delete_object(Bucket=_bucket, Key=_object["Key"])
+    template = env.get_template(name="install-config-template.j2")
+    rendered = template.render(cluster_dict)
+    undefined_variables = meta.find_undeclared_variables(env.parse(rendered))
+    if undefined_variables:
+        click.secho(
+            f"The following variables are undefined: {undefined_variables}",
+            fg=ERROR_LOG_COLOR,
+        )
+        raise click.Abort()
 
-        _s3_client.delete_bucket(Bucket=_bucket)
+    return yaml.safe_load(rendered)
+
+
+def generate_unified_pull_secret(registry_config_file, docker_config_file):
+    registry_config = get_pull_secret_data(registry_config_file=registry_config_file)
+    docker_config = get_pull_secret_data(registry_config_file=docker_config_file)
+    docker_config["auths"].update(registry_config["auths"])
+
+    return json.dumps(docker_config)
+
+
+def get_pull_secret_data(registry_config_file):
+    with open(registry_config_file) as fd:
+        return json.load(fd)
+
+
+def get_local_ssh_key(ssh_key_file):
+    with open(ssh_key_file) as fd:
+        return fd.read().strip()
