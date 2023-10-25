@@ -92,16 +92,13 @@ Attach clusters to ACM cluster hub:
 
 ### Destroy clusters
 
-Both `--destroy-clusters-from-install-data-directory` and `--destroy-clusters-from-s3-bucket` must have:
+`--destroy-clusters-from-install-data-directory`, `--destroy-clusters-from-s3-bucket` and `--destroy-clusters-from-install-data-directory-using-s3-bucket` must have:
 
 ```bash
---ocm-token=$OCM_TOKEN \
-  --ssh-key-file=${HOME}/.ssh/id_rsa.pub \
+  --ocm-token=$OCM_TOKEN \
   --registry-config-file=${HOME}/docker-secrets.json \
   --aws-access-key-id=${AWS_ACCESS_KEY_ID} \
-  --aws-secret-access-key=${AWS_SECRET_ACCESS_KEY} \
-  --aws-account-id=${AWS_ACCOUNT_ID} \
-  --clusters-install-data-directory=/tmp/clusters-destroy
+  --aws-secret-access-key=${AWS_SECRET_ACCESS_KEY}
 ```
 
 ## Destroy clusters from clusters data directory
@@ -111,6 +108,13 @@ To destroy all clusters locate in `--clusters-install-data-directory` run:
 ```bash
 podman run quay.io/redhat_msi/openshift-cli-installer \
   --destroy-clusters-from-install-data-directory \
+  --clusters-install-data-directory=/openshift-cli-installer/clusters-install-data
+```
+
+## Destroy clusters from clusters data directory using s3 bucket stored in cluster_data.yaml
+```bash
+podman run quay.io/redhat_msi/openshift-cli-installer \
+  --destroy-clusters-from-install-data-directory-using-s3-bucket \
   --clusters-install-data-directory=/openshift-cli-installer/clusters-install-data
 ```
 
