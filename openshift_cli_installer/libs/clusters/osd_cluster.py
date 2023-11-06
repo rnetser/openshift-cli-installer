@@ -45,8 +45,8 @@ class OsdCluster(OcmCluster):
         try:
             ocp_version = (
                 self.install_version
-                if self.channel_group != "candidate"
-                else f"{self.install_version}-candidate"
+                if self.channel_group == "stable"
+                else f"{self.install_version}-{self.channel_group}"
             )
             provision_osd_kwargs = {
                 "wait_for_ready": True,
