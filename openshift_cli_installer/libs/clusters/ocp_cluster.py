@@ -11,6 +11,7 @@ import shortuuid
 import yaml
 from clouds.aws.session_clients import s3_client
 from ocm_python_wrapper.ocm_client import OCMPythonClient
+from ocp_resources.cluster_version import ClusterVersion
 from ocp_resources.managed_cluster import ManagedCluster
 from ocp_resources.multi_cluster_hub import MultiClusterHub
 from ocp_resources.multi_cluster_observability import MultiClusterObservability
@@ -298,6 +299,9 @@ class OCPCluster(UserInput):
 
         else:
             self.ocp_client = get_client(config_file=self.kubeconfig_path)
+            self.cluster_id = ClusterVersion(
+                client=self.ocp_client, name="version"
+            ).instance.spec.clusterID
 
         self.api_url = self.ocp_client.configuration.host
         console_route = Route(
