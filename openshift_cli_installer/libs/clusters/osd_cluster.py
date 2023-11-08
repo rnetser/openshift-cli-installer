@@ -20,14 +20,13 @@ class OsdCluster(OcmCluster):
             self.gcp_service_account = self.get_service_account_dict_from_file()
 
         if self.create:
-            self.replicas = self.cluster.get("replicas")
-            self.compute_machine_type = self.cluster.get("compute-machine-type")
+            self.cluster_info["aws-account-id"] = self.aws_account_id
             self.get_osd_versions()
             self.all_available_versions.update(
                 filter_versions(
                     wanted_version=self.version,
                     base_versions_dict=self.osd_base_available_versions_dict,
-                    platform=self.platform,
+                    platform=self.cluster_info["platform"],
                     stream=self.stream,
                 )
             )
@@ -44,31 +43,33 @@ class OsdCluster(OcmCluster):
         self.timeout_watch = self.start_time_watcher()
         try:
             ocp_version = (
-                self.install_version
-                if self.channel_group == "stable"
-                else f"{self.install_version}-{self.channel_group}"
+                self.cluster["version"]
+                if self.cluster_info["channel-group"] == "stable"
+                else f"{self.cluster['version']}-{self.cluster_info['channel-group']}"
             )
             provision_osd_kwargs = {
                 "wait_for_ready": True,
                 "wait_timeout": self.timeout_watch.remaining_time(),
-                "region": self.region,
+                "region": self.cluster_info["region"],
                 "ocp_version": ocp_version,
-                "replicas": self.replicas,
-                "compute_machine_type": self.compute_machine_type,
-                "multi_az": self.multi_az,
-                "channel_group": self.channel_group,
-                "expiration_time": self.expiration_time,
-                "platform": self.platform.replace("-osd", ""),
+                "replicas": self.cluster_info["replicas"],
+                "compute_machine_type": self.cluster_info["compute-machine-type"],
+                "multi_az": self.cluster_info["multi-az"],
+                "channel_group": self.cluster_info["channel-group"],
+                "expiration_time": self.cluster_info["expiration-time"],
+                "platform": self.cluster_info["platform"].replace("-osd", ""),
             }
-            if self.platform == AWS_OSD_STR:
+            if self.cluster_info["platform"] == AWS_OSD_STR:
                 provision_osd_kwargs.update(
                     {
-                        "aws_access_key_id": self.aws_access_key_id,
-                        "aws_account_id": self.aws_account_id,
-                        "aws_secret_access_key": self.aws_secret_access_key,
+                        "aws_access_key_id": self.cluster_info["aws-access-key-id"],
+                        "aws_account_id": self.cluster_info["aws-account-id"],
+                        "aws_secret_access_key": self.cluster_info[
+                            "aws-secret-access-key"
+                        ],
                     }
                 )
-            elif self.platform == GCP_OSD_STR:
+            elif self.cluster_info["platform"] == GCP_OSD_STR:
                 provision_osd_kwargs.update(
                     {"gcp_service_account": self.gcp_service_account}
                 )
@@ -94,10 +95,10 @@ class OsdCluster(OcmCluster):
 
         if self.s3_bucket_name:
             zip_and_upload_to_s3(
-                install_dir=self.cluster_dir,
+                install_dir=self.cluster_info["cluster-dir"],
                 s3_bucket_name=self.s3_bucket_name,
                 s3_bucket_path=self.s3_bucket_path,
-                uuid=self.shortuuid,
+                uuid=self.cluster_info["shortuuid"],
             )
 
     def destroy_cluster(self):

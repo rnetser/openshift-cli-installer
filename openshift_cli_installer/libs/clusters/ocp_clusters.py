@@ -117,16 +117,18 @@ class OCPClusters(UserInput):
             unsupported_regions = []
             hypershift_regions_dict = {PRODUCTION_STR: None, STAGE_STR: None}
             for _cluster in self.hypershift_clusters:
-                _hypershift_regions = hypershift_regions_dict[_cluster.ocm_env]
+                region = _cluster.cluster_info["region"]
+                ocm_env = _cluster.cluster_info["ocm-env"]
+                _hypershift_regions = hypershift_regions_dict[ocm_env]
                 if not _hypershift_regions:
                     _hypershift_regions = self._hypershift_regions(
                         ocm_client=_cluster.ocm_client
                     )
-                    hypershift_regions_dict[_cluster.ocm_env] = _hypershift_regions
+                    hypershift_regions_dict[ocm_env] = _hypershift_regions
 
-                if _cluster.region not in _hypershift_regions:
+                if region not in _hypershift_regions:
                     unsupported_regions.append(
-                        f"Cluster {_cluster.name}, region: {_cluster.region}\n"
+                        f"Cluster {_cluster.name}, region: {region}\n"
                     )
 
                 if unsupported_regions:
@@ -143,7 +145,7 @@ class OCPClusters(UserInput):
             self.logger.info(f"Check if regions are {AWS_STR}-supported.")
             _regions_to_verify = set()
             for _cluster in self.aws_ipi_clusters + self.aws_managed_clusters:
-                _regions_to_verify.add(_cluster.region)
+                _regions_to_verify.add(_cluster.cluster_info["region"])
 
             for _region in _regions_to_verify:
                 set_and_verify_aws_credentials(region_name=_region)
@@ -156,7 +158,7 @@ class OCPClusters(UserInput):
             )
             unsupported_regions = []
             for _cluster in self.gcp_osd_clusters:
-                cluster_region = _cluster.region
+                cluster_region = _cluster.cluster_info["region"]
                 if cluster_region not in supported_regions:
                     unsupported_regions.append(
                         f"cluster: {_cluster.name}, region: {cluster_region}"

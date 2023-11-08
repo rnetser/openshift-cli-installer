@@ -29,7 +29,7 @@ class AwsIpiCluster(OCPCluster):
 
         self.openshift_install_binary_path = None
         self.aws_base_available_versions = None
-        self.ocm_env = PRODUCTION_STR
+        self.cluster["ocm-env"] = self.cluster_info["ocm-env"] = PRODUCTION_STR
         self.log_level = self.cluster.get("log_level", "error")
 
         self.prepare_cluster_data()
@@ -37,13 +37,12 @@ class AwsIpiCluster(OCPCluster):
         self.dump_cluster_data_to_file()
 
     def _prepare_aws_ipi_cluster(self):
-        self.base_domain = self.cluster["base_domain"]
         self.aws_base_available_versions = get_aws_versions()
         self.all_available_versions.update(
             filter_versions(
                 wanted_version=self.version,
                 base_versions_dict=self.aws_base_available_versions,
-                platform=self.platform,
+                platform=self.cluster_info["platform"],
                 stream=self.stream,
             )
         )
@@ -80,21 +79,49 @@ class AwsIpiCluster(OCPCluster):
             docker_config_file=self.docker_config_file,
         )
         self.ssh_key = get_local_ssh_key(ssh_key_file=self.ssh_key_file)
+
+        terraform_parameters = {
+            "name": self.cluster["name"],
+            "region": self.cluster["region"],
+            "base_domain": self.cluster["base_domain"],
+            "platform": self.cluster["platform"],
+            "ssh_key": self.ssh_key,
+            "pull_secret": self.pull_secret,
+        }
+
+        worker_flavor = self.cluster.get("worker_flavor")
+        if worker_flavor:
+            terraform_parameters["worker_flavor"] = worker_flavor
+
+        worker_root_disk_size = self.cluster.get("worker_root_disk_size")
+        if worker_root_disk_size:
+            terraform_parameters["worker_root_disk_size"] = worker_root_disk_size
+
+        worker_replicas = self.cluster.get("worker_replicas")
+        if worker_replicas:
+            terraform_parameters["worker_replicas"] = worker_replicas
+
+        fips = self.cluster.get("fips")
+        if fips:
+            terraform_parameters["fips"] = fips
+
         cluster_install_config = get_install_config_j2_template(
-            cluster_dict=self.to_dict
+            jinja_dict=terraform_parameters
         )
 
-        with open(os.path.join(self.cluster_dir, "install-config.yaml"), "w") as fd:
+        with open(
+            os.path.join(self.cluster_info["cluster-dir"], "install-config.yaml"), "w"
+        ) as fd:
             fd.write(yaml.dump(cluster_install_config))
 
     def _set_install_version_url(self):
         version_url = [
             url
             for url, versions in self.aws_base_available_versions.items()
-            if self.install_version in versions
+            if self.cluster["version"] in versions
         ]
         if version_url:
-            self.version_url = f"{version_url[0]}:{self.install_version}"
+            self.version_url = f"{version_url[0]}:{self.cluster['version']}"
         else:
             self.logger.error(
                 f"{self.log_prefix}: Cluster version url not found for"
@@ -106,7 +133,7 @@ class AwsIpiCluster(OCPCluster):
         res, out, err = run_command(
             command=shlex.split(
                 f"{self.openshift_install_binary_path} {self.action} cluster --dir"
-                f" {self.cluster_dir} --log-level {self.log_level}"
+                f" {self.cluster_info['cluster-dir']} --log-level {self.log_level}"
             ),
             capture_output=False,
             check=False,
@@ -150,10 +177,10 @@ class AwsIpiCluster(OCPCluster):
 
         if self.s3_bucket_name:
             zip_and_upload_to_s3(
-                install_dir=self.cluster_dir,
+                install_dir=self.cluster_info["cluster-dir"],
                 s3_bucket_name=self.s3_bucket_name,
                 s3_bucket_path=self.s3_bucket_path,
-                uuid=self.shortuuid,
+                uuid=self.cluster_info["shortuuid"],
             )
 
     def destroy_cluster(self):

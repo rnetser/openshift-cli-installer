@@ -29,45 +29,44 @@ class RosaCluster(OcmCluster):
                 filter_versions(
                     wanted_version=self.version,
                     base_versions_dict=self.rosa_base_available_versions_dict,
-                    platform=self.platform,
+                    platform=self.cluster_info["platform"],
                     stream=self.stream,
                 )
             )
             self.set_cluster_install_version()
 
-        if self.platform == HYPERSHIFT_STR:
-            self.oidc_config_id = None
+        if self.cluster_info["platform"] == HYPERSHIFT_STR:
             self.terraform = None
-            self.subnet_ids = None
-            self.hosted_cp = "true"
-            self.tags = "dns:external"
-            self.machine_cidr = self.cluster.get("cidr", "10.0.0.0/16")
-            self.cidr = self.cluster.get("cidr")
-            self.private_subnets = self.cluster.get("private_subnets")
-            self.public_subnets = self.cluster.get("public_subnets")
+            self.cluster["tags"] = "dns:external"
+            self.cluster["machine-cidr"] = self.cluster.get("cidr", "10.0.0.0/16")
 
         self.dump_cluster_data_to_file()
 
     def terraform_init(self):
         self.logger.info(f"{self.log_prefix}: Init Terraform")
         # az_id example: us-east-2 -> ["use2-az1", "use2-az2"]
-        az_id_prefix = "".join(re.match(r"(.*)-(\w).*-(\d)", self.region).groups())
+        az_id_prefix = "".join(
+            re.match(r"(.*)-(\w).*-(\d)", self.cluster_info["region"]).groups()
+        )
         cluster_parameters = {
-            "aws_region": self.region,
+            "aws_region": self.cluster_info["region"],
             "az_ids": [f"{az_id_prefix}-az1", f"{az_id_prefix}-az2"],
             "cluster_name": self.name,
         }
-        if self.cidr:
-            cluster_parameters["cidr"] = self.cidr
+        cidr = self.cluster.get("cidr")
+        if cidr:
+            cluster_parameters["cidr"] = cidr
 
-        if self.private_subnets:
-            cluster_parameters["private_subnets"] = self.private_subnets
+        private_subnets = self.cluster.get("private_subnets")
+        if private_subnets:
+            cluster_parameters["private_subnets"] = private_subnets
 
-        if self.public_subnets:
-            cluster_parameters["public_subnets"] = self.public_subnets
+        public_subnets = self.cluster.get("public_subnets")
+        if public_subnets:
+            cluster_parameters["public_subnets"] = public_subnets
 
         self.terraform = Terraform(
-            working_dir=self.cluster_dir, variables=cluster_parameters
+            working_dir=self.cluster_info["cluster-dir"], variables=cluster_parameters
         )
         self.terraform.init()
 
@@ -75,7 +74,7 @@ class RosaCluster(OcmCluster):
         self.logger.info(f"{self.log_prefix}: Create OIDC config")
         res = rosa.cli.execute(
             command=f"create oidc-config --managed=false --prefix={self.name}",
-            aws_region=self.region,
+            aws_region=self.cluster_info["region"],
             ocm_client=self.ocm_client,
         )
         oidc_id = re.search(r'"id": "([a-z0-9]+)",', res["out"])
@@ -83,17 +82,18 @@ class RosaCluster(OcmCluster):
             self.logger.error(f"{self.log_prefix}: Failed to get OIDC config")
             raise click.Abort()
 
-        self.oidc_config_id = oidc_id.group(1)
+        self.cluster["oidc-config-id"] = oidc_id.group(1)
 
     def delete_oidc(self):
         self.logger.info(f"{self.log_prefix}: Delete OIDC config")
-        if not self.oidc_config_id:
+        oidc_config_id = self.cluster.get("oidc-config-id")
+        if not oidc_config_id:
             self.logger.warning(f"{self.log_prefix}: No OIDC config ID to delete")
             return
 
         rosa.cli.execute(
-            command=f"delete oidc-config --oidc-config-id={self.oidc_config_id}",
-            aws_region=self.region,
+            command=f"delete oidc-config --oidc-config-id={oidc_config_id}",
+            aws_region=self.cluster_info["region"],
             ocm_client=self.ocm_client,
         )
 
@@ -116,7 +116,8 @@ class RosaCluster(OcmCluster):
         self.terraform_init()
         self.logger.info(f"{self.log_prefix}: Preparing hypershift VPCs")
         shutil.copy(
-            os.path.join(get_manifests_path(), "setup-vpc.tf"), self.cluster_dir
+            os.path.join(get_manifests_path(), "setup-vpc.tf"),
+            self.cluster_info["cluster-dir"],
         )
         self.terraform.plan(dir_or_plan="hypershift.plan")
         rc, _, err = self.terraform.apply(
@@ -135,58 +136,24 @@ class RosaCluster(OcmCluster):
         terraform_output = self.terraform.output()
         private_subnet = terraform_output["cluster-private-subnet"]["value"]
         public_subnet = terraform_output["cluster-public-subnet"]["value"]
-        self.subnet_ids = f'"{public_subnet},{private_subnet}"'
+        self.cluster["subnet-ids"] = f'"{public_subnet},{private_subnet}"'
 
     def build_rosa_command(self):
-        hosted_cp_arg = "--hosted-cp"
         ignore_keys = (
             "name",
             "platform",
-            "ocm_env",
-            "ocm_token",
-            "cluster_dir",
+            "ocm-env",
             "timeout",
-            "auth_dir",
             "cidr",
-            "private_subnets",
-            "public_subnets",
-            "aws_access_key_id",
-            "aws_secret_access_key",
-            "aws_account_id",
-            "multi_az",
-            "ocm_client",
-            "shortuuid",
-            "s3_object_name",
-            "s3_bucket_name",
-            "s3_bucket_path",
             "acm",
-            "acm_clusters",
-            "timeout_watch",
-            "cluster_object",
-            "acm_observability",
-            "logger",
-            "log_prefix",
-            "gcp_service_account_file",
-            "clusters_install_data_directory",
-            "auth_path",
-            "clusters_yaml_config_file",
-            "version",
-            "ssh_key_file",
-            "registry_config_file",
-            "action",
-            "kubeconfig_path",
-            "stream",
-            "docker_config_file",
-            "region",
-            "_already_processed",
-            "must_gather_output_dir",
-            "acm_observability_s3_region",
-            "acm_observability_storage_type",
+            "acm-clusters",
         )
         ignore_prefix = ("acm-observability",)
         command = f"create cluster --sts --cluster-name={self.name} "
-        command_kwargs = []
-        for _key, _val in self.to_dict.items():
+        if self.cluster_info["platform"] == HYPERSHIFT_STR:
+            command += "--hosted-cp "
+
+        for _key, _val in self.cluster.items():
             if (
                 _key in ignore_keys
                 or _key.startswith(ignore_prefix)
@@ -194,22 +161,13 @@ class RosaCluster(OcmCluster):
             ):
                 continue
 
-            if _key == "install_version":
-                _key = "version"
-
-            command_kwargs.append(f"--{_key.replace('_', '-')}={_val}")
-
-        for cmd in command_kwargs:
-            if hosted_cp_arg in cmd:
-                command += f"{hosted_cp_arg} "
-            else:
-                command += f"{cmd} "
+            command += f"--{_key.replace('_', '-')}={_val} "
 
         return command
 
     def create_cluster(self):
         self.timeout_watch = self.start_time_watcher()
-        if self.platform == HYPERSHIFT_STR:
+        if self.cluster_info["platform"] == HYPERSHIFT_STR:
             self.create_oidc()
             self.prepare_hypershift_vpc()
 
@@ -219,7 +177,7 @@ class RosaCluster(OcmCluster):
             rosa.cli.execute(
                 command=self.build_rosa_command(),
                 ocm_client=self.ocm_client,
-                aws_region=self.region,
+                aws_region=self.cluster_info["region"],
             )
 
             self.cluster_object.wait_for_cluster_ready(
@@ -243,8 +201,8 @@ class RosaCluster(OcmCluster):
 
         if self.s3_bucket_name:
             zip_and_upload_to_s3(
-                uuid=self.shortuuid,
-                install_dir=self.cluster_dir,
+                uuid=self.cluster_info["shortuuid"],
+                install_dir=self.cluster_info["cluster-dir"],
                 s3_bucket_name=self.s3_bucket_name,
                 s3_bucket_path=self.s3_bucket_path,
             )
@@ -256,7 +214,7 @@ class RosaCluster(OcmCluster):
             res = rosa.cli.execute(
                 command=f"delete cluster --cluster={self.name}",
                 ocm_client=self.ocm_client,
-                aws_region=self.region,
+                aws_region=self.cluster_info["region"],
             )
             self.cluster_object.wait_for_cluster_deletion(
                 wait_timeout=self.timeout_watch.remaining_time()
@@ -266,7 +224,7 @@ class RosaCluster(OcmCluster):
         except Exception as ex:
             should_raise = ex
 
-        if self.platform == HYPERSHIFT_STR:
+        if self.cluster_info["platform"] == HYPERSHIFT_STR:
             self.destroy_hypershift_vpc()
             self.delete_oidc()
 
@@ -299,5 +257,5 @@ class RosaCluster(OcmCluster):
                     rosa.cli.execute(
                         command=command,
                         ocm_client=self.ocm_client,
-                        aws_region=self.region,
+                        aws_region=self.cluster_info["region"],
                     )

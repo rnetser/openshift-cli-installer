@@ -175,7 +175,7 @@ def destroy_clusters_from_s3_bucket_or_local_directory(**kwargs):
                     s3_bucket_name=_cluster.get("s3_bucket_name"),
                     s3_bucket_path=_cluster.get("s3_bucket_path"),
                     query=os.path.split(
-                        _cluster.get("s3_object_name"),
+                        _cluster.cluster_info.get("s3-object-name"),
                     )[-1],
                 )
 
