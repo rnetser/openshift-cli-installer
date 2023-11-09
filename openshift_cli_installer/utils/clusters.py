@@ -57,7 +57,7 @@ def clusters_from_directories(directories):
                     with open(os.path.join(root, _file)) as fd:
                         _data = yaml.safe_load(fd)
 
-                    _data["cluster"]["cluster_dir"] = root
+                    _data["cluster_info"]["cluster-dir"] = root
 
                     clusters_data_list.append(_data)
 

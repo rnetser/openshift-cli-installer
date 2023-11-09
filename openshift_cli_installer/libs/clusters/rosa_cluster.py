@@ -30,7 +30,7 @@ class RosaCluster(OcmCluster):
                     wanted_version=self.version,
                     base_versions_dict=self.rosa_base_available_versions_dict,
                     platform=self.cluster_info["platform"],
-                    stream=self.stream,
+                    stream=self.cluster_info["stream"],
                 )
             )
             self.set_cluster_install_version()

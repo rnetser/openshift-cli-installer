@@ -55,11 +55,16 @@ class OCPCluster(UserInput):
         self.cluster_info = copy.deepcopy(self.cluster)
         self.cluster_info.update(
             {
-                "display_name": self.name,
+                "display-name": self.name,
                 "shortuuid": shortuuid.uuid(),
                 "aws-access-key-id": self.cluster.pop("aws-access-key-id", None),
                 "aws-secret-access-key": self.cluster.pop(
                     "aws-secret-access-key", None
+                ),
+                "acm": self.cluster.get("acm") is True,
+                "acm-observability": self.cluster.get("acm-observability") is True,
+                "acm-observability-s3-region": self.cluster.get(
+                    "acm-observability-s3-region", self.cluster_info["region"]
                 ),
             }
         )
@@ -67,7 +72,6 @@ class OCPCluster(UserInput):
         self.timeout = tts(ts=self.cluster.get("timeout", TIMEOUT_60MIN))
 
         self.ocm_client = None
-        self.version_url = None
         self.ssh_key = None
         self.pull_secret = None
         self.timeout_watch = None
@@ -75,18 +79,8 @@ class OCPCluster(UserInput):
         self.ocp_client = None
         self.all_available_versions = {}
 
-        self.acm = self.cluster.get("acm") is True
-        self.acm_clusters = self.cluster.get("acm-clusters")
-        self.acm_observability = self.cluster.get("acm-observability") is True
-        self.acm_observability_storage_type = self.cluster.get(
-            "acm-observability-storage-type"
-        )
-        self.acm_observability_s3_region = self.cluster.get(
-            "acm-observability-s3-region", self.cluster_info["region"]
-        )
-
         self.version = self.cluster["version"]
-        self.stream = get_cluster_stream(cluster_data=self.cluster)
+        self.cluster_info["stream"] = get_cluster_stream(cluster_data=self.cluster)
 
         self.cluster_info["cluster-dir"] = cluster_dir = self.cluster.pop(
             "cluster_dir",
@@ -96,7 +90,6 @@ class OCPCluster(UserInput):
                 self.name,
             ),
         )
-
         self.cluster_info["auth-path"] = auth_path = os.path.join(cluster_dir, "auth")
         self.cluster_info["kubeconfig-path"] = os.path.join(auth_path, "kubeconfig")
         Path(auth_path).mkdir(parents=True, exist_ok=True)
@@ -150,10 +143,12 @@ class OCPCluster(UserInput):
 
     def set_cluster_install_version(self):
         version_key = get_split_version(version=self.version)
-        all_stream_versions = self.all_available_versions[self.stream][version_key]
+        all_stream_versions = self.all_available_versions[self.cluster_info["stream"]][
+            version_key
+        ]
         err_msg = (
             f"{self.log_prefix}: Cluster version {self.version} not found for stream"
-            f" {self.stream}"
+            f" {self.cluster_info['stream']}"
         )
         if len(self.version.split(".")) == 3:
             for _ver in all_stream_versions["versions"]:
@@ -201,34 +196,11 @@ class OCPCluster(UserInput):
             "gcp_service_account",
             "osd_base_available_versions_dict",
             "rosa_base_available_versions_dict",
-            "replicas",
-            "version",
             "timeout",
-            "platform",
-            "region",
-            "stream",
-            "name",
-            "ocm_env",
             "terraform",
             "timeout_watch",
             "aws_base_available_versions",
-            "base_domain",
-            "channel_group",
-            "acm_observability",
-            "acm_observability_s3_region",
-            "acm_observability_storage_type",
-            "expiration_time",
-            "compute_machine_type",
-            "acm_clusters",
-            "acm",
-            "public_subnets",
-            "private_subnets",
-            "tags",
-            "machine_cidr",
-            "cidr",
-            "hosted_cp",
             "_already_processed",
-            "cluster_dir",
         )
         for _key, _val in self.to_dict.items():
             if _key in keys_to_pop or not _val:
@@ -303,14 +275,16 @@ class OCPCluster(UserInput):
         """
         if self.cluster_object:
             self.ocp_client = self.cluster_object.ocp_client
-            self.cluster["cluster_id"] = self.cluster_object.cluster_id
+            self.cluster.cluster_info["cluster-id"] = self.cluster_object.cluster_id
 
         else:
             self.ocp_client = get_client(
                 config_file=self.cluster_info["kubeconfig-path"]
             )
             # Unmanaged clusters name is set to cluster id
-            self.cluster["cluster_id"] = self.cluster["display_name"] = ClusterVersion(
+            self.cluster.cluster_info["cluster-id"] = self.cluster.cluster_info[
+                "display-name"
+            ] = ClusterVersion(
                 client=self.ocp_client, name="version"
             ).instance.spec.clusterID
 
@@ -388,13 +362,14 @@ class OCPCluster(UserInput):
         _s3_client = None
         bucket_name = f"{self.name}-observability-{self.cluster_info['shortuuid']}"
 
-        if self.acm_observability_storage_type == S3_STR:
-            _s3_client = s3_client(region_name=self.acm_observability_s3_region)
+        if self.cluster_info["acm-observability-storage-type"] == S3_STR:
+            region = self.cluster_info["acm-observability-s3-region"]
+            _s3_client = s3_client(region_name=region)
             s3_secret_data = f"""
             type: {S3_STR}
             config:
               bucket: {bucket_name}
-              endpoint: s3.{self.acm_observability_s3_region}.amazonaws.com
+              endpoint: s3.{region}.amazonaws.com
               insecure: true
               access_key: {self.cluster_info["aws-access-key-id"]}
               secret_key: {self.cluster_info["aws-secret-access-key"]}
@@ -404,14 +379,11 @@ class OCPCluster(UserInput):
                 "thanos.yaml": base64.b64encode(s3_secret_data_bytes).decode("utf-8")
             }
             self.logger.info(
-                f"{self.log_prefix}: Create S3 bucket {bucket_name} in"
-                f" {self.acm_observability_s3_region}"
+                f"{self.log_prefix}: Create S3 bucket {bucket_name} in {region}"
             )
             _s3_client.create_bucket(
                 Bucket=bucket_name.lower(),
-                CreateBucketConfiguration={
-                    "LocationConstraint": self.acm_observability_s3_region
-                },
+                CreateBucketConfiguration={"LocationConstraint": region},
             )
 
         try:
@@ -464,7 +436,7 @@ class OCPCluster(UserInput):
                 f"{self.log_prefix}: Failed to enable observability. error: {ex}"
             )
 
-            if self.acm_observability_storage_type == S3_STR:
+            if self.cluster_info["acm-observability-storage-type"] == S3_STR:
                 for _bucket in _s3_client.list_buckets()["Buckets"]:
                     if _bucket["Name"] == bucket_name:
                         _s3_client.delete_bucket(Bucket=bucket_name)
@@ -474,7 +446,7 @@ class OCPCluster(UserInput):
     def attach_clusters_to_acm_hub(self, clusters):
         futures = []
         with ThreadPoolExecutor() as executor:
-            for _managed_acm_cluster in self.acm_clusters:
+            for _managed_acm_cluster in self.cluster_info["acm-clusters"]:
                 _managed_acm_cluster_object = clusters.get_cluster_object_by_name(
                     name=_managed_acm_cluster
                 )

@@ -43,7 +43,7 @@ class AwsIpiCluster(OCPCluster):
                 wanted_version=self.version,
                 base_versions_dict=self.aws_base_available_versions,
                 platform=self.cluster_info["platform"],
-                stream=self.stream,
+                stream=self.cluster_info["stream"],
             )
         )
         self.set_cluster_install_version()
@@ -54,14 +54,15 @@ class AwsIpiCluster(OCPCluster):
 
     def _aws_download_installer(self):
         openshift_install_str = "openshift-install"
-        binary_dir = os.path.join("/tmp", self.version_url)
+        version_url = self.cluster_info["version-url"]
+        binary_dir = os.path.join("/tmp", version_url)
         self.openshift_install_binary_path = os.path.join(
             binary_dir, openshift_install_str
         )
         rc, _, err = run_command(
             command=shlex.split(
                 "oc adm release extract "
-                f"{self.version_url} "
+                f"{version_url} "
                 f"--command={openshift_install_str} --to={binary_dir} --registry-config={self.registry_config_file}"
             ),
             check=False,
@@ -69,7 +70,7 @@ class AwsIpiCluster(OCPCluster):
         if not rc:
             self.logger.error(
                 f"{self.log_prefix}: Failed to get {openshift_install_str} for version"
-                f" {self.version_url}, error: {err}",
+                f" {version_url}, error: {err}",
             )
             raise click.Abort()
 
@@ -121,7 +122,9 @@ class AwsIpiCluster(OCPCluster):
             if self.cluster["version"] in versions
         ]
         if version_url:
-            self.version_url = f"{version_url[0]}:{self.cluster['version']}"
+            self.cluster_info["version-url"] = (
+                f"{version_url[0]}:{self.cluster['version']}"
+            )
         else:
             self.logger.error(
                 f"{self.log_prefix}: Cluster version url not found for"

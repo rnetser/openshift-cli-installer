@@ -27,7 +27,7 @@ class OsdCluster(OcmCluster):
                     wanted_version=self.version,
                     base_versions_dict=self.osd_base_available_versions_dict,
                     platform=self.cluster_info["platform"],
-                    stream=self.stream,
+                    stream=self.cluster_info["stream"],
                 )
             )
 

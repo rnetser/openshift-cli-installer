@@ -71,7 +71,7 @@ def set_clusters_versions(clusters, base_available_versions):
                 if cluster_data["version"] in versions
             ]
             if version_url:
-                cluster_data["version_url"] = version_url[0]
+                cluster_data["version-url"] = version_url[0]
             else:
                 click.secho(
                     f"{cluster_name}: Cluster version url not found for"

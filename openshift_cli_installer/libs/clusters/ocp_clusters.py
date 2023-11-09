@@ -209,7 +209,7 @@ class OCPClusters(UserInput):
 
     def attach_clusters_to_acm_cluster_hub(self):
         for cluster in self.list_clusters:
-            if cluster.acm_clusters:
+            if cluster.cluster_info["acm-clusters"]:
                 cluster.attach_clusters_to_acm_hub(clusters=self)
 
     def get_cluster_object_by_name(self, name):
@@ -219,10 +219,13 @@ class OCPClusters(UserInput):
 
     def install_acm_on_clusters(self):
         for _cluster in self.list_clusters:
-            if _cluster.acm:
+            if _cluster.cluster_info["acm"]:
                 _cluster.install_acm()
 
     def enable_observability_on_acm_clusters(self):
         for _cluster in self.list_clusters:
-            if _cluster.acm and _cluster.acm_observability:
+            if (
+                _cluster.cluster_info["acm"]
+                and _cluster.cluster_info["acm-observability"]
+            ):
                 _cluster.enable_observability()
