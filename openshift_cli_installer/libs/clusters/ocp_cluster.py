@@ -79,7 +79,6 @@ class OCPCluster(UserInput):
         self.ocp_client = None
         self.all_available_versions = {}
 
-        self.version = self.cluster["version"]
         self.cluster_info["stream"] = get_cluster_stream(cluster_data=self.cluster)
 
         self.cluster_info["cluster-dir"] = cluster_dir = self.cluster.pop(
@@ -142,27 +141,27 @@ class OCPCluster(UserInput):
         )
 
     def set_cluster_install_version(self):
-        version_key = get_split_version(version=self.version)
+        version = self.cluster_info["version"]
+        version_key = get_split_version(version=version)
         all_stream_versions = self.all_available_versions[self.cluster_info["stream"]][
             version_key
         ]
         err_msg = (
-            f"{self.log_prefix}: Cluster version {self.version} not found for stream"
+            f"{self.log_prefix}: Cluster version {version} not found for stream"
             f" {self.cluster_info['stream']}"
         )
-        if len(self.version.split(".")) == 3:
+        if len(version.split(".")) == 3:
             for _ver in all_stream_versions["versions"]:
-                if self.version in _ver:
+                if version in _ver:
                     self.cluster["version"] = _ver
                     break
             else:
                 self.logger.error(f"{err_msg}")
                 raise click.Abort()
 
-        elif len(self.version.split(".")) < 2:
+        elif len(version.split(".")) < 2:
             self.logger.error(
-                f"{self.log_prefix}: Version must be at least x.y (4.3), got"
-                f" {self.version}",
+                f"{self.log_prefix}: Version must be at least x.y (4.3), got {version}",
             )
             raise click.Abort()
         else:
@@ -182,6 +181,7 @@ class OCPCluster(UserInput):
 
         _cluster_data = {}
         keys_to_pop = (
+            "name",
             "ocm_client",
             "ocp_client",
             "cluster_object",
@@ -446,7 +446,7 @@ class OCPCluster(UserInput):
     def attach_clusters_to_acm_hub(self, clusters):
         futures = []
         with ThreadPoolExecutor() as executor:
-            for _managed_acm_cluster in self.cluster_info["acm-clusters"]:
+            for _managed_acm_cluster in self.cluster_info.get("acm-clusters"):
                 _managed_acm_cluster_object = clusters.get_cluster_object_by_name(
                     name=_managed_acm_cluster
                 )

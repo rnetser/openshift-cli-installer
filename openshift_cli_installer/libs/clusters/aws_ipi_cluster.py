@@ -40,7 +40,7 @@ class AwsIpiCluster(OCPCluster):
         self.aws_base_available_versions = get_aws_versions()
         self.all_available_versions.update(
             filter_versions(
-                wanted_version=self.version,
+                wanted_version=self.cluster_info["version"],
                 base_versions_dict=self.aws_base_available_versions,
                 platform=self.cluster_info["platform"],
                 stream=self.cluster_info["stream"],
@@ -116,10 +116,11 @@ class AwsIpiCluster(OCPCluster):
             fd.write(yaml.dump(cluster_install_config))
 
     def _set_install_version_url(self):
+        cluster_version = self.cluster["version"]
         version_url = [
             url
             for url, versions in self.aws_base_available_versions.items()
-            if self.cluster["version"] in versions
+            if cluster_version in versions
         ]
         if version_url:
             self.cluster_info["version-url"] = (
@@ -128,7 +129,7 @@ class AwsIpiCluster(OCPCluster):
         else:
             self.logger.error(
                 f"{self.log_prefix}: Cluster version url not found for"
-                f" {self.version} in {self.aws_base_available_versions.keys()}",
+                f" {cluster_version} in {self.aws_base_available_versions.keys()}",
             )
             raise click.Abort()
 

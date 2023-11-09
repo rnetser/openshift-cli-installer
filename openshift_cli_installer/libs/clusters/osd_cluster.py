@@ -24,7 +24,7 @@ class OsdCluster(OcmCluster):
             self.get_osd_versions()
             self.all_available_versions.update(
                 filter_versions(
-                    wanted_version=self.version,
+                    wanted_version=self.cluster_info["version"],
                     base_versions_dict=self.osd_base_available_versions_dict,
                     platform=self.cluster_info["platform"],
                     stream=self.cluster_info["stream"],

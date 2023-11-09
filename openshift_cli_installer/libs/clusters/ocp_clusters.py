@@ -209,7 +209,7 @@ class OCPClusters(UserInput):
 
     def attach_clusters_to_acm_cluster_hub(self):
         for cluster in self.list_clusters:
-            if cluster.cluster_info["acm-clusters"]:
+            if cluster.cluster_info.get("acm-clusters"):
                 cluster.attach_clusters_to_acm_hub(clusters=self)
 
     def get_cluster_object_by_name(self, name):

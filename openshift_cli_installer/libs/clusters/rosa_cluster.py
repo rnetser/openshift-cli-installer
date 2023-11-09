@@ -28,7 +28,7 @@ class RosaCluster(OcmCluster):
             self.get_rosa_versions()
             self.all_available_versions.update(
                 filter_versions(
-                    wanted_version=self.version,
+                    wanted_version=self.cluster_info["version"],
                     base_versions_dict=self.rosa_base_available_versions_dict,
                     platform=self.cluster_info["platform"],
                     stream=self.cluster_info["stream"],
@@ -74,7 +74,7 @@ class RosaCluster(OcmCluster):
     def create_oidc(self):
         self.logger.info(f"{self.log_prefix}: Create OIDC config")
         res = rosa.cli.execute(
-            command=f"create oidc-config --managed=false --prefix={self.name}",
+            command="create oidc-config --managed=true",
             aws_region=self.cluster_info["region"],
             ocm_client=self.ocm_client,
         )
@@ -100,7 +100,7 @@ class RosaCluster(OcmCluster):
 
     def create_operator_role(self):
         self.logger.info(f"{self.log_prefix}: Create operator role")
-        res = rosa.cli.execute(
+        rosa.cli.execute(
             command=(
                 f"create operator-roles --hosted-cp --prefix={self.name} "
                 f"--oidc-config-id={self.cluster['oidc-config-id']} "
@@ -110,21 +110,9 @@ class RosaCluster(OcmCluster):
             aws_region=self.cluster_info["region"],
             ocm_client=self.ocm_client,
         )
-        operator_role_id = re.search(r'"id": "([a-z0-9]+)",', res["out"])
-        if not operator_role_id:
-            self.logger.error(f"{self.log_prefix}: Failed to get operator role")
-            raise click.Abort()
-
-        self.group = operator_role_id.group(1)
-        self.cluster_info["operator-role-id"] = self.group
 
     def delete_operator_role(self):
         self.logger.info(f"{self.log_prefix}: Delete operator role")
-        operator_role_id = self.cluster_info.get("operator-role-id")
-        if not operator_role_id:
-            self.logger.warning(f"{self.log_prefix}: No operator role ID to delete")
-            return
-
         rosa.cli.execute(
             command=f"delete operator-roles --prefix={self.name} --cluster={self.name}",
             aws_region=self.cluster_info["region"],
