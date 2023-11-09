@@ -57,11 +57,11 @@ class RosaCluster(OcmCluster):
         if cidr:
             cluster_parameters["cidr"] = cidr
 
-        private_subnets = self.cluster.get("private_subnets")
+        private_subnets = self.cluster.get("private-subnets")
         if private_subnets:
             cluster_parameters["private_subnets"] = private_subnets
 
-        public_subnets = self.cluster.get("public_subnets")
+        public_subnets = self.cluster.get("public-subnets")
         if public_subnets:
             cluster_parameters["public_subnets"] = public_subnets
 
@@ -93,6 +93,36 @@ class RosaCluster(OcmCluster):
 
         rosa.cli.execute(
             command=f"delete oidc-config --oidc-config-id={oidc_config_id}",
+            aws_region=self.cluster_info["region"],
+            ocm_client=self.ocm_client,
+        )
+
+    def create_operator_role(self):
+        self.logger.info(f"{self.log_prefix}: Create operator role")
+        res = rosa.cli.execute(
+            command=(
+                f"create operator-roles --hosted-cp --prefix={self.name} "
+                f"--oidc-config-id={self.cluster['oidc-config-id']}"
+            ),
+            aws_region=self.cluster_info["region"],
+            ocm_client=self.ocm_client,
+        )
+        operator_role_id = re.search(r'"id": "([a-z0-9]+)",', res["out"])
+        if not operator_role_id:
+            self.logger.error(f"{self.log_prefix}: Failed to get operator role")
+            raise click.Abort()
+
+        self.cluster.cluster_info["operator-role-id"] = operator_role_id.group(1)
+
+    def delete_operator_role(self):
+        self.logger.info(f"{self.log_prefix}: Delete operator role")
+        operator_role_id = self.cluster.cluster_info.get("operator-role-id")
+        if not operator_role_id:
+            self.logger.warning(f"{self.log_prefix}: No operator role ID to delete")
+            return
+
+        rosa.cli.execute(
+            command=f"delete operator-roles --prefix={self.name} --cluster={self.name}",
             aws_region=self.cluster_info["region"],
             ocm_client=self.ocm_client,
         )
@@ -129,6 +159,7 @@ class RosaCluster(OcmCluster):
                 f" error: {err}, rolling back.",
             )
             self.delete_oidc()
+            self.delete_operator_role()
             # Clean up already created resources from the plan
             self.destroy_hypershift_vpc()
             raise click.Abort()
@@ -145,23 +176,21 @@ class RosaCluster(OcmCluster):
             "ocm-env",
             "timeout",
             "cidr",
+            "private-subnets",
+            "public-subnets",
             "acm",
             "acm-clusters",
         )
         ignore_prefix = ("acm-observability",)
         command = f"create cluster --sts --cluster-name={self.name} "
         if self.cluster_info["platform"] == HYPERSHIFT_STR:
-            command += "--hosted-cp "
+            command += f"--hosted-cp --operator-roles-prefix={self.name} "
 
         for _key, _val in self.cluster.items():
-            if (
-                _key in ignore_keys
-                or _key.startswith(ignore_prefix)
-                or not isinstance(_val, str)
-            ):
+            if _key in ignore_keys or _key.startswith(ignore_prefix):
                 continue
 
-            command += f"--{_key.replace('_', '-')}={_val} "
+            command += f"--{_key}={_val} "
 
         return command
 
@@ -169,6 +198,7 @@ class RosaCluster(OcmCluster):
         self.timeout_watch = self.start_time_watcher()
         if self.cluster_info["platform"] == HYPERSHIFT_STR:
             self.create_oidc()
+            self.create_operator_role()
             self.prepare_hypershift_vpc()
 
         self.dump_cluster_data_to_file()
@@ -227,6 +257,7 @@ class RosaCluster(OcmCluster):
         if self.cluster_info["platform"] == HYPERSHIFT_STR:
             self.destroy_hypershift_vpc()
             self.delete_oidc()
+            self.delete_operator_role()
 
         if should_raise:
             self.logger.error(

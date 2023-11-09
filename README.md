@@ -78,8 +78,8 @@ Every call to the openshift installer cli must have at least one `--cluster` opt
   * Hypershift:
     * Cluster VPC CIDR, public and private subnets can be configured from the CLI. Otherwise, values in [setup-vpc.tf](openshift_cli_installer/manifests/setup-vpc.tf) will be used.
       * To set `cidr`, pass `--cluster ...cidr=1.1.0.0/16'`
-      * To set `private_subnets`, pass `--cluster ...private_subnets=10.1.1.0/24,10.1.2.0/24'`
-      * To set `public_subnets`, pass `--cluster ...public_subnets=10.1.10.0/24,10.1.20.0/24'`
+      * To set `private-subnets`, pass `--cluster ...private-subnets=10.1.1.0/24,10.1.2.0/24'`
+      * To set `public-subnets`, pass `--cluster ...public-subnets=10.1.10.0/24,10.1.20.0/24'`
 
 ### ACM (Advanced Cluster Management)
 Managed clusters (Rosa, AWS and OSD) can be deployed with ACM and attached to ACM hub.

@@ -288,13 +288,13 @@ class OCPCluster(UserInput):
                 client=self.ocp_client, name="version"
             ).instance.spec.clusterID
 
-        self.cluster_info["api_url"] = self.ocp_client.configuration.host
+        self.cluster_info["api-url"] = self.ocp_client.configuration.host
         console_route = Route(
             name="console", namespace="openshift-console", client=self.ocp_client
         )
         if console_route.exists:
             route_spec = console_route.instance.spec
-            self.cluster_info["console_url"] = (
+            self.cluster_info["console-url"] = (
                 f"{route_spec.port.targetPort}://{route_spec.host}"
             )
 
@@ -332,7 +332,7 @@ class OCPCluster(UserInput):
         with change_home_environment_on_openshift_ci():
             with get_kubeadmin_token(
                 cluster_dir=self.cluster_info["cluster-dir"],
-                api_url=self.cluster_info["api_url"],
+                api_url=self.cluster_info["api-url"],
             ) as kubeadmin_token:
                 self.cluster_info["kubeadmin-token"] = kubeadmin_token
 
