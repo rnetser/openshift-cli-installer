@@ -24,6 +24,7 @@ class RosaCluster(OcmCluster):
         )
 
         if self.create:
+            self.cluster_info["aws-account-id"] = self.aws_account_id
             self.get_rosa_versions()
             self.all_available_versions.update(
                 filter_versions(
@@ -102,7 +103,9 @@ class RosaCluster(OcmCluster):
         res = rosa.cli.execute(
             command=(
                 f"create operator-roles --hosted-cp --prefix={self.name} "
-                f"--oidc-config-id={self.cluster['oidc-config-id']}"
+                f"--oidc-config-id={self.cluster['oidc-config-id']} "
+                "--installer-role-arn "
+                f"arn:aws:iam::{self.cluster_info['aws-account-id']}:role/ManagedOpenShift-HCP-ROSA-Installer-Role"
             ),
             aws_region=self.cluster_info["region"],
             ocm_client=self.ocm_client,
@@ -112,11 +115,12 @@ class RosaCluster(OcmCluster):
             self.logger.error(f"{self.log_prefix}: Failed to get operator role")
             raise click.Abort()
 
-        self.cluster.cluster_info["operator-role-id"] = operator_role_id.group(1)
+        self.group = operator_role_id.group(1)
+        self.cluster_info["operator-role-id"] = self.group
 
     def delete_operator_role(self):
         self.logger.info(f"{self.log_prefix}: Delete operator role")
-        operator_role_id = self.cluster.cluster_info.get("operator-role-id")
+        operator_role_id = self.cluster_info.get("operator-role-id")
         if not operator_role_id:
             self.logger.warning(f"{self.log_prefix}: No operator role ID to delete")
             return

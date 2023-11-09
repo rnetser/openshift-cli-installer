@@ -39,6 +39,7 @@ Action also can be passed to the CLI as `--action create/destroy` instead of spe
 
 * ROSA / Hypershift clusters:
   * `platform=rosa`: Must pass in cluster parameters
+  * * `--aws-account-id`: AWS account ID for Hypershift clusters
 
 * AWS OSD clusters:
   * `platform=aws-osd`: Must pass in cluster parameters

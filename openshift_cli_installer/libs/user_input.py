@@ -171,7 +171,7 @@ class UserInput:
             self.assert_managed_acm_clusters_user_input()
             self.assert_aws_ipi_installer_log_level_user_input()
             self.assert_aws_ipi_user_input()
-            self.assert_aws_osd_user_input()
+            self.assert_aws_osd_hypershift__user_input()
             self.assert_acm_clusters_user_input()
             self.assert_gcp_osd_user_input()
             self.assert_boolean_values()
@@ -285,12 +285,18 @@ class UserInput:
             )
             raise click.Abort()
 
-    def assert_aws_osd_user_input(self):
-        if any([_cluster["platform"] == AWS_OSD_STR for _cluster in self.clusters]):
+    def assert_aws_osd_hypershift__user_input(self):
+        if any(
+            [
+                _cluster["platform"] in (AWS_OSD_STR, HYPERSHIFT_STR)
+                for _cluster in self.clusters
+            ]
+        ):
             self.assert_aws_credentials_exist()
             if not self.aws_account_id and self.create:
                 self.logger.error(
-                    "--aws-account-id required for AWS OSD installations.",
+                    "--aws-account-id required for AWS OSD or Hypershift"
+                    " installations.",
                 )
                 raise click.Abort()
 

@@ -103,7 +103,7 @@ File must include token for `registry.ci.openshift.org`
 )
 @click.option(
     "--aws-account-id",
-    help="AWS account-id, needed for OSD AWS clusters.",
+    help="AWS account-id, needed for OSD AWS and Hypershift clusters.",
     default=os.environ.get("AWS_ACCOUNT_ID"),
 )
 @click.option(

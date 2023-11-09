@@ -275,18 +275,18 @@ class OCPCluster(UserInput):
         """
         if self.cluster_object:
             self.ocp_client = self.cluster_object.ocp_client
-            self.cluster.cluster_info["cluster-id"] = self.cluster_object.cluster_id
+            self.cluster_info["cluster-id"] = self.cluster_object.cluster_id
 
         else:
             self.ocp_client = get_client(
                 config_file=self.cluster_info["kubeconfig-path"]
             )
             # Unmanaged clusters name is set to cluster id
-            self.cluster.cluster_info["cluster-id"] = self.cluster.cluster_info[
-                "display-name"
-            ] = ClusterVersion(
-                client=self.ocp_client, name="version"
-            ).instance.spec.clusterID
+            self.cluster_info["cluster-id"] = self.cluster_info["display-name"] = (
+                ClusterVersion(
+                    client=self.ocp_client, name="version"
+                ).instance.spec.clusterID
+            )
 
         self.cluster_info["api-url"] = self.ocp_client.configuration.host
         console_route = Route(
