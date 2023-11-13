@@ -32,7 +32,7 @@ class OcmCluster(OCPCluster):
         self.prepare_cluster_data()
         self.cluster_object = Cluster(
             client=self.ocm_client,
-            name=self.name,
+            name=self.cluster_info["name"],
         )
         self._set_expiration_time()
         self.dump_cluster_data_to_file()

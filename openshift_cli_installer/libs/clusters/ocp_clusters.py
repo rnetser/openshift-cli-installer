@@ -90,7 +90,7 @@ class OCPClusters(UserInput):
             existing_clusters_list = []
             for _cluster in self.ocm_managed_clusters:
                 if _cluster.cluster_object.exists:
-                    existing_clusters_list.append(_cluster.name)
+                    existing_clusters_list.append(_cluster["cluster_info"]["name"])
 
             if existing_clusters_list:
                 self.logger.error(
@@ -128,7 +128,8 @@ class OCPClusters(UserInput):
 
                 if region not in _hypershift_regions:
                     unsupported_regions.append(
-                        f"Cluster {_cluster.name}, region: {region}\n"
+                        f"Cluster {_cluster['cluster_info']['name']}, region:"
+                        f" {region}\n"
                     )
 
                 if unsupported_regions:
@@ -161,7 +162,8 @@ class OCPClusters(UserInput):
                 cluster_region = _cluster.cluster_info["region"]
                 if cluster_region not in supported_regions:
                     unsupported_regions.append(
-                        f"cluster: {_cluster.name}, region: {cluster_region}"
+                        f"cluster: {_cluster.cluster_info['name']}, region:"
+                        f" {cluster_region}"
                     )
 
             if unsupported_regions:
@@ -179,8 +181,8 @@ class OCPClusters(UserInput):
             for cluster in self.list_clusters:
                 action_func = getattr(cluster, action_str)
                 click.echo(
-                    f"Executing {self.action} cluster {cluster.name} [parallel:"
-                    f" {self.parallel}]"
+                    f"Executing {self.action} cluster"
+                    f" {cluster.cluster_info['name']} [parallel: {self.parallel}]"
                 )
                 if self.parallel:
                     futures.append(executor.submit(action_func))
@@ -214,7 +216,7 @@ class OCPClusters(UserInput):
 
     def get_cluster_object_by_name(self, name):
         for _cluster in self.list_clusters:
-            if _cluster.name == name:
+            if _cluster["cluster_info"]["name"] == name:
                 return _cluster
 
     def install_acm_on_clusters(self):

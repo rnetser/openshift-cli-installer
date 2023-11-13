@@ -26,21 +26,24 @@ class AwsIpiCluster(OCPCluster):
         self.logger = get_logger(
             f"{self.__class__.__module__}-{self.__class__.__name__}"
         )
-
-        self.openshift_install_binary_path = None
-        self.aws_base_available_versions = None
-        self.cluster["ocm-env"] = self.cluster_info["ocm-env"] = PRODUCTION_STR
         self.log_level = self.cluster.get("log_level", "error")
 
-        self.prepare_cluster_data()
-        self._prepare_aws_ipi_cluster()
-        self.dump_cluster_data_to_file()
+        if kwargs.get("destroy_from_s3_bucket_or_local_directory"):
+            self._aws_download_installer()
+        else:
+            self.openshift_install_binary_path = None
+            self.aws_base_available_versions = None
+            self.cluster["ocm-env"] = self.cluster_info["ocm-env"] = PRODUCTION_STR
+
+            self.prepare_cluster_data()
+            self._prepare_aws_ipi_cluster()
+            self.dump_cluster_data_to_file()
 
     def _prepare_aws_ipi_cluster(self):
         self.aws_base_available_versions = get_aws_versions()
         self.all_available_versions.update(
             filter_versions(
-                wanted_version=self.cluster_info["version"],
+                wanted_version=self.cluster_info["user-requested-version"],
                 base_versions_dict=self.aws_base_available_versions,
                 platform=self.cluster_info["platform"],
                 stream=self.cluster_info["stream"],
@@ -82,10 +85,10 @@ class AwsIpiCluster(OCPCluster):
         self.ssh_key = get_local_ssh_key(ssh_key_file=self.ssh_key_file)
 
         terraform_parameters = {
-            "name": self.cluster["name"],
-            "region": self.cluster["region"],
-            "base_domain": self.cluster["base_domain"],
-            "platform": self.cluster["platform"],
+            "name": self.cluster_info["name"],
+            "region": self.cluster_info["region"],
+            "base_domain": self.cluster_info["base_domain"],
+            "platform": self.cluster_info["platform"],
             "ssh_key": self.ssh_key,
             "pull_secret": self.pull_secret,
         }
@@ -124,7 +127,7 @@ class AwsIpiCluster(OCPCluster):
         ]
         if version_url:
             self.cluster_info["version-url"] = (
-                f"{version_url[0]}:{self.cluster['version']}"
+                f"{version_url[0]}:{self.cluster_info['version']}"
             )
         else:
             self.logger.error(

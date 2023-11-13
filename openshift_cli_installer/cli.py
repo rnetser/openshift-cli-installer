@@ -220,7 +220,10 @@ def main(**kwargs):
         or kwargs["destroy_clusters_from_install_data_directory"]
         or kwargs["destroy_clusters_from_install_data_directory_using_s3_bucket"]
     ):
-        clusters_kwargs = destroy_clusters_from_s3_bucket_or_local_directory(**kwargs)
+        clusters_kwargs = {"destroy_from_s3_bucket_or_local_directory": True}
+        clusters_kwargs.update(
+            destroy_clusters_from_s3_bucket_or_local_directory(**kwargs)
+        )
 
         try:
             clusters = OCPClusters(**clusters_kwargs)

@@ -28,7 +28,7 @@ class RosaCluster(OcmCluster):
             self.get_rosa_versions()
             self.all_available_versions.update(
                 filter_versions(
-                    wanted_version=self.cluster_info["version"],
+                    wanted_version=self.cluster_info["user-requested-version"],
                     base_versions_dict=self.rosa_base_available_versions_dict,
                     platform=self.cluster_info["platform"],
                     stream=self.cluster_info["stream"],
@@ -36,12 +36,13 @@ class RosaCluster(OcmCluster):
             )
             self.set_cluster_install_version()
 
-        if self.cluster_info["platform"] == HYPERSHIFT_STR:
-            self.terraform = None
-            self.cluster["tags"] = "dns:external"
-            self.cluster["machine-cidr"] = self.cluster.get("cidr", "10.0.0.0/16")
+        if kwargs.get("destroy_from_s3_bucket_or_local_directory"):
+            if self.cluster_info["platform"] == HYPERSHIFT_STR:
+                self.terraform = None
+                self.cluster["tags"] = "dns:external"
+                self.cluster["machine-cidr"] = self.cluster.get("cidr", "10.0.0.0/16")
 
-        self.dump_cluster_data_to_file()
+            self.dump_cluster_data_to_file()
 
     def terraform_init(self):
         self.logger.info(f"{self.log_prefix}: Init Terraform")
@@ -52,7 +53,7 @@ class RosaCluster(OcmCluster):
         cluster_parameters = {
             "aws_region": self.cluster_info["region"],
             "az_ids": [f"{az_id_prefix}-az1", f"{az_id_prefix}-az2"],
-            "cluster_name": self.name,
+            "cluster_name": self.cluster_info["name"],
         }
         cidr = self.cluster.get("cidr")
         if cidr:
@@ -102,7 +103,8 @@ class RosaCluster(OcmCluster):
         self.logger.info(f"{self.log_prefix}: Create operator role")
         rosa.cli.execute(
             command=(
-                f"create operator-roles --hosted-cp --prefix={self.name} "
+                "create operator-roles --hosted-cp"
+                f" --prefix={self.cluster_info['name']} "
                 f"--oidc-config-id={self.cluster['oidc-config-id']} "
                 "--installer-role-arn "
                 f"arn:aws:iam::{self.cluster_info['aws-account-id']}:role/ManagedOpenShift-HCP-ROSA-Installer-Role"
@@ -113,8 +115,9 @@ class RosaCluster(OcmCluster):
 
     def delete_operator_role(self):
         self.logger.info(f"{self.log_prefix}: Delete operator role")
+        name = self.cluster_info["name"]
         rosa.cli.execute(
-            command=f"delete operator-roles --prefix={self.name} --cluster={self.name}",
+            command=f"delete operator-roles --prefix={name} --cluster={name}",
             aws_region=self.cluster_info["region"],
             ocm_client=self.ocm_client,
         )
@@ -174,9 +177,10 @@ class RosaCluster(OcmCluster):
             "acm-clusters",
         )
         ignore_prefix = ("acm-observability",)
-        command = f"create cluster --sts --cluster-name={self.name} "
+        name = self.cluster_info["name"]
+        command = f"create cluster --sts --cluster-name={name} "
         if self.cluster_info["platform"] == HYPERSHIFT_STR:
-            command += f"--hosted-cp --operator-roles-prefix={self.name} "
+            command += f"--hosted-cp --operator-roles-prefix={name} "
 
         for _key, _val in self.cluster.items():
             if _key in ignore_keys or _key.startswith(ignore_prefix):
@@ -234,7 +238,7 @@ class RosaCluster(OcmCluster):
         should_raise = False
         try:
             res = rosa.cli.execute(
-                command=f"delete cluster --cluster={self.name}",
+                command=f"delete cluster --cluster={self.cluster_info['name']}",
                 ocm_client=self.ocm_client,
                 aws_region=self.cluster_info["region"],
             )

@@ -24,7 +24,7 @@ class OsdCluster(OcmCluster):
             self.get_osd_versions()
             self.all_available_versions.update(
                 filter_versions(
-                    wanted_version=self.cluster_info["version"],
+                    wanted_version=self.cluster_info["user-requested-version"],
                     base_versions_dict=self.osd_base_available_versions_dict,
                     platform=self.cluster_info["platform"],
                     stream=self.cluster_info["stream"],
@@ -33,7 +33,8 @@ class OsdCluster(OcmCluster):
 
             self.set_cluster_install_version()
 
-        self.dump_cluster_data_to_file()
+        if kwargs.get("destroy_from_s3_bucket_or_local_directory"):
+            self.dump_cluster_data_to_file()
 
     def get_service_account_dict_from_file(self):
         with open(self.gcp_service_account_file) as fd:
@@ -45,7 +46,7 @@ class OsdCluster(OcmCluster):
             ocp_version = (
                 self.cluster["version"]
                 if self.cluster_info["channel-group"] == "stable"
-                else f"{self.cluster['version']}-{self.cluster_info['channel-group']}"
+                else f"{self.cluster_info['version']}-{self.cluster_info['channel-group']}"
             )
             provision_osd_kwargs = {
                 "wait_for_ready": True,
