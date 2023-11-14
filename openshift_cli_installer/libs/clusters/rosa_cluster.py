@@ -79,16 +79,16 @@ class RosaCluster(OcmCluster):
             aws_region=self.cluster_info["region"],
             ocm_client=self.ocm_client,
         )
-        oidc_id = re.search(r'"id": "([a-z0-9]+)",', res["out"])
+        oidc_id = res["out"].get("id")
         if not oidc_id:
             self.logger.error(f"{self.log_prefix}: Failed to get OIDC config")
             raise click.Abort()
 
-        self.cluster["oidc-config-id"] = oidc_id.group(1)
+        self.cluster["oidc-config-id"] = self.cluster_info["oidc-config-id"] = oidc_id
 
     def delete_oidc(self):
         self.logger.info(f"{self.log_prefix}: Delete OIDC config")
-        oidc_config_id = self.cluster.get("oidc-config-id")
+        oidc_config_id = self.cluster_info.get("oidc-config-id")
         if not oidc_config_id:
             self.logger.warning(f"{self.log_prefix}: No OIDC config ID to delete")
             return
@@ -105,7 +105,7 @@ class RosaCluster(OcmCluster):
             command=(
                 "create operator-roles --hosted-cp"
                 f" --prefix={self.cluster_info['name']} "
-                f"--oidc-config-id={self.cluster['oidc-config-id']} "
+                f"--oidc-config-id={self.cluster_info['oidc-config-id']} "
                 "--installer-role-arn "
                 f"arn:aws:iam::{self.cluster_info['aws-account-id']}:role/ManagedOpenShift-HCP-ROSA-Installer-Role"
             ),
