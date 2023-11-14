@@ -465,13 +465,11 @@ class OCPCluster(UserInput):
                 _managed_acm_cluster_object = clusters.get_cluster_object_by_name(
                     name=_managed_acm_cluster
                 )
-                _managed_cluster_name = _managed_acm_cluster_object["cluster_info"][
-                    "name"
-                ]
+                _managed_cluster_name = _managed_acm_cluster_object.cluster_info["name"]
                 managed_acm_cluster_kubeconfig = (
                     self.get_cluster_kubeconfig_from_install_dir(
                         cluster_name=_managed_cluster_name,
-                        cluster_platform=_managed_acm_cluster_object["cluster_info"][
+                        cluster_platform=_managed_acm_cluster_object.cluster_info[
                             "platform"
                         ],
                     )
