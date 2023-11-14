@@ -36,7 +36,7 @@ class RosaCluster(OcmCluster):
             )
             self.set_cluster_install_version()
 
-        if kwargs.get("destroy_from_s3_bucket_or_local_directory"):
+        if not kwargs.get("destroy_from_s3_bucket_or_local_directory"):
             if self.cluster_info["platform"] == HYPERSHIFT_STR:
                 self.terraform = None
                 self.cluster["tags"] = "dns:external"

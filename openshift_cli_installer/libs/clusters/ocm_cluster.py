@@ -17,25 +17,31 @@ class OcmCluster(OCPCluster):
             f"{self.__class__.__module__}-{self.__class__.__name__}"
         )
 
-        self.osd_base_available_versions_dict = {}
-        self.rosa_base_available_versions_dict = {}
-        self.cluster["channel-group"] = self.cluster_info["channel-group"] = (
-            self.cluster.get("channel-group", "stable")
+        destroy_from_s3_bucket_or_local_directory = kwargs.get(
+            "destroy_from_s3_bucket_or_local_directory"
         )
-        self.cluster["multi-az"] = self.cluster_info["multi-az"] = self.cluster.get(
-            "multi-az", False
-        )
-        self.cluster["ocm-env"] = self.cluster_info["ocm-env"] = self.cluster.get(
-            "ocm-env", STAGE_STR
-        )
+
+        if not destroy_from_s3_bucket_or_local_directory:
+            self.osd_base_available_versions_dict = {}
+            self.rosa_base_available_versions_dict = {}
+            self.cluster["channel-group"] = self.cluster_info["channel-group"] = (
+                self.cluster.get("channel-group", "stable")
+            )
+            self.cluster["multi-az"] = self.cluster_info["multi-az"] = self.cluster.get(
+                "multi-az", False
+            )
+            self.cluster["ocm-env"] = self.cluster_info["ocm-env"] = self.cluster.get(
+                "ocm-env", STAGE_STR
+            )
+
+            self._set_expiration_time()
+            self.dump_cluster_data_to_file()
 
         self.prepare_cluster_data()
         self.cluster_object = Cluster(
             client=self.ocm_client,
             name=self.cluster_info["name"],
         )
-        self._set_expiration_time()
-        self.dump_cluster_data_to_file()
 
     def _set_expiration_time(self):
         expiration_time = self.cluster.get("expiration-time")

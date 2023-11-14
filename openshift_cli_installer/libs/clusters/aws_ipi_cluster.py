@@ -35,9 +35,10 @@ class AwsIpiCluster(OCPCluster):
             self.aws_base_available_versions = None
             self.cluster["ocm-env"] = self.cluster_info["ocm-env"] = PRODUCTION_STR
 
-            self.prepare_cluster_data()
             self._prepare_aws_ipi_cluster()
             self.dump_cluster_data_to_file()
+
+        self.prepare_cluster_data()
 
     def _prepare_aws_ipi_cluster(self):
         self.aws_base_available_versions = get_aws_versions()

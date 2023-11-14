@@ -216,7 +216,7 @@ class OCPClusters(UserInput):
 
     def get_cluster_object_by_name(self, name):
         for _cluster in self.list_clusters:
-            if _cluster["cluster_info"]["name"] == name:
+            if _cluster.cluster_info["name"] == name:
                 return _cluster
 
     def install_acm_on_clusters(self):
