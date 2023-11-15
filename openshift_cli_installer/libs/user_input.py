@@ -233,7 +233,7 @@ class UserInput:
     def assert_public_ssh_key_file_exists(self):
         if not self.ssh_key_file or not os.path.exists(self.ssh_key_file):
             self.logger.error(
-                "SSH file is required for AWS cluster installations." f" {self.ssh_key_file} file does not exist.",
+                "SSH file is required for AWS cluster installations. {self.ssh_key_file} file does not exist.",
             )
             raise click.Abort()
 
@@ -277,7 +277,7 @@ class UserInput:
             and not self.gcp_service_account_file
         ):
             self.logger.error(
-                "`--gcp-service-account-file` option must be provided for" f" {GCP_OSD_STR} clusters",
+                "`--gcp-service-account-file` option must be provided for {GCP_OSD_STR} clusters",
             )
             raise click.Abort()
 
@@ -325,7 +325,7 @@ class UserInput:
             if missing_storage_data:
                 _storage_clusters = "\n".join(missing_storage_data)
                 self.logger.error(
-                    "The following clusters are missing storage data for" f" observability:\n{_storage_clusters}\n"
+                    "The following clusters are missing storage data for observability:\n{_storage_clusters}\n"
                 )
             raise click.Abort()
 

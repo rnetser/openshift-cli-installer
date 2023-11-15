@@ -115,7 +115,7 @@ class OCPClusters(UserInput):
                     hypershift_regions_dict[ocm_env] = _hypershift_regions
 
                 if region not in _hypershift_regions:
-                    unsupported_regions.append(f"Cluster {_cluster['cluster_info']['name']}, region: {region}\n")
+                    unsupported_regions.append(f"Cluster {_cluster.cluster_info['name']}, region: {region}\n")
 
                 if unsupported_regions:
                     self.logger.error(
