@@ -1,17 +1,17 @@
 ---
 kind: InstallConfig
 apiVersion: v1
-baseDomain: {{ base_domain }}
+baseDomain: {{ base-domain }}
 compute:
 - architecture: amd64
   hyperthreading: Enabled
   name: worker
   platform:
     {{ platform }}:
-      type: {{ worker_flavor|default("m5.4xlarge", true) }}
+      type: {{ worker-flavor|default("m5.4xlarge", true) }}
       rootVolume:
-        size: {{ worker_root_disk_size|default("128", true) }}
-  replicas: {{ worker_replicas|default("3", true) }}
+        size: {{ worker-root-disk-size|default("128", true) }}
+  replicas: {{ worker-replicas|default("3", true) }}
 controlPlane:
   architecture: amd64
   hyperthreading: Enabled
@@ -34,5 +34,5 @@ platform:
     region: {{ region }}
 publish: External
 fips: {{ fips|default("false", true) }}
-sshKey: {{ ssh_key }}
-pullSecret: '{{ pull_secret }}'
+sshKey: {{ ssh-key }}
+pullSecret: '{{ pull-secret }}'

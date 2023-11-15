@@ -32,7 +32,7 @@ Action also can be passed to the CLI as `--action create/destroy` instead of spe
   * The installer output is saved in the <cluster directory>.
   * The data is used for cluster destroy.
   * `platform=aws`: Must pass in cluster parameters
-  * `base_domain`: cluster parameter is mandatory
+  * `base-domain`: cluster parameter is mandatory
   * `--registry-config-file`: registry-config json file path, can be obtained from [openshift local cluster](https://console.redhat.com/openshift/create/local)
   * `--docker-config-file`: Path to Docker config.json file, defaults to `~/.docker/config.json`. File must include token for `registry.ci.openshift.org`
   * `--ssh-key-file`: id_rsa file path
@@ -196,7 +196,7 @@ podman run quay.io/redhat_msi/openshift-cli-installer \
     --registry-config-file=registry-config.json \
     --s3-bucket-name=openshift-cli-installer \
     --s3-bucket-path=install-folders \
-    --cluster 'name=ipi1;base_domain=aws.interop.ccitredhat.com;platform=aws;region=us-east-2;version=4.14.0-ec.2;worker_flavor=m5.xlarge;log_level=info'
+    --cluster 'name=ipi1;base-domain=aws.interop.ccitredhat.com;platform=aws;region=us-east-2;version=4.14.0-ec.2;worker-flavor=m5.xlarge;log_level=info'
 ```
   * Default `log_level=error` is set for cluster config to hide the openshift-installer logs which contains kubeadmin password.
 
@@ -239,7 +239,7 @@ podman run quay.io/redhat_msi/openshift-cli-installer \
     --s3-bucket-path=install-folders \  --cluster 'name=hyper1;platform=hypershift;region=us-west-2;version=4.13.4;compute-machine-type=m5.4xlarge;replicas=6;channel-group=candidate;expiration-time=2h;timeout=1h' \
     --ocm-token=$OCM_TOKEN \
 
-    --cluster 'name=ipi1;base_domain=aws.interop.ccitredhat.com;platform=aws;region=us-east-2;version=4.14.0-ec.2;worker_flavor=m5.xlarge' \
+    --cluster 'name=ipi1;base-domain=aws.interop.ccitredhat.com;platform=aws;region=us-east-2;version=4.14.0-ec.2;worker-flavor=m5.xlarge' \
     --cluster 'name=rosa1;platform=rosa;region=us-east-2;version=4.13.4;compute-machine-type=m5.xlarge;replicas=2;channel-group=candidate;expiration-time=4h;timeout=1h' \
     --parallel
 ```

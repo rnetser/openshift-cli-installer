@@ -88,23 +88,23 @@ class AwsIpiCluster(OCPCluster):
         terraform_parameters = {
             "name": self.cluster_info["name"],
             "region": self.cluster_info["region"],
-            "base_domain": self.cluster_info["base_domain"],
+            "base-domain": self.cluster_info["base-domain"],
             "platform": self.cluster_info["platform"],
-            "ssh_key": self.ssh_key,
-            "pull_secret": self.pull_secret,
+            "ssh-key": self.ssh_key,
+            "pull-secret": self.pull_secret,
         }
 
-        worker_flavor = self.cluster.get("worker_flavor")
+        worker_flavor = self.cluster.get("worker-flavor")
         if worker_flavor:
-            terraform_parameters["worker_flavor"] = worker_flavor
+            terraform_parameters["worker-flavor"] = worker_flavor
 
-        worker_root_disk_size = self.cluster.get("worker_root_disk_size")
+        worker_root_disk_size = self.cluster.get("worker-root-disk-size")
         if worker_root_disk_size:
-            terraform_parameters["worker_root_disk_size"] = worker_root_disk_size
+            terraform_parameters["worker-root-disk-size"] = worker_root_disk_size
 
-        worker_replicas = self.cluster.get("worker_replicas")
+        worker_replicas = self.cluster.get("worker-replicas")
         if worker_replicas:
-            terraform_parameters["worker_replicas"] = worker_replicas
+            terraform_parameters["worker-replicas"] = worker_replicas
 
         fips = self.cluster.get("fips")
         if fips:
