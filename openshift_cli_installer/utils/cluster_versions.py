@@ -38,7 +38,7 @@ def set_clusters_versions(clusters, base_available_versions):
         platform = cluster_data["platform"]
         version_key = get_split_version(version=cluster_version)
         all_stream_versions = all_available_versions[stream][version_key]
-        err_msg = f"{cluster_name}: Cluster version {cluster_version} not found for stream" f" {stream}"
+        err_msg = f"{cluster_name}: Cluster version {cluster_version} not found for stream {stream}"
         if len(cluster_version.split(".")) == 3:
             for _ver in all_stream_versions["versions"]:
                 if cluster_version in _ver:
@@ -49,7 +49,7 @@ def set_clusters_versions(clusters, base_available_versions):
                 raise click.Abort()
         elif len(cluster_version.split(".")) < 2:
             click.secho(
-                f"{cluster_name}: Version must be at least x.y (4.3), got" f" {cluster_version}", fg=ERROR_LOG_COLOR
+                f"{cluster_name}: Version must be at least x.y (4.3), got {cluster_version}", fg=ERROR_LOG_COLOR
             )
             raise click.Abort()
         else:

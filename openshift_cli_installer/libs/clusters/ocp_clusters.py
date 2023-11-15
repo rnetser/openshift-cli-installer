@@ -84,7 +84,7 @@ class OCPClusters(UserInput):
             existing_clusters_list = []
             for _cluster in self.ocm_managed_clusters:
                 if _cluster.cluster_object.exists:
-                    existing_clusters_list.append(_cluster["cluster_info"]["name"])
+                    existing_clusters_list.append(_cluster.cluster_info["name"])
 
             if existing_clusters_list:
                 self.logger.error(
@@ -115,7 +115,7 @@ class OCPClusters(UserInput):
                     hypershift_regions_dict[ocm_env] = _hypershift_regions
 
                 if region not in _hypershift_regions:
-                    unsupported_regions.append(f"Cluster {_cluster['cluster_info']['name']}, region:" f" {region}\n")
+                    unsupported_regions.append(f"Cluster {_cluster.cluster_info['name']}, region: {region}\n")
 
                 if unsupported_regions:
                     self.logger.error(
@@ -144,12 +144,10 @@ class OCPClusters(UserInput):
             for _cluster in self.gcp_osd_clusters:
                 cluster_region = _cluster.cluster_info["region"]
                 if cluster_region not in supported_regions:
-                    unsupported_regions.append(
-                        f"cluster: {_cluster.cluster_info['name']}, region:" f" {cluster_region}"
-                    )
+                    unsupported_regions.append(f"cluster: {_cluster.cluster_info['name']}, region: {cluster_region}")
 
             if unsupported_regions:
-                self.logger.error("The following clusters regions are not supported in GCP:" f" {unsupported_regions}")
+                self.logger.error("The following clusters regions are not supported in GCP: {unsupported_regions}")
                 raise click.Abort()
 
     def run_create_or_destroy_clusters(self):
@@ -160,7 +158,7 @@ class OCPClusters(UserInput):
             for cluster in self.list_clusters:
                 action_func = getattr(cluster, action_str)
                 click.echo(
-                    f"Executing {self.action} cluster" f" {cluster.cluster_info['name']} [parallel: {self.parallel}]"
+                    f"Executing {self.action} cluster {cluster.cluster_info['name']} [parallel: {self.parallel}]"
                 )
                 if self.parallel:
                     futures.append(executor.submit(action_func))

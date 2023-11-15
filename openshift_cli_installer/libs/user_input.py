@@ -109,7 +109,7 @@ class UserInput:
         if self.destroy_clusters_from_s3_bucket:
             if not self.s3_bucket_name:
                 self.logger.error(
-                    "`--s3-bucket-name` must be provided when running with" " `--destroy-clusters-from-s3-bucket`",
+                    "`--s3-bucket-name` must be provided when running with `--destroy-clusters-from-s3-bucket`",
                 )
                 raise click.Abort()
 
@@ -132,12 +132,12 @@ class UserInput:
 
         else:
             if not self.action:
-                self.logger.error("'action' must be provided, supported actions:" " `{SUPPORTED_ACTIONS}`")
+                self.logger.error("'action' must be provided, supported actions: `{SUPPORTED_ACTIONS}`")
 
                 raise click.Abort()
 
             if self.action not in SUPPORTED_ACTIONS:
-                self.logger.error(f"'{self.action}' is not supported, supported actions:" f" `{SUPPORTED_ACTIONS}`")
+                self.logger.error(f"'{self.action}' is not supported, supported actions: `{SUPPORTED_ACTIONS}`")
 
                 raise click.Abort()
 
@@ -233,7 +233,7 @@ class UserInput:
     def assert_public_ssh_key_file_exists(self):
         if not self.ssh_key_file or not os.path.exists(self.ssh_key_file):
             self.logger.error(
-                "SSH file is required for AWS cluster installations." f" {self.ssh_key_file} file does not exist.",
+                "SSH file is required for AWS cluster installations. {self.ssh_key_file} file does not exist.",
             )
             raise click.Abort()
 
@@ -250,14 +250,14 @@ class UserInput:
             self.assert_aws_credentials_exist()
             if not self.aws_account_id and self.create:
                 self.logger.error(
-                    "--aws-account-id required for AWS OSD or Hypershift" " installations.",
+                    "--aws-account-id required for AWS OSD or Hypershift installations.",
                 )
                 raise click.Abort()
 
     def assert_aws_credentials_exist(self):
         if not (self.aws_secret_access_key and self.aws_access_key_id):
             self.logger.error(
-                "--aws-secret-access-key and aws-access-key-id" " required for AWS OSD OR ACM cluster installations.",
+                "--aws-secret-access-key and aws-access-key-id required for AWS OSD OR ACM cluster installations.",
             )
             raise click.Abort()
 
@@ -277,7 +277,7 @@ class UserInput:
             and not self.gcp_service_account_file
         ):
             self.logger.error(
-                "`--gcp-service-account-file` option must be provided for" f" {GCP_OSD_STR} clusters",
+                "`--gcp-service-account-file` option must be provided for {GCP_OSD_STR} clusters",
             )
             raise click.Abort()
 
@@ -325,7 +325,7 @@ class UserInput:
             if missing_storage_data:
                 _storage_clusters = "\n".join(missing_storage_data)
                 self.logger.error(
-                    "The following clusters are missing storage data for" f" observability:\n{_storage_clusters}\n"
+                    "The following clusters are missing storage data for observability:\n{_storage_clusters}\n"
                 )
             raise click.Abort()
 
