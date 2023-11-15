@@ -125,7 +125,7 @@ class RosaCluster(OcmCluster):
             capture_output=True,
         )
         if rc != 0:
-            self.logger.error(f"{self.log_prefix}: Failed to destroy hypershift VPCs with error:" f" {err}")
+            self.logger.error(f"{self.log_prefix}: Failed to destroy hypershift VPCs with error: {err}")
             raise click.Abort()
 
     def prepare_hypershift_vpc(self):
@@ -139,7 +139,7 @@ class RosaCluster(OcmCluster):
         rc, _, err = self.terraform.apply(capture_output=True, skip_plan=True, auto_approve=True)
         if rc != 0:
             self.logger.error(
-                f"{self.log_prefix}: Create hypershift VPC failed with" f" error: {err}, rolling back.",
+                f"{self.log_prefix}: Create hypershift VPC failed with error: {err}, rolling back.",
             )
             self.delete_oidc()
             self.delete_operator_role()
@@ -163,6 +163,9 @@ class RosaCluster(OcmCluster):
             "public-subnets",
             "acm",
             "acm-clusters",
+            "aws-access-key-id",
+            "aws-secret-access-key",
+            "aws-account-id",
         )
         ignore_prefix = ("acm-observability",)
         name = self.cluster_info["name"]

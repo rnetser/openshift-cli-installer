@@ -69,7 +69,7 @@ class AwsIpiCluster(OCPCluster):
         )
         if not rc:
             self.logger.error(
-                f"{self.log_prefix}: Failed to get {openshift_install_str} for version" f" {version_url}, error: {err}",
+                f"{self.log_prefix}: Failed to get {openshift_install_str} for version {version_url}, error: {err}",
             )
             raise click.Abort()
 
@@ -134,7 +134,7 @@ class AwsIpiCluster(OCPCluster):
 
         if not res:
             self.logger.error(
-                f"{self.log_prefix}: Failed to run cluster {self.action} \n\tERR:" f" {err}\n\tOUT: {out}.",
+                f"{self.log_prefix}: Failed to run cluster {self.action} \n\tERR: {err}\n\tOUT: {out}.",
             )
             if raise_on_failure:
                 raise click.Abort()
