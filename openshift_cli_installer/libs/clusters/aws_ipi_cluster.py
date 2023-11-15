@@ -26,25 +26,28 @@ class AwsIpiCluster(OCPCluster):
         self.logger = get_logger(
             f"{self.__class__.__module__}-{self.__class__.__name__}"
         )
-
-        self.openshift_install_binary_path = None
-        self.aws_base_available_versions = None
-        self.ocm_env = PRODUCTION_STR
         self.log_level = self.cluster.get("log_level", "error")
 
+        if kwargs.get("destroy_from_s3_bucket_or_local_directory"):
+            self._aws_download_installer()
+        else:
+            self.openshift_install_binary_path = None
+            self.aws_base_available_versions = None
+            self.cluster["ocm-env"] = self.cluster_info["ocm-env"] = PRODUCTION_STR
+
+            self._prepare_aws_ipi_cluster()
+            self.dump_cluster_data_to_file()
+
         self.prepare_cluster_data()
-        self._prepare_aws_ipi_cluster()
-        self.dump_cluster_data_to_file()
 
     def _prepare_aws_ipi_cluster(self):
-        self.base_domain = self.cluster["base_domain"]
         self.aws_base_available_versions = get_aws_versions()
         self.all_available_versions.update(
             filter_versions(
-                wanted_version=self.version,
+                wanted_version=self.cluster_info["user-requested-version"],
                 base_versions_dict=self.aws_base_available_versions,
-                platform=self.platform,
-                stream=self.stream,
+                platform=self.cluster_info["platform"],
+                stream=self.cluster_info["stream"],
             )
         )
         self.set_cluster_install_version()
@@ -55,14 +58,15 @@ class AwsIpiCluster(OCPCluster):
 
     def _aws_download_installer(self):
         openshift_install_str = "openshift-install"
-        binary_dir = os.path.join("/tmp", self.version_url)
+        version_url = self.cluster_info["version-url"]
+        binary_dir = os.path.join("/tmp", version_url)
         self.openshift_install_binary_path = os.path.join(
             binary_dir, openshift_install_str
         )
         rc, _, err = run_command(
             command=shlex.split(
                 "oc adm release extract "
-                f"{self.version_url} "
+                f"{version_url} "
                 f"--command={openshift_install_str} --to={binary_dir} --registry-config={self.registry_config_file}"
             ),
             check=False,
@@ -70,7 +74,7 @@ class AwsIpiCluster(OCPCluster):
         if not rc:
             self.logger.error(
                 f"{self.log_prefix}: Failed to get {openshift_install_str} for version"
-                f" {self.version_url}, error: {err}",
+                f" {version_url}, error: {err}",
             )
             raise click.Abort()
 
@@ -80,25 +84,56 @@ class AwsIpiCluster(OCPCluster):
             docker_config_file=self.docker_config_file,
         )
         self.ssh_key = get_local_ssh_key(ssh_key_file=self.ssh_key_file)
+
+        terraform_parameters = {
+            "name": self.cluster_info["name"],
+            "region": self.cluster_info["region"],
+            "base_domain": self.cluster_info["base-domain"],
+            "platform": self.cluster_info["platform"],
+            "ssh_key": self.ssh_key,
+            "pull_secret": self.pull_secret,
+        }
+
+        worker_flavor = self.cluster.get("worker-flavor")
+        if worker_flavor:
+            terraform_parameters["worker_flavor"] = worker_flavor
+
+        worker_root_disk_size = self.cluster.get("worker-root-disk-size")
+        if worker_root_disk_size:
+            terraform_parameters["worker_root_disk_size"] = worker_root_disk_size
+
+        worker_replicas = self.cluster.get("worker-replicas")
+        if worker_replicas:
+            terraform_parameters["worker_replicas"] = worker_replicas
+
+        fips = self.cluster.get("fips")
+        if fips:
+            terraform_parameters["fips"] = fips
+
         cluster_install_config = get_install_config_j2_template(
-            cluster_dict=self.to_dict
+            jinja_dict=terraform_parameters
         )
 
-        with open(os.path.join(self.cluster_dir, "install-config.yaml"), "w") as fd:
+        with open(
+            os.path.join(self.cluster_info["cluster-dir"], "install-config.yaml"), "w"
+        ) as fd:
             fd.write(yaml.dump(cluster_install_config))
 
     def _set_install_version_url(self):
+        cluster_version = self.cluster["version"]
         version_url = [
             url
             for url, versions in self.aws_base_available_versions.items()
-            if self.install_version in versions
+            if cluster_version in versions
         ]
         if version_url:
-            self.version_url = f"{version_url[0]}:{self.install_version}"
+            self.cluster_info["version-url"] = (
+                f"{version_url[0]}:{self.cluster_info['version']}"
+            )
         else:
             self.logger.error(
                 f"{self.log_prefix}: Cluster version url not found for"
-                f" {self.version} in {self.aws_base_available_versions.keys()}",
+                f" {cluster_version} in {self.aws_base_available_versions.keys()}",
             )
             raise click.Abort()
 
@@ -106,7 +141,7 @@ class AwsIpiCluster(OCPCluster):
         res, out, err = run_command(
             command=shlex.split(
                 f"{self.openshift_install_binary_path} {self.action} cluster --dir"
-                f" {self.cluster_dir} --log-level {self.log_level}"
+                f" {self.cluster_info['cluster-dir']} --log-level {self.log_level}"
             ),
             capture_output=False,
             check=False,
@@ -150,10 +185,10 @@ class AwsIpiCluster(OCPCluster):
 
         if self.s3_bucket_name:
             zip_and_upload_to_s3(
-                install_dir=self.cluster_dir,
+                install_dir=self.cluster_info["cluster-dir"],
                 s3_bucket_name=self.s3_bucket_name,
                 s3_bucket_path=self.s3_bucket_path,
-                uuid=self.shortuuid,
+                uuid=self.cluster_info["shortuuid"],
             )
 
     def destroy_cluster(self):

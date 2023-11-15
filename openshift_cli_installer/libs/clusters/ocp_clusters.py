@@ -90,7 +90,7 @@ class OCPClusters(UserInput):
             existing_clusters_list = []
             for _cluster in self.ocm_managed_clusters:
                 if _cluster.cluster_object.exists:
-                    existing_clusters_list.append(_cluster.name)
+                    existing_clusters_list.append(_cluster["cluster_info"]["name"])
 
             if existing_clusters_list:
                 self.logger.error(
@@ -117,16 +117,19 @@ class OCPClusters(UserInput):
             unsupported_regions = []
             hypershift_regions_dict = {PRODUCTION_STR: None, STAGE_STR: None}
             for _cluster in self.hypershift_clusters:
-                _hypershift_regions = hypershift_regions_dict[_cluster.ocm_env]
+                region = _cluster.cluster_info["region"]
+                ocm_env = _cluster.cluster_info["ocm-env"]
+                _hypershift_regions = hypershift_regions_dict[ocm_env]
                 if not _hypershift_regions:
                     _hypershift_regions = self._hypershift_regions(
                         ocm_client=_cluster.ocm_client
                     )
-                    hypershift_regions_dict[_cluster.ocm_env] = _hypershift_regions
+                    hypershift_regions_dict[ocm_env] = _hypershift_regions
 
-                if _cluster.region not in _hypershift_regions:
+                if region not in _hypershift_regions:
                     unsupported_regions.append(
-                        f"Cluster {_cluster.name}, region: {_cluster.region}\n"
+                        f"Cluster {_cluster['cluster_info']['name']}, region:"
+                        f" {region}\n"
                     )
 
                 if unsupported_regions:
@@ -143,7 +146,7 @@ class OCPClusters(UserInput):
             self.logger.info(f"Check if regions are {AWS_STR}-supported.")
             _regions_to_verify = set()
             for _cluster in self.aws_ipi_clusters + self.aws_managed_clusters:
-                _regions_to_verify.add(_cluster.region)
+                _regions_to_verify.add(_cluster.cluster_info["region"])
 
             for _region in _regions_to_verify:
                 set_and_verify_aws_credentials(region_name=_region)
@@ -156,10 +159,11 @@ class OCPClusters(UserInput):
             )
             unsupported_regions = []
             for _cluster in self.gcp_osd_clusters:
-                cluster_region = _cluster.region
+                cluster_region = _cluster.cluster_info["region"]
                 if cluster_region not in supported_regions:
                     unsupported_regions.append(
-                        f"cluster: {_cluster.name}, region: {cluster_region}"
+                        f"cluster: {_cluster.cluster_info['name']}, region:"
+                        f" {cluster_region}"
                     )
 
             if unsupported_regions:
@@ -177,8 +181,8 @@ class OCPClusters(UserInput):
             for cluster in self.list_clusters:
                 action_func = getattr(cluster, action_str)
                 click.echo(
-                    f"Executing {self.action} cluster {cluster.name} [parallel:"
-                    f" {self.parallel}]"
+                    f"Executing {self.action} cluster"
+                    f" {cluster.cluster_info['name']} [parallel: {self.parallel}]"
                 )
                 if self.parallel:
                     futures.append(executor.submit(action_func))
@@ -207,20 +211,23 @@ class OCPClusters(UserInput):
 
     def attach_clusters_to_acm_cluster_hub(self):
         for cluster in self.list_clusters:
-            if cluster.acm_clusters:
+            if cluster.cluster_info.get("acm-clusters"):
                 cluster.attach_clusters_to_acm_hub(clusters=self)
 
     def get_cluster_object_by_name(self, name):
         for _cluster in self.list_clusters:
-            if _cluster.name == name:
+            if _cluster.cluster_info["name"] == name:
                 return _cluster
 
     def install_acm_on_clusters(self):
         for _cluster in self.list_clusters:
-            if _cluster.acm:
+            if _cluster.cluster_info["acm"]:
                 _cluster.install_acm()
 
     def enable_observability_on_acm_clusters(self):
         for _cluster in self.list_clusters:
-            if _cluster.acm and _cluster.acm_observability:
+            if (
+                _cluster.cluster_info["acm"]
+                and _cluster.cluster_info["acm-observability"]
+            ):
                 _cluster.enable_observability()

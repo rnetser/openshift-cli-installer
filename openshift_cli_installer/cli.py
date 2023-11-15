@@ -103,7 +103,7 @@ File must include token for `registry.ci.openshift.org`
 )
 @click.option(
     "--aws-account-id",
-    help="AWS account-id, needed for OSD AWS clusters.",
+    help="AWS account-id, needed for OSD AWS and Hypershift clusters.",
     default=os.environ.get("AWS_ACCOUNT_ID"),
 )
 @click.option(
@@ -114,10 +114,10 @@ File must include token for `registry.ci.openshift.org`
 \b
 Cluster/s to install.
 Format to pass is:
-    'name=cluster1;base_domain=aws.domain.com;platform=aws;region=us-east-2;version=4.14.0-ec.2'
+    'name=cluster1;base-domain=aws.domain.com;platform=aws;region=us-east-2;version=4.14.0-ec.2'
 Required parameters:
     name: Cluster name.
-    base_domain: Base domain for the cluster.
+    base-domain: Base domain for the cluster.
     platform: Cloud platform to install the cluster on, supported platforms are: aws, rosa and hypershift.
     region: Region to use for the cloud platform.
     version: Openshift cluster version to install
@@ -125,8 +125,8 @@ Required parameters:
 Check install-config-template.j2 for variables that can be overwritten by the user.
 For example:
     fips=true
-    worker_flavor=m5.xlarge
-    worker_replicas=6
+    worker-flavor=m5.xlarge
+    worker-replicas=6
     """,
     multiple=True,
 )
@@ -220,7 +220,10 @@ def main(**kwargs):
         or kwargs["destroy_clusters_from_install_data_directory"]
         or kwargs["destroy_clusters_from_install_data_directory_using_s3_bucket"]
     ):
-        clusters_kwargs = destroy_clusters_from_s3_bucket_or_local_directory(**kwargs)
+        clusters_kwargs = {"destroy_from_s3_bucket_or_local_directory": True}
+        clusters_kwargs.update(
+            destroy_clusters_from_s3_bucket_or_local_directory(**kwargs)
+        )
 
         try:
             clusters = OCPClusters(**clusters_kwargs)
