@@ -25,9 +25,7 @@ class OCPClusters(UserInput):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.logger = get_logger(
-            f"{self.__class__.__module__}-{self.__class__.__name__}"
-        )
+        self.logger = get_logger(f"{self.__class__.__module__}-{self.__class__.__name__}")
         self.aws_ipi_clusters = []
         self.aws_osd_clusters = []
         self.rosa_clusters = []
@@ -48,9 +46,7 @@ class OCPClusters(UserInput):
     def add_to_cluster_lists(self, ocp_cluster, **kwargs):
         _cluster_platform = ocp_cluster["platform"]
         if _cluster_platform == AWS_STR:
-            self.aws_ipi_clusters.append(
-                AwsIpiCluster(ocp_cluster=ocp_cluster, **kwargs)
-            )
+            self.aws_ipi_clusters.append(AwsIpiCluster(ocp_cluster=ocp_cluster, **kwargs))
 
         if _cluster_platform == AWS_OSD_STR:
             self.aws_osd_clusters.append(OsdCluster(ocp_cluster=ocp_cluster, **kwargs))
@@ -59,9 +55,7 @@ class OCPClusters(UserInput):
             self.rosa_clusters.append(RosaCluster(ocp_cluster=ocp_cluster, **kwargs))
 
         if _cluster_platform == HYPERSHIFT_STR:
-            self.hypershift_clusters.append(
-                RosaCluster(ocp_cluster=ocp_cluster, **kwargs)
-            )
+            self.hypershift_clusters.append(RosaCluster(ocp_cluster=ocp_cluster, **kwargs))
 
         if _cluster_platform == GCP_OSD_STR:
             self.gcp_osd_clusters.append(OsdCluster(ocp_cluster=ocp_cluster, **kwargs))
@@ -105,11 +99,7 @@ class OCPClusters(UserInput):
             aws_region="us-west-2",
             ocm_client=ocm_client,
         )["out"]
-        return [
-            region["id"]
-            for region in rosa_regions
-            if region["supports_hypershift"] is True
-        ]
+        return [region["id"] for region in rosa_regions if region["supports_hypershift"] is True]
 
     def is_region_support_hypershift(self):
         if self.hypershift_clusters:
@@ -121,16 +111,11 @@ class OCPClusters(UserInput):
                 ocm_env = _cluster.cluster_info["ocm-env"]
                 _hypershift_regions = hypershift_regions_dict[ocm_env]
                 if not _hypershift_regions:
-                    _hypershift_regions = self._hypershift_regions(
-                        ocm_client=_cluster.ocm_client
-                    )
+                    _hypershift_regions = self._hypershift_regions(ocm_client=_cluster.ocm_client)
                     hypershift_regions_dict[ocm_env] = _hypershift_regions
 
                 if region not in _hypershift_regions:
-                    unsupported_regions.append(
-                        f"Cluster {_cluster['cluster_info']['name']}, region:"
-                        f" {region}\n"
-                    )
+                    unsupported_regions.append(f"Cluster {_cluster['cluster_info']['name']}, region:" f" {region}\n")
 
                 if unsupported_regions:
                     self.logger.error(
@@ -154,23 +139,17 @@ class OCPClusters(UserInput):
     def is_region_support_gcp(self):
         if self.gcp_osd_clusters:
             self.logger.info("Check if regions are GCP-supported.")
-            supported_regions = get_gcp_regions(
-                gcp_service_account_file=self.gcp_service_account_file
-            )
+            supported_regions = get_gcp_regions(gcp_service_account_file=self.gcp_service_account_file)
             unsupported_regions = []
             for _cluster in self.gcp_osd_clusters:
                 cluster_region = _cluster.cluster_info["region"]
                 if cluster_region not in supported_regions:
                     unsupported_regions.append(
-                        f"cluster: {_cluster.cluster_info['name']}, region:"
-                        f" {cluster_region}"
+                        f"cluster: {_cluster.cluster_info['name']}, region:" f" {cluster_region}"
                     )
 
             if unsupported_regions:
-                self.logger.error(
-                    "The following clusters regions are not supported in GCP:"
-                    f" {unsupported_regions}"
-                )
+                self.logger.error("The following clusters regions are not supported in GCP:" f" {unsupported_regions}")
                 raise click.Abort()
 
     def run_create_or_destroy_clusters(self):
@@ -181,8 +160,7 @@ class OCPClusters(UserInput):
             for cluster in self.list_clusters:
                 action_func = getattr(cluster, action_str)
                 click.echo(
-                    f"Executing {self.action} cluster"
-                    f" {cluster.cluster_info['name']} [parallel: {self.parallel}]"
+                    f"Executing {self.action} cluster" f" {cluster.cluster_info['name']} [parallel: {self.parallel}]"
                 )
                 if self.parallel:
                     futures.append(executor.submit(action_func))
@@ -226,8 +204,5 @@ class OCPClusters(UserInput):
 
     def enable_observability_on_acm_clusters(self):
         for _cluster in self.list_clusters:
-            if (
-                _cluster.cluster_info["acm"]
-                and _cluster.cluster_info["acm-observability"]
-            ):
+            if _cluster.cluster_info["acm"] and _cluster.cluster_info["acm-observability"]:
                 _cluster.enable_observability()

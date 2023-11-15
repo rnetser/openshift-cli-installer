@@ -12,9 +12,7 @@ from openshift_cli_installer.utils.general import zip_and_upload_to_s3
 class OsdCluster(OcmCluster):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.logger = get_logger(
-            f"{self.__class__.__module__}-{self.__class__.__name__}"
-        )
+        self.logger = get_logger(f"{self.__class__.__module__}-{self.__class__.__name__}")
 
         if self.gcp_service_account_file:
             self.gcp_service_account = self.get_service_account_dict_from_file()
@@ -61,15 +59,15 @@ class OsdCluster(OcmCluster):
                 "platform": self.cluster_info["platform"].replace("-osd", ""),
             }
             if self.cluster_info["platform"] == AWS_OSD_STR:
-                provision_osd_kwargs.update({
-                    "aws_access_key_id": self.cluster_info["aws-access-key-id"],
-                    "aws_account_id": self.cluster_info["aws-account-id"],
-                    "aws_secret_access_key": self.cluster_info["aws-secret-access-key"],
-                })
+                provision_osd_kwargs.update(
+                    {
+                        "aws_access_key_id": self.cluster_info["aws-access-key-id"],
+                        "aws_account_id": self.cluster_info["aws-account-id"],
+                        "aws_secret_access_key": self.cluster_info["aws-secret-access-key"],
+                    }
+                )
             elif self.cluster_info["platform"] == GCP_OSD_STR:
-                provision_osd_kwargs.update({
-                    "gcp_service_account": self.gcp_service_account
-                })
+                provision_osd_kwargs.update({"gcp_service_account": self.gcp_service_account})
 
             self.cluster_object.provision_osd(**provision_osd_kwargs)
             self.add_cluster_info_to_cluster_object()

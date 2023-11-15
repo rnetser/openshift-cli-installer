@@ -19,9 +19,7 @@ from openshift_cli_installer.utils.general import (
 class RosaCluster(OcmCluster):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.logger = get_logger(
-            f"{self.__class__.__module__}-{self.__class__.__name__}"
-        )
+        self.logger = get_logger(f"{self.__class__.__module__}-{self.__class__.__name__}")
 
         if self.create:
             self.cluster_info["aws-account-id"] = self.aws_account_id
@@ -47,9 +45,7 @@ class RosaCluster(OcmCluster):
     def terraform_init(self):
         self.logger.info(f"{self.log_prefix}: Init Terraform")
         # az_id example: us-east-2 -> ["use2-az1", "use2-az2"]
-        az_id_prefix = "".join(
-            re.match(r"(.*)-(\w).*-(\d)", self.cluster_info["region"]).groups()
-        )
+        az_id_prefix = "".join(re.match(r"(.*)-(\w).*-(\d)", self.cluster_info["region"]).groups())
         cluster_parameters = {
             "aws_region": self.cluster_info["region"],
             "az_ids": [f"{az_id_prefix}-az1", f"{az_id_prefix}-az2"],
@@ -67,9 +63,7 @@ class RosaCluster(OcmCluster):
         if public_subnets:
             cluster_parameters["public_subnets"] = public_subnets
 
-        self.terraform = Terraform(
-            working_dir=self.cluster_info["cluster-dir"], variables=cluster_parameters
-        )
+        self.terraform = Terraform(working_dir=self.cluster_info["cluster-dir"], variables=cluster_parameters)
         self.terraform.init()
 
     def create_oidc(self):
@@ -131,10 +125,7 @@ class RosaCluster(OcmCluster):
             capture_output=True,
         )
         if rc != 0:
-            self.logger.error(
-                f"{self.log_prefix}: Failed to destroy hypershift VPCs with error:"
-                f" {err}"
-            )
+            self.logger.error(f"{self.log_prefix}: Failed to destroy hypershift VPCs with error:" f" {err}")
             raise click.Abort()
 
     def prepare_hypershift_vpc(self):
@@ -145,13 +136,10 @@ class RosaCluster(OcmCluster):
             self.cluster_info["cluster-dir"],
         )
         self.terraform.plan(dir_or_plan="hypershift.plan")
-        rc, _, err = self.terraform.apply(
-            capture_output=True, skip_plan=True, auto_approve=True
-        )
+        rc, _, err = self.terraform.apply(capture_output=True, skip_plan=True, auto_approve=True)
         if rc != 0:
             self.logger.error(
-                f"{self.log_prefix}: Create hypershift VPC failed with"
-                f" error: {err}, rolling back.",
+                f"{self.log_prefix}: Create hypershift VPC failed with" f" error: {err}, rolling back.",
             )
             self.delete_oidc()
             self.delete_operator_role()
@@ -206,9 +194,7 @@ class RosaCluster(OcmCluster):
                 aws_region=self.cluster_info["region"],
             )
 
-            self.cluster_object.wait_for_cluster_ready(
-                wait_timeout=self.timeout_watch.remaining_time()
-            )
+            self.cluster_object.wait_for_cluster_ready(wait_timeout=self.timeout_watch.remaining_time())
             self.set_cluster_auth()
             self.add_cluster_info_to_cluster_object()
             self.logger.success(f"{self.log_prefix}: Cluster created successfully")
@@ -242,9 +228,7 @@ class RosaCluster(OcmCluster):
                 ocm_client=self.ocm_client,
                 aws_region=self.cluster_info["region"],
             )
-            self.cluster_object.wait_for_cluster_deletion(
-                wait_timeout=self.timeout_watch.remaining_time()
-            )
+            self.cluster_object.wait_for_cluster_deletion(wait_timeout=self.timeout_watch.remaining_time())
             self.remove_leftovers(res=res)
 
         except Exception as ex:
@@ -256,9 +240,7 @@ class RosaCluster(OcmCluster):
             self.delete_operator_role()
 
         if should_raise:
-            self.logger.error(
-                f"{self.log_prefix}: Failed to run cluster destroy\n{should_raise}"
-            )
+            self.logger.error(f"{self.log_prefix}: Failed to run cluster destroy\n{should_raise}")
             raise click.Abort()
 
         self.logger.success(f"{self.log_prefix}: Cluster destroyed successfully")

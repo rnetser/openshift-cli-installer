@@ -221,17 +221,13 @@ def main(**kwargs):
         or kwargs["destroy_clusters_from_install_data_directory_using_s3_bucket"]
     ):
         clusters_kwargs = {"destroy_from_s3_bucket_or_local_directory": True}
-        clusters_kwargs.update(
-            destroy_clusters_from_s3_bucket_or_local_directory(**kwargs)
-        )
+        clusters_kwargs.update(destroy_clusters_from_s3_bucket_or_local_directory(**kwargs))
 
         try:
             clusters = OCPClusters(**clusters_kwargs)
             clusters.run_create_or_destroy_clusters()
         finally:
-            shutil.rmtree(
-                DESTROY_CLUSTERS_FROM_S3_BASE_DATA_DIRECTORY, ignore_errors=True
-            )
+            shutil.rmtree(DESTROY_CLUSTERS_FROM_S3_BASE_DATA_DIRECTORY, ignore_errors=True)
 
     else:
         clusters = OCPClusters(**kwargs)
@@ -263,9 +259,6 @@ if __name__ == "__main__":
             _logger.error(ex)
             should_raise = True
     finally:
-        _logger.info(
-            "Total execution time:"
-            f" {datetime.timedelta(seconds=time.time() - start_time)}"
-        )
+        _logger.info("Total execution time:" f" {datetime.timedelta(seconds=time.time() - start_time)}")
         if should_raise:
             sys.exit(1)

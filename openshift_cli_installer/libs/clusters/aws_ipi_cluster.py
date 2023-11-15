@@ -23,9 +23,7 @@ from openshift_cli_installer.utils.general import (
 class AwsIpiCluster(OCPCluster):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.logger = get_logger(
-            f"{self.__class__.__module__}-{self.__class__.__name__}"
-        )
+        self.logger = get_logger(f"{self.__class__.__module__}-{self.__class__.__name__}")
         self.log_level = self.cluster.get("log_level", "error")
 
         if kwargs.get("destroy_from_s3_bucket_or_local_directory"):
@@ -60,9 +58,7 @@ class AwsIpiCluster(OCPCluster):
         openshift_install_str = "openshift-install"
         version_url = self.cluster_info["version-url"]
         binary_dir = os.path.join("/tmp", version_url)
-        self.openshift_install_binary_path = os.path.join(
-            binary_dir, openshift_install_str
-        )
+        self.openshift_install_binary_path = os.path.join(binary_dir, openshift_install_str)
         rc, _, err = run_command(
             command=shlex.split(
                 "oc adm release extract "
@@ -73,8 +69,7 @@ class AwsIpiCluster(OCPCluster):
         )
         if not rc:
             self.logger.error(
-                f"{self.log_prefix}: Failed to get {openshift_install_str} for version"
-                f" {version_url}, error: {err}",
+                f"{self.log_prefix}: Failed to get {openshift_install_str} for version" f" {version_url}, error: {err}",
             )
             raise click.Abort()
 
@@ -110,26 +105,16 @@ class AwsIpiCluster(OCPCluster):
         if fips:
             terraform_parameters["fips"] = fips
 
-        cluster_install_config = get_install_config_j2_template(
-            jinja_dict=terraform_parameters
-        )
+        cluster_install_config = get_install_config_j2_template(jinja_dict=terraform_parameters)
 
-        with open(
-            os.path.join(self.cluster_info["cluster-dir"], "install-config.yaml"), "w"
-        ) as fd:
+        with open(os.path.join(self.cluster_info["cluster-dir"], "install-config.yaml"), "w") as fd:
             fd.write(yaml.dump(cluster_install_config))
 
     def _set_install_version_url(self):
         cluster_version = self.cluster["version"]
-        version_url = [
-            url
-            for url, versions in self.aws_base_available_versions.items()
-            if cluster_version in versions
-        ]
+        version_url = [url for url, versions in self.aws_base_available_versions.items() if cluster_version in versions]
         if version_url:
-            self.cluster_info["version-url"] = (
-                f"{version_url[0]}:{self.cluster_info['version']}"
-            )
+            self.cluster_info["version-url"] = f"{version_url[0]}:{self.cluster_info['version']}"
         else:
             self.logger.error(
                 f"{self.log_prefix}: Cluster version url not found for"
@@ -149,8 +134,7 @@ class AwsIpiCluster(OCPCluster):
 
         if not res:
             self.logger.error(
-                f"{self.log_prefix}: Failed to run cluster {self.action} \n\tERR:"
-                f" {err}\n\tOUT: {out}.",
+                f"{self.log_prefix}: Failed to run cluster {self.action} \n\tERR:" f" {err}\n\tOUT: {out}.",
             )
             if raise_on_failure:
                 raise click.Abort()
@@ -159,9 +143,7 @@ class AwsIpiCluster(OCPCluster):
 
     def create_cluster(self):
         def _rollback_on_error(_ex=None):
-            self.logger.error(
-                f"{self.log_prefix}: Failed to create cluster: {_ex or 'No exception'}"
-            )
+            self.logger.error(f"{self.log_prefix}: Failed to create cluster: {_ex or 'No exception'}")
             if self.must_gather_output_dir:
                 self.collect_must_gather()
 
