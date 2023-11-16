@@ -158,8 +158,6 @@ class AwsIpiCluster(OCPCluster):
         self.timeout_watch = self.start_time_watcher()
         res, _, _ = self.run_installer_command(action=CREATE_STR, raise_on_failure=False)
 
-        res = False
-
         if not res:
             _rollback_on_error()
 
