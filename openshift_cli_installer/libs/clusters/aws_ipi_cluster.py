@@ -11,7 +11,7 @@ from openshift_cli_installer.utils.cluster_versions import (
     filter_versions,
     get_aws_versions,
 )
-from openshift_cli_installer.utils.const import PRODUCTION_STR
+from openshift_cli_installer.utils.const import CREATE_STR, DESTROY_STR, PRODUCTION_STR
 from openshift_cli_installer.utils.general import (
     generate_unified_pull_secret,
     get_install_config_j2_template,
@@ -122,10 +122,14 @@ class AwsIpiCluster(OCPCluster):
             )
             raise click.Abort()
 
-    def run_installer_command(self, raise_on_failure):
+    def run_installer_command(self, action, raise_on_failure):
+        run_after_failed_create_str = (
+            " after cluster creation failed" if action == DESTROY_STR and self.action == CREATE_STR else ""
+        )
+        self.logger.info(f"{self.log_prefix}: Running cluster {action}{run_after_failed_create_str}")
         res, out, err = run_command(
             command=shlex.split(
-                f"{self.openshift_install_binary_path} {self.action} cluster --dir"
+                f"{self.openshift_install_binary_path} {action} cluster --dir"
                 f" {self.cluster_info['cluster-dir']} --log-level {self.log_level}"
             ),
             capture_output=False,
@@ -152,7 +156,9 @@ class AwsIpiCluster(OCPCluster):
             raise click.Abort()
 
         self.timeout_watch = self.start_time_watcher()
-        res, _, _ = self.run_installer_command(raise_on_failure=False)
+        res, _, _ = self.run_installer_command(action=CREATE_STR, raise_on_failure=False)
+
+        res = False
 
         if not res:
             _rollback_on_error()
@@ -175,6 +181,6 @@ class AwsIpiCluster(OCPCluster):
 
     def destroy_cluster(self):
         self.timeout_watch = self.start_time_watcher()
-        self.run_installer_command(raise_on_failure=True)
+        self.run_installer_command(action=DESTROY_STR, raise_on_failure=True)
         self.logger.success(f"{self.log_prefix}: Cluster destroyed")
         self.delete_cluster_s3_buckets()

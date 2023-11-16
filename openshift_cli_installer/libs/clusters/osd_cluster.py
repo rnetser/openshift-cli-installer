@@ -55,9 +55,13 @@ class OsdCluster(OcmCluster):
                 "compute_machine_type": self.cluster_info["compute-machine-type"],
                 "multi_az": self.cluster_info["multi-az"],
                 "channel_group": self.cluster_info["channel-group"],
-                "expiration_time": self.cluster_info["expiration-time"],
                 "platform": self.cluster_info["platform"].replace("-osd", ""),
             }
+
+            expiration_time = self.cluster_info.get("expiration-time")
+            if expiration_time:
+                provision_osd_kwargs["expiration_time"] = expiration_time
+
             if self.cluster_info["platform"] == AWS_OSD_STR:
                 provision_osd_kwargs.update(
                     {
