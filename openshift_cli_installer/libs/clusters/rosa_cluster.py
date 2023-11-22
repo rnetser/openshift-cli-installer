@@ -100,7 +100,7 @@ class RosaCluster(OcmCluster):
                 "create operator-roles --hosted-cp"
                 f" --prefix={self.cluster_info['name']} "
                 f"--oidc-config-id={self.cluster_info['oidc-config-id']} "
-                "--installer-role-arn "
+                "--installer-role-arn="
                 f"arn:aws:iam::{self.cluster_info['aws-account-id']}:role/ManagedOpenShift-HCP-ROSA-Installer-Role"
             ),
             aws_region=self.cluster_info["region"],
