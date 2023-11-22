@@ -22,6 +22,7 @@ from openshift_cli_installer.utils.const import (
     SUPPORTED_PLATFORMS,
     USER_INPUT_CLUSTER_BOOLEAN_KEYS,
 )
+from clouds.aws.session_clients import iam_client
 
 
 class UserInput:
@@ -155,6 +156,7 @@ class UserInput:
             self.assert_gcp_osd_user_input()
             self.assert_boolean_values()
             self.assert_cluster_platform_support_observability()
+            self.assert_hypershift_missing_roles()
 
     def abort_no_ocm_token(self):
         if not self.ocm_token:
@@ -343,3 +345,15 @@ class UserInput:
                 missing_storage_data.append(f"{base_error_str} is missing" " `acm-observability-s3-secret-access-key`")
 
         return missing_storage_data
+
+    def assert_hypershift_missing_roles(self):
+        if any([cluster["platform"] == HYPERSHIFT_STR for cluster in self.clusters]):
+            hcp_roles = {
+                "ManagedOpenShift-HCP-ROSA-Installer-Role",
+                "ManagedOpenShift-HCP-ROSA-Support-Role",
+                "ManagedOpenShift-HCP-ROSA-Worker-Role",
+            }
+
+            if missing_roles := hcp_roles - {role["RoleName"] for role in iam_client().list_roles()["Roles"]}:
+                self.logger.error(f"The following roles are missing for Hypershitf deploment: {missing_roles}")
+                raise click.Abort()

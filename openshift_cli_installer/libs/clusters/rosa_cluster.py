@@ -171,7 +171,12 @@ class RosaCluster(OcmCluster):
         name = self.cluster_info["name"]
         command = f"create cluster --sts --cluster-name={name} "
         if self.cluster_info["platform"] == HYPERSHIFT_STR:
-            command += f"--hosted-cp --operator-roles-prefix={name} "
+            command += (
+                f" --role-arn=arn:aws:iam::{self.cluster_info['aws-account-id']}:role/ManagedOpenShift-HCP-ROSA-Installer-Role "
+                f"--support-role-arn=arn:aws:iam::{self.cluster_info['aws-account-id']}:role/ManagedOpenShift-HCP-ROSA-Support-Role "
+                f" --worker-iam-role=arn:aws:iam::{self.cluster_info['aws-account-id']}:role/ManagedOpenShift-HCP-ROSA-Worker-Role "
+                f"--hosted-cp --operator-roles-prefix={name} "
+            )
 
         for _key, _val in self.cluster.items():
             if _key in ignore_keys or _key.startswith(ignore_prefix):
