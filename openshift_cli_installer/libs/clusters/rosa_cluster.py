@@ -14,6 +14,7 @@ from openshift_cli_installer.utils.general import (
     get_manifests_path,
     zip_and_upload_to_s3,
 )
+from clouds.aws.session_clients import iam_client
 
 
 class RosaCluster(OcmCluster):
@@ -23,6 +24,7 @@ class RosaCluster(OcmCluster):
 
         if self.create:
             self.cluster_info["aws-account-id"] = self.aws_account_id
+            self.assert_hypershift_missing_roles()
             self.get_rosa_versions()
             self.all_available_versions.update(
                 filter_versions(
@@ -276,3 +278,15 @@ class RosaCluster(OcmCluster):
                         ocm_client=self.ocm_client,
                         aws_region=self.cluster_info["region"],
                     )
+
+    def assert_hypershift_missing_roles(self):
+        if self.cluster_info["platform"] == HYPERSHIFT_STR:
+            hcp_roles = {
+                "ManagedOpenShift-HCP-ROSA-Installer-Role",
+                "ManagedOpenShift-HCP-ROSA-Support-Role",
+                "ManagedOpenShift-HCP-ROSA-Worker-Role",
+            }
+
+            if missing_roles := hcp_roles - {role["RoleName"] for role in iam_client().list_roles()["Roles"]}:
+                self.logger.error(f"The following roles are missing for {HYPERSHIFT_STR} deployment: {missing_roles}")
+                raise click.Abort()
