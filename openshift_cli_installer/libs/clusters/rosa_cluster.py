@@ -67,9 +67,12 @@ class RosaCluster(OcmCluster):
             cluster_parameters["public_subnets"] = public_subnets
 
         self.terraform = Terraform(working_dir=self.cluster_info["cluster-dir"], variables=cluster_parameters)
-        if self.terraform.init()[0] != 0:
-            time.sleep(seconds=5)
+
+        vpc_exists = os.path.exists(f"{self.cluster_info['cluster-dir']}/.terraform/modules/vpc")
+        while not vpc_exists:
+            time.sleep(5)
             self.terraform.init()
+            vpc_exists = os.path.exists(f"{self.cluster_info['cluster-dir']}/.terraform/modules/vpc")
 
     def create_oidc(self):
         self.logger.info(f"{self.log_prefix}: Create OIDC config")
