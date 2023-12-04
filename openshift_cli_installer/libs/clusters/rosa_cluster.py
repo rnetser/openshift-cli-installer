@@ -1,6 +1,7 @@
 import os
 import re
 import shutil
+import time
 
 import click
 import rosa.cli
@@ -66,7 +67,9 @@ class RosaCluster(OcmCluster):
             cluster_parameters["public_subnets"] = public_subnets
 
         self.terraform = Terraform(working_dir=self.cluster_info["cluster-dir"], variables=cluster_parameters)
-        self.terraform.init()
+        if self.terraform.init()[0] != 0:
+            time.sleep(seconds=5)
+            self.terraform.init()
 
     def create_oidc(self):
         self.logger.info(f"{self.log_prefix}: Create OIDC config")
