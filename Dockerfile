@@ -3,7 +3,7 @@ FROM python:3.11
 ARG GITHUB_API_TOKEN
 
 RUN apt-get update \
-    && apt-get install -y ssh gnupg software-properties-common curl gpg wget
+    && apt-get install -y ssh gnupg software-properties-common curl gpg wget vim
 
 # Install Hashicorp's APT repository for Terraform
 RUN wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg \

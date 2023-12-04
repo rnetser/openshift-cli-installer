@@ -71,7 +71,11 @@ class RosaCluster(OcmCluster):
         vpc_exists = os.path.exists(f"{self.cluster_info['cluster-dir']}/.terraform/modules/vpc")
         while not vpc_exists:
             time.sleep(5)
-            self.terraform.init()
+            rc, out, err = self.terraform.init()
+            self.logger.info(f"{self.log_prefix}: Terraform init output: {out}")
+            self.logger.info(f"{self.log_prefix}: Terraform init error: {err}")
+            self.logger.info(f"{self.log_prefix}: Terraform init return code: {rc}")
+
             vpc_exists = os.path.exists(f"{self.cluster_info['cluster-dir']}/.terraform/modules/vpc")
 
     def create_oidc(self):
