@@ -1,7 +1,6 @@
 import os
 import re
 import shutil
-import time
 
 import click
 import rosa.cli
@@ -67,16 +66,14 @@ class RosaCluster(OcmCluster):
             cluster_parameters["public_subnets"] = public_subnets
 
         self.terraform = Terraform(working_dir=self.cluster_info["cluster-dir"], variables=cluster_parameters)
-
-        vpc_exists = os.path.exists(f"{self.cluster_info['cluster-dir']}/.terraform/modules/vpc")
-        while not vpc_exists:
-            time.sleep(5)
-            rc, out, err = self.terraform.init()
-            self.logger.info(f"{self.log_prefix}: Terraform init output: {out}")
-            self.logger.info(f"{self.log_prefix}: Terraform init error: {err}")
-            self.logger.info(f"{self.log_prefix}: Terraform init return code: {rc}")
-
-            vpc_exists = os.path.exists(f"{self.cluster_info['cluster-dir']}/.terraform/modules/vpc")
+        shutil.copy(
+            os.path.join(get_manifests_path(), "setup-vpc.tf"),
+            self.cluster_info["cluster-dir"],
+        )
+        rc, out, err = self.terraform.init()
+        if rc != 0:
+            self.logger.error(f"{self.log_prefix}: Terraform init failed. Err: {err}, Out: {out}")
+            raise click.Abort()
 
     def create_oidc(self):
         self.logger.info(f"{self.log_prefix}: Create OIDC config")
@@ -143,12 +140,7 @@ class RosaCluster(OcmCluster):
     def prepare_hypershift_vpc(self):
         self.terraform_init()
         self.logger.info(f"{self.log_prefix}: Preparing hypershift VPCs")
-        shutil.copy(
-            os.path.join(get_manifests_path(), "setup-vpc.tf"),
-            self.cluster_info["cluster-dir"],
-        )
-        plan_relative_path = os.path.relpath(self.cluster_info["cluster-dir"], ".")
-        self.terraform.plan(dir_or_plan=plan_relative_path)
+        self.terraform.plan(dir_or_plan="hypershift.plan")
         rc, _, err = self.terraform.apply(capture_output=True, skip_plan=True, auto_approve=True)
         if rc != 0:
             self.logger.error(
