@@ -137,8 +137,10 @@ class RosaCluster(OcmCluster):
             os.path.join(get_manifests_path(), "setup-vpc.tf"),
             self.cluster_info["cluster-dir"],
         )
-        self.terraform.plan(dir_or_plan=self.cluster_info["cluster-dir"])
+        plan_relative_path = os.path.relpath(self.cluster_info["cluster-dir"], ".")
+        self.terraform.plan(dir_or_plan=plan_relative_path)
         rc, _, err = self.terraform.apply(capture_output=True, skip_plan=True, auto_approve=True)
+        rc = 1
         if rc != 0:
             self.logger.error(
                 f"{self.log_prefix}: Create hypershift VPC failed with error: {err}, rolling back.",
