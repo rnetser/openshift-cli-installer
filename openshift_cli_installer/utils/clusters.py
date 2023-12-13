@@ -65,20 +65,22 @@ def prepare_clusters_directory_from_s3_bucket(s3_bucket_name, s3_bucket_path=Non
         s3_bucket_path=s3_bucket_path,
         query=query,
     ):
+        extracted_zip_filename = os.path.split(cluster_zip_file)[-1]
         extract_target_dir = os.path.join(
             DESTROY_CLUSTERS_FROM_S3_BASE_DATA_DIRECTORY,
-            cluster_zip_file.split(".")[0],
+            extracted_zip_filename.split(".")[0],
         )
         Path(extract_target_dir).mkdir(parents=True, exist_ok=True)
-        target_file_path = os.path.join(extract_target_dir, cluster_zip_file)
-        cluster_zip_path = os.path.join(s3_bucket_path, cluster_zip_file)
+        target_file_path = os.path.join(extract_target_dir, extracted_zip_filename)
+        s3_bucket_cluster_zip_path = os.path.join(s3_bucket_path, cluster_zip_file)
         with ThreadPoolExecutor() as download_executor:
+            LOGGER.info(f"Download S3 bucket {s3_bucket_name} to {extracted_zip_filename}")
             download_futures.append(
                 download_executor.submit(
                     _s3_client.download_file,
                     **{
                         "Bucket": s3_bucket_name,
-                        "Key": cluster_zip_path,
+                        "Key": s3_bucket_cluster_zip_path,
                         "Filename": target_file_path,
                     },
                 )
@@ -116,7 +118,7 @@ def get_all_zip_files_from_s3_bucket(client, s3_bucket_name, s3_bucket_path=None
         _object_key = _object["Key"]
         if _object_key.endswith(".zip"):
             if query is None or query in _object_key:
-                yield os.path.split(_object_key)[-1]
+                yield os.path.split(_object_key)[-1] if s3_bucket_path else _object_key
 
 
 def destroy_clusters_from_s3_bucket_or_local_directory(**kwargs):
@@ -125,11 +127,12 @@ def destroy_clusters_from_s3_bucket_or_local_directory(**kwargs):
 
     s3_from_clusters_data_directory = kwargs["destroy_clusters_from_install_data_directory_using_s3_bucket"]
     destroy_clusters_from_install_data_directory = kwargs["destroy_clusters_from_install_data_directory"]
-    if kwargs["destroy_clusters_from_s3_bucket"]:
+    destroy_clusters_from_s3_bucket_query = kwargs["destroy_clusters_from_s3_bucket_query"]
+    if kwargs["destroy_clusters_from_s3_bucket"] or destroy_clusters_from_s3_bucket_query:
         prepare_clusters_directory_from_s3_bucket(
             s3_bucket_name=kwargs["s3_bucket_name"],
             s3_bucket_path=kwargs["s3_bucket_path"],
-            query=kwargs["destroy_clusters_from_s3_bucket_query"],
+            query=destroy_clusters_from_s3_bucket_query,
         )
 
     if destroy_clusters_from_install_data_directory or s3_from_clusters_data_directory:
