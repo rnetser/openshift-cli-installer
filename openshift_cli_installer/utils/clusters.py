@@ -73,6 +73,7 @@ def prepare_clusters_directory_from_s3_bucket(s3_bucket_name, s3_bucket_path=Non
         target_file_path = os.path.join(extract_target_dir, cluster_zip_file)
         cluster_zip_path = os.path.join(s3_bucket_path, cluster_zip_file)
         with ThreadPoolExecutor() as download_executor:
+            LOGGER.info(f"Download S3 bucket {s3_bucket_name} to {target_file_path}")
             download_futures.append(
                 download_executor.submit(
                     _s3_client.download_file,
