@@ -49,8 +49,8 @@ class OCPCluster(UserInput):
         destroy_from_s3_bucket_or_local_directory = kwargs.get("destroy_from_s3_bucket_or_local_directory")
         if destroy_from_s3_bucket_or_local_directory:
             self.cluster_info = self.cluster["cluster_info"]
-            self.s3_bucket_name = self.cluster["cluster_info"]["s3_bucket_name"]
-            self.s3_bucket_path = self.cluster["cluster_info"]["s3_bucket_path"]
+            self.s3_bucket_name = self.s3_bucket_name or self.cluster["cluster_info"].get("s3_bucket_name")
+            self.s3_bucket_path = self.s3_bucket_path or self.cluster["cluster_info"].get("s3_bucket_path")
         else:
             self.cluster_info = copy.deepcopy(self.cluster)
 
