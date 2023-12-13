@@ -37,6 +37,8 @@ def clusters_from_directories(directories):
                         _data = yaml.safe_load(fd)
 
                     _data["cluster_info"]["cluster-dir"] = root
+                    _data["cluster_info"]["s3_bucket_name"] = _data.get("s3_bucket_name")
+                    _data["cluster_info"]["s3_bucket_path"] = _data.get("s3_bucket_path")
 
                     clusters_data_list.append(_data)
 
@@ -49,6 +51,7 @@ def get_destroy_clusters_kwargs(clusters_data_list, **kwargs):
     for cluster_data_from_yaml in clusters_data_list:
         cluster_data_from_yaml["cluster"].pop("expiration-time", None)
         cluster_data_from_yaml["cluster"]["cluster_info"] = cluster_data_from_yaml["cluster_info"]
+
         kwargs.setdefault("clusters", []).append(cluster_data_from_yaml["cluster"])
 
     return kwargs
