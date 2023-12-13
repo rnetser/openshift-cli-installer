@@ -51,6 +51,7 @@ class UserInput:
         self.s3_bucket_path = self.user_kwargs.get("s3_bucket_path")
         self.s3_bucket_path_uuid = self.user_kwargs.get("s3_bucket_path_uuid")
         self.destroy_clusters_from_s3_bucket = self.user_kwargs.get("destroy_clusters_from_s3_bucket")
+        self.destroy_clusters_from_s3_bucket_query = self.user_kwargs.get("destroy_clusters_from_s3_bucket_query")
         self.destroy_clusters_from_install_data_directory = self.user_kwargs.get(
             "destroy_clusters_from_install_data_directory"
         )
@@ -107,10 +108,10 @@ class UserInput:
     def verify_user_input(self):
         self.abort_no_ocm_token()
 
-        if self.destroy_clusters_from_s3_bucket:
+        if self.destroy_clusters_from_s3_bucket or self.destroy_clusters_from_s3_bucket_query:
             if not self.s3_bucket_name:
                 self.logger.error(
-                    "`--s3-bucket-name` must be provided when running with `--destroy-clusters-from-s3-bucket`",
+                    "`--s3-bucket-name` must be provided when running with `--destroy-clusters-from-s3-bucket` or `--destroy-clusters-from-s3-bucket-query`",
                 )
                 raise click.Abort()
 

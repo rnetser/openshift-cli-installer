@@ -278,19 +278,10 @@ class OCPCluster(UserInput):
         self.dump_cluster_data_to_file()
 
     def delete_cluster_s3_buckets(self):
-        self.logger.info(f"{self.log_prefix}: Deleting S3 bucket")
-        buckets_to_delete = []
-        _s3_client = s3_client()
-        for _bucket in _s3_client.list_buckets()["Buckets"]:
-            if _bucket["Name"].startswith(self.cluster_info["name"]):
-                buckets_to_delete.append(_bucket["Name"])
-
-        for _bucket in buckets_to_delete:
-            self.logger.info(f"{self.log_prefix}: Deleting S3 bucket {_bucket}")
-            for _object in _s3_client.list_objects(Bucket=_bucket).get("Contents", []):
-                _s3_client.delete_object(Bucket=_bucket, Key=_object["Key"])
-
-            _s3_client.delete_bucket(Bucket=_bucket)
+        if s3_file := self.cluster_info.get("s3-object-name"):
+            self.logger.info(f"{self.log_prefix}: Deleting S3 file {s3_file} from {self.s3_bucket_name}")
+            s3_client().delete_object(Bucket=self.s3_bucket_name, Key=s3_file)
+            self.logger.success(f"{self.log_prefix}: {s3_file} deleted ")
 
     def install_acm(self):
         self.logger.info(f"{self.log_prefix}: Installing ACM")

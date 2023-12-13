@@ -81,11 +81,7 @@ File must include token for `registry.ci.openshift.org`
     help="S3 bucket name to store install folder backups",
     show_default=True,
 )
-@click.option(
-    "--s3-bucket-path",
-    help="S3 bucket path to store the backups",
-    show_default=True,
-)
+@click.option("--s3-bucket-path", help="S3 bucket path to store the backups", show_default=True, default="")
 @click.option(
     "--s3-bucket-path-uuid",
     help="S3 bucket path UUID to append to the S3 zip file name",
@@ -149,7 +145,7 @@ Destroy clusters from S3 bucket, --s3-bucket-name is required and optional --s3-
     "--destroy-clusters-from-s3-bucket-query",
     help="""
 \b
-Option to pass query to --destroy-clusters-from-s3-bucket, match only files that have it.
+Detroy cluster(s) from S3 bucket which match only files that have it.
     """,
     show_default=True,
 )
@@ -224,6 +220,7 @@ def main(**kwargs):
         kwargs["destroy_clusters_from_s3_bucket"]
         or kwargs["destroy_clusters_from_install_data_directory"]
         or kwargs["destroy_clusters_from_install_data_directory_using_s3_bucket"]
+        or kwargs["destroy_clusters_from_s3_bucket_query"]
     ):
         clusters_kwargs = {"destroy_from_s3_bucket_or_local_directory": True}
         clusters_kwargs.update(destroy_clusters_from_s3_bucket_or_local_directory(**kwargs))
