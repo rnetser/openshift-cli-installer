@@ -37,6 +37,8 @@ def clusters_from_directories(directories):
                         _data = yaml.safe_load(fd)
 
                     _data["cluster_info"]["cluster-dir"] = root
+                    _data["cluster_info"]["s3_bucket_name"] = _data.get("s3_bucket_name")
+                    _data["cluster_info"]["s3_bucket_path"] = _data.get("s3_bucket_path")
 
                     clusters_data_list.append(_data)
 
