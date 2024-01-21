@@ -163,7 +163,7 @@ class OCPClusters(UserInput):
         with ThreadPoolExecutor() as executor:
             for cluster in self.list_clusters:
                 action_func = getattr(cluster, action_str)
-                click.echo(
+                self.logger.info(
                     f"Executing {self.action} cluster {cluster.cluster_info['name']} [parallel: {self.parallel}]"
                 )
                 if self.parallel:

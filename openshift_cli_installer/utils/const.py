@@ -30,8 +30,3 @@ STAGE_STR = "stage"
 
 # Timeouts
 TIMEOUT_60MIN = "60m"
-
-# Log colors
-ERROR_LOG_COLOR = "red"
-SUCCESS_LOG_COLOR = "green"
-WARNING_LOG_COLOR = "yellow"

@@ -12,7 +12,6 @@ from clouds.aws.session_clients import s3_client
 from jinja2 import DebugUndefined, Environment, FileSystemLoader, meta
 from simple_logger.logger import get_logger
 
-from openshift_cli_installer.utils.const import ERROR_LOG_COLOR
 
 LOGGER = get_logger(name=__name__)
 
@@ -62,7 +61,7 @@ def zip_and_upload_to_s3(install_dir, s3_bucket_name, uuid, s3_bucket_path=None)
 
     zip_file = shutil.make_archive(base_name=_base_name, format="zip", root_dir=install_dir)
     bucket_key = os.path.join(s3_bucket_path or "", os.path.split(zip_file)[-1])
-    click.echo(f"Upload {zip_file} file to S3 {s3_bucket_name}, path {bucket_key}")
+    LOGGER.info(f"Upload {zip_file} file to S3 {s3_bucket_name}, path {bucket_key}")
     s3_client().upload_file(Filename=zip_file, Bucket=s3_bucket_name, Key=bucket_key)
 
     return _base_name
@@ -119,7 +118,7 @@ def get_install_config_j2_template(jinja_dict, platform):
     rendered = template.render(jinja_dict)
     undefined_variables = meta.find_undeclared_variables(env.parse(rendered))
     if undefined_variables:
-        click.secho(f"The following variables are undefined: {undefined_variables}", fg=ERROR_LOG_COLOR)
+        LOGGER.error(f"The following variables are undefined: {undefined_variables}")
         raise click.Abort()
 
     return yaml.safe_load(rendered)
