@@ -7,16 +7,19 @@ import rosa.cli
 import semver
 from ocm_python_wrapper.versions import Versions
 from ocp_utilities.utils import run_command
+from simple_logger.logger import get_logger
 
 from openshift_cli_installer.utils.const import (
     AWS_OSD_STR,
     AWS_STR,
-    ERROR_LOG_COLOR,
     GCP_OSD_STR,
     HYPERSHIFT_STR,
     ROSA_STR,
     IPI_BASED_PLATFORMS,
 )
+
+
+LOGGER = get_logger(name=__name__)
 
 
 def set_clusters_versions(clusters, base_available_versions):
@@ -46,18 +49,16 @@ def set_clusters_versions(clusters, base_available_versions):
                     cluster_data["version"] = _ver
                     break
             else:
-                click.secho(f"{err_msg}", fg=ERROR_LOG_COLOR)
+                LOGGER.error(err_msg)
                 raise click.Abort()
         elif len(cluster_version.split(".")) < 2:
-            click.secho(
-                f"{cluster_name}: Version must be at least x.y (4.3), got {cluster_version}", fg=ERROR_LOG_COLOR
-            )
+            LOGGER.error(f"{cluster_name}: Version must be at least x.y (4.3), got {cluster_version}")
             raise click.Abort()
         else:
             try:
                 cluster_data["version"] = all_stream_versions["latest"]
             except KeyError:
-                click.secho(f"{err_msg}", fg=ERROR_LOG_COLOR)
+                LOGGER.error(err_msg)
                 raise click.Abort()
 
         if platform in IPI_BASED_PLATFORMS:
@@ -67,14 +68,13 @@ def set_clusters_versions(clusters, base_available_versions):
             if version_url:
                 cluster_data["version-url"] = version_url[0]
             else:
-                click.secho(
+                LOGGER.error(
                     f"{cluster_name}: Cluster version url not found for"
                     f" {cluster_version} in {base_available_versions.keys()}",
-                    fg=ERROR_LOG_COLOR,
                 )
                 raise click.Abort()
 
-        click.echo(f"{cluster_name}: Cluster version set to {cluster_data['version']}")
+        LOGGER.info(f"{cluster_name}: Cluster version set to {cluster_data['version']}")
 
     return clusters
 
@@ -112,7 +112,7 @@ def filter_versions(wanted_version, base_versions_dict, platform, stream):
             versions_dict[stream][version_key]["latest"] = f"{max_version}{x86_64_str if add_x86_64 else ''}"
 
     if not versions_dict[stream][version_key]["versions"]:
-        click.secho(f"Cluster version {wanted_version} not found for stream {stream}", fg=ERROR_LOG_COLOR)
+        LOGGER.error(f"Cluster version {wanted_version} not found for stream {stream}")
         raise click.Abort()
     return versions_dict
 

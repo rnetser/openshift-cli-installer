@@ -227,7 +227,7 @@ class OCPCluster(UserInput):
             self.logger.info(f"{self.log_prefix}: Prepare must-gather target extracted directory {target_dir}.")
             Path(target_dir).mkdir(parents=True, exist_ok=True)
 
-            click.echo(f"Collect must-gather for cluster {name} running on {self.cluster_info['platform']}")
+            self.logger.info(f"Collect must-gather for cluster {name} running on {self.cluster_info['platform']}")
             run_must_gather(
                 target_base_dir=target_dir,
                 kubeconfig=kubeconfig_path,
