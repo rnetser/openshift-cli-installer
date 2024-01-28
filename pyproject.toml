@@ -44,6 +44,7 @@ python-simple-logger = "^1.0.7"
 ruff = "^0.1.5"
 timeout-sampler = "^0.0.1"
 openshift-python-wrapper = "^10.0.0"
+pytest-testconfig = "^0.2.0"
 
 
 [tool.poetry.group.dev.dependencies]
