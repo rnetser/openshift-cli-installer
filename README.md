@@ -33,6 +33,7 @@ Action also can be passed to the CLI as `--action create/destroy` instead of spe
   * The data is used for cluster destroy.
   * `platform=aws`: Must pass in cluster parameters
   * `base-domain`: cluster parameter is mandatory
+  * `auto-region=True`: Optional cluster parameter for assigning `region` param to a region which have the least number of VPCs.
   * `--registry-config-file`: registry-config json file path, can be obtained from [openshift local cluster](https://console.redhat.com/openshift/create/local)
   * `--docker-config-file`: Path to Docker config.json file, defaults to `~/.docker/config.json`. File must include token for `registry.ci.openshift.org`
   * `--ssh-key-file`: id_rsa file path
@@ -51,6 +52,7 @@ Action also can be passed to the CLI as `--action create/destroy` instead of spe
 
 * AWS OSD clusters:
   * `platform=aws-osd`: Must pass in cluster parameters
+  * `auto-region=True`: Optional cluster parameter for assigning `region` param to a region which have the least number of VPCs.
   * `--aws-access-key-id`: AWS access key ID
   * `--aws-secret-access-key`: AWS secret access key
   * `--aws-account-id`: AWS account ID
@@ -66,7 +68,7 @@ Every call to the openshift installer cli must have at least one `--cluster` opt
 * Mandatory parameters:
   * name: The name of the cluster
   * platform: The platform to deploy the cluster on (supported platforms are: aws, rosa and hypershift)
-  * region: The region to deploy the cluster
+  * region: The region to deploy the cluster. Optional for AWS-IPI and AWS-OSD clusters, but mandatory for other (GCP, ROSA, Hypershift) clusters.
 * Optional parameters:
   * Parameter names should be separated by semicolons (`;`)
   * To set cluster create / destroy timeout (not applicable for AWS IPI clusters), pass `--cluster ...timeout=1h'`; default is 60 minutes.
@@ -209,9 +211,18 @@ podman run quay.io/redhat_msi/openshift-cli-installer \
     --registry-config-file=registry-config.json \
     --s3-bucket-name=openshift-cli-installer \
     --s3-bucket-path=install-folders \
-    --cluster 'name=ipi1;base-domain=aws.interop.ccitredhat.com;platform=aws;region=us-east-2;version=4.14.0-ec.2;worker-flavor=m5.xlarge;log_level=info'
+    --cluster 'name=ipi1;base-domain=gcp.interop.ccitredhat.com;platform=gcp;region=us-east1;version=4.14.0-ec.2;worker-flavor=custom-4-16384;log_level=info'
 ```
   * Default `log_level=error` is set for cluster config to hide the openshift-installer logs which contains kubeadmin password.
+
+```
+podman run quay.io/redhat_msi/openshift-cli-installer \
+    --action create \
+    --registry-config-file=registry-config.json \
+    --s3-bucket-name=openshift-cli-installer \
+    --s3-bucket-path=install-folders \
+    --cluster 'name=ipi2;base-domain=aws.interop.ccitredhat.com;platform=aws;auto-region=True;version=4.14.0-ec.2;worker-flavor= m5.4xlarge'
+```
 
 ##### ROSA cluster
 

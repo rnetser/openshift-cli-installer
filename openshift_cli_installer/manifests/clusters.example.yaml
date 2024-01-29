@@ -27,6 +27,19 @@ clusters:
   ocm-env: stage
   expiration-time: 4h
 
+# AWS OSD cluster with auto-region option
+- name: aws-osd-c2
+  platform: aws-osd
+  auto-region: True
+  version: "4.13"
+  channel-group: stable
+  compute-machine-type: m5.4xlarge
+  timeout: 90m
+  replicas: 2
+  fips: True
+  ocm-env: stage
+  expiration-time: 4h
+
 # GCP OSD cluster
 - name: gcp-osd-c1
   platform: gcp-osd
@@ -116,5 +129,18 @@ clusters:
   timeout: 4h
   worker-replicas: 2
   worker-flavor: custom-4-16384
+  worker-root-disk-size: 128
+  log_level: info # optional, default: "error", supported options are debug, info, warn, error
+
+# AWS IPI cluster with auto-region option
+- name: aws-ipi-c2
+  base-domain: aws.domain.example.com
+  platform: aws
+  auto-region: True
+  version: "4.13"
+  stream: stable
+  timeout: 4h
+  worker-replicas: 2
+  worker-flavor: m5.4xlarge
   worker-root-disk-size: 128
   log_level: info # optional, default: "error", supported options are debug, info, warn, error

@@ -145,7 +145,7 @@ Destroy clusters from S3 bucket, --s3-bucket-name is required and optional --s3-
     "--destroy-clusters-from-s3-bucket-query",
     help="""
 \b
-Detroy cluster(s) from S3 bucket which match only files that have it.
+Destroy cluster(s) from S3 bucket which match only files that have it.
     """,
     show_default=True,
 )
