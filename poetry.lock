@@ -741,27 +741,27 @@ urllib3 = ">=1.25.3"
 
 [[package]]
 name = "openshift-cluster-management-python-wrapper"
-version = "1.0.69"
+version = "1.0.70"
 description = "Wrapper around https://github.com/openshift/openshift-cluster-management-python-client"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "openshift_cluster_management_python_wrapper-1.0.69.tar.gz", hash = "sha256:c35add58d3c63dbd0633aec4938d9d58e08ac4d7309c27ef363e4223cfd8c417"},
+    {file = "openshift_cluster_management_python_wrapper-1.0.70.tar.gz", hash = "sha256:5a48c4d6a19d114d043fd1165e3d36f7cacb5eb7b74b447699faf96e04318807"},
 ]
 
 [package.dependencies]
 colorlog = ">=6.7.0,<7.0.0"
 importlib = ">=1.0.4,<2.0.0"
-openshift-cluster-management-python-client = ">=1.0.23,<2.0.0"
-openshift-python-utilities = ">=5.0.0,<6.0.0"
-openshift-python-wrapper = ">=10.0.0,<11.0.0"
+openshift-cluster-management-python-client = ">=1.0.23"
+openshift-python-utilities = ">=5.0.0"
+openshift-python-wrapper = ">=10.0.0"
 python-benedict = "0.33.1"
-python-simple-logger = ">=1.0.5,<2.0.0"
+python-simple-logger = ">=1.0.5"
 pyyaml = ">=6.0.1,<7.0.0"
-redhat-qe-cloud-tools = ">=1.0.10,<2.0.0"
+redhat-qe-cloud-tools = ">=1.0.10"
 requests = ">=2.31.0,<3.0.0"
-rosa-python-client = ">=1.0.28,<2.0.0"
-timeout-sampler = ">=0.0.2,<0.0.3"
+rosa-python-client = ">=1.0.28"
+timeout-sampler = ">=0.0.2"
 
 [[package]]
 name = "openshift-python-utilities"
