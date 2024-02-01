@@ -12,7 +12,8 @@ class OsdCluster(OcmCluster):
         super().__init__(**kwargs)
         self.logger = get_logger(f"{self.__class__.__module__}-{self.__class__.__name__}")
 
-        self.gcp_service_account = get_dict_from_json(gcp_service_account_file=self.gcp_service_account_file)
+        if platform := self.cluster_info["platform"] == GCP_OSD_STR:
+            self.gcp_service_account = get_dict_from_json(gcp_service_account_file=self.gcp_service_account_file)
 
         if self.create:
             self.cluster_info["aws-account-id"] = self.aws_account_id
@@ -21,7 +22,7 @@ class OsdCluster(OcmCluster):
                 filter_versions(
                     wanted_version=self.cluster_info["user-requested-version"],
                     base_versions_dict=self.osd_base_available_versions_dict,
-                    platform=self.cluster_info["platform"],
+                    platform=platform,
                     stream=self.cluster_info["stream"],
                 )
             )
