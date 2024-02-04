@@ -140,9 +140,9 @@ class OCPCluster(UserInput):
         ).client
 
     def _add_s3_bucket_data(self):
+        object_name = self.s3_bucket_object_name or f"{self.cluster_info['name']}-{self.cluster_info['shortuuid']}"
         self.cluster_info["s3-object-name"] = (
-            f"{f'{self.s3_bucket_path}/' if self.s3_bucket_path else ''}"
-            f"{self.cluster_info['name']}-{self.cluster_info['shortuuid']}.zip"
+            f"{f'{self.s3_bucket_path}/' if self.s3_bucket_path else ''}{object_name}.zip"
         )
 
     def check_and_assign_aws_cluster_region(self):

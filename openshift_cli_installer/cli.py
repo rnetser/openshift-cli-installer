@@ -89,6 +89,11 @@ File must include token for `registry.ci.openshift.org`
     show_default=True,
 )
 @click.option(
+    "--s3-bucket-object-name",
+    help="S3 bucket object name; Will be saved as a zip file",
+    show_default=True,
+)
+@click.option(
     "--ocm-token",
     help="OCM token.",
     default=os.environ.get("OCM_TOKEN"),

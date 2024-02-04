@@ -24,7 +24,7 @@ Action also can be passed to the CLI as `--action create/destroy` instead of spe
 * `--clusters-install-data-directory`: Clusters configurations are written to `<clusters-install-data-directory><platform><cluster name>`; write permissions are needed.
     * `<cluster directory>/auth` contains `kubeconfig` and `kubeadmin-password` files
 * `--parallel`: To create / destroy clusters in parallel
-* Pass `--s3-bucket-name` (and optionally `--s3-bucket-path`) to backup <cluster directory> in an S3 bucket.  
+* Pass `--s3-bucket-name` (and optionally `--s3-bucket-path` and `--s3-bucket-object-name`) to back up <cluster directory> in an S3 bucket.  
 * `--ocm-token`: OCM token, defaults to `OCM_TOKEN` environment variable.
 * `--must-gather-output-dir`: Path to must-gather output dir. `must-gather` will try to collect data when cluster installation fails and cluster can be accessed.
 
@@ -211,6 +211,7 @@ podman run quay.io/redhat_msi/openshift-cli-installer \
     --registry-config-file=registry-config.json \
     --s3-bucket-name=openshift-cli-installer \
     --s3-bucket-path=install-folders \
+    --s3-bucket-object-name=cluster-backup \
     --cluster 'name=ipi1;base-domain=gcp.interop.ccitredhat.com;platform=gcp;region=us-east1;version=4.14.0-ec.2;worker-flavor=custom-4-16384;log_level=info'
 ```
   * Default `log_level=error` is set for cluster config to hide the openshift-installer logs which contains kubeadmin password.
@@ -260,7 +261,8 @@ podman run quay.io/redhat_msi/openshift-cli-installer \
     --action create \
     --registry-config-file=registry-config.json \
     --s3-bucket-name=openshift-cli-installer \
-    --s3-bucket-path=install-folders \  --cluster 'name=hyper1;platform=hypershift;region=us-west-2;version=4.13.4;compute-machine-type=m5.4xlarge;replicas=6;channel-group=candidate;expiration-time=2h;timeout=1h' \
+    --s3-bucket-path=install-folders \
+    --cluster 'name=hyper1;platform=hypershift;region=us-west-2;version=4.13.4;compute-machine-type=m5.4xlarge;replicas=6;channel-group=candidate;expiration-time=2h;timeout=1h' \
     --ocm-token=$OCM_TOKEN \
 
     --cluster 'name=ipi1;base-domain=aws.interop.ccitredhat.com;platform=aws;region=us-east-2;version=4.14.0-ec.2;worker-flavor=m5.xlarge' \

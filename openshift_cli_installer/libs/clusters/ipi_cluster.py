@@ -170,8 +170,7 @@ class IpiCluster(OCPCluster):
             zip_and_upload_to_s3(
                 install_dir=self.cluster_info["cluster-dir"],
                 s3_bucket_name=self.s3_bucket_name,
-                s3_bucket_path=self.s3_bucket_path,
-                uuid=self.cluster_info["shortuuid"],
+                s3_bucket_object_name=self.cluster_info["s3-object-name"],
             )
 
     def destroy_cluster(self):
