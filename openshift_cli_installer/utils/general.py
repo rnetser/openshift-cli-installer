@@ -54,17 +54,14 @@ def ignore_exceptions(logger=None, retry=None):
 
 
 @ignore_exceptions()
-def zip_and_upload_to_s3(install_dir, s3_bucket_name, uuid, s3_bucket_path=None):
+def zip_and_upload_to_s3(install_dir, s3_bucket_name, s3_bucket_object_name):
     remove_terraform_folder_from_install_dir(install_dir=install_dir)
 
-    _base_name = f"{install_dir}-{uuid}"
+    base_name = re.match(".*/(.*).zip", s3_bucket_object_name).group(1)
+    zip_file = shutil.make_archive(base_name=base_name, format="zip", root_dir=install_dir)
 
-    zip_file = shutil.make_archive(base_name=_base_name, format="zip", root_dir=install_dir)
-    bucket_key = os.path.join(s3_bucket_path or "", os.path.split(zip_file)[-1])
-    LOGGER.info(f"Upload {zip_file} file to S3 {s3_bucket_name}, path {bucket_key}")
-    s3_client().upload_file(Filename=zip_file, Bucket=s3_bucket_name, Key=bucket_key)
-
-    return _base_name
+    LOGGER.info(f"Upload {zip_file} file to S3 {s3_bucket_name}, path {s3_bucket_object_name}")
+    s3_client().upload_file(Filename=zip_file, Bucket=s3_bucket_name, Key=s3_bucket_object_name)
 
 
 def get_manifests_path():
