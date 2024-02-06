@@ -58,7 +58,9 @@ def ignore_exceptions(logger=None, retry=None):
 def zip_and_upload_to_s3(install_dir, s3_bucket_name, s3_bucket_object_name):
     remove_terraform_folder_from_install_dir(install_dir=install_dir)
 
-    zip_file = shutil.make_archive(base_name=Path(s3_bucket_object_name).stem, format="zip", root_dir=install_dir)
+    _base_name = os.path.join(install_dir, Path(s3_bucket_object_name).stem)
+    LOGGER.info(f"Writing data from {install_dir} to {_base_name} zip file")
+    zip_file = shutil.make_archive(base_name=_base_name, format="zip", root_dir=install_dir)
 
     LOGGER.info(f"Upload {zip_file} file to S3 {s3_bucket_name}, path {s3_bucket_object_name}")
     s3_client().upload_file(Filename=zip_file, Bucket=s3_bucket_name, Key=s3_bucket_object_name)
