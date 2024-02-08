@@ -8,6 +8,8 @@ import semver
 from ocm_python_wrapper.versions import Versions
 from ocp_utilities.utils import run_command
 from simple_logger.logger import get_logger
+import requests
+from bs4 import BeautifulSoup
 
 from openshift_cli_installer.utils.const import (
     AWS_OSD_STR,
@@ -154,6 +156,7 @@ def get_ipi_cluster_versions():
             1
         ].splitlines()
 
+    # TODO: Use `is_version_accepted` to return only accepted versions
     return versions_dict
 
 
@@ -182,3 +185,16 @@ def update_rosa_osd_clusters_versions(clusters, _test=False, _test_versions_dict
                 base_available_versions_dict.setdefault(channel_group, []).extend(_all_versions)
 
     return set_clusters_versions(clusters=clusters, base_available_versions=base_available_versions_dict)
+
+
+def is_version_accepted(version):
+    for tr in parse_openshift_release_url.find_all("tr"):
+        if version in tr.text and "Accepted" in tr.text:
+            return True
+    return False
+
+
+@functools.cache
+def parse_openshift_release_url():
+    req = requests.get("https://openshift-release.apps.ci.l2s4.p1.openshiftapps.com")
+    return BeautifulSoup(req.text, "html.parser")
