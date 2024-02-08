@@ -172,6 +172,7 @@ class RosaCluster(OcmCluster):
             "aws-secret-access-key",
             "aws-account-id",
             "auto-region",
+            "name-prefix",
         )
         ignore_prefix = ("acm-observability", "gcp")
         name = self.cluster_info["name"]
