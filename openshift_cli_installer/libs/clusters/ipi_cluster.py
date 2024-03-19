@@ -27,18 +27,18 @@ from openshift_cli_installer.utils.general import get_dict_from_json
 
 
 class IpiCluster(OCPCluster):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, ocp_cluster, user_input):
+        super().__init__(ocp_cluster=ocp_cluster, user_input=user_input)
         self.logger = get_logger(f"{self.__class__.__module__}-{self.__class__.__name__}")
         self.log_level = self.cluster.get("log_level", "error")
 
         self.platform = None
         self.gcp_project_id = None
         self.unified_pull_secret = generate_unified_pull_secret(
-            registry_config_file=self.registry_config_file,
-            docker_config_file=self.docker_config_file,
+            registry_config_file=self.user_input.registry_config_file,
+            docker_config_file=self.user_input.docker_config_file,
         )
-        if kwargs.get("destroy_from_s3_bucket_or_local_directory"):
+        if self.user_input.destroy_from_s3_bucket_or_local_directory:
             self._ipi_download_installer()
         else:
             self.openshift_install_binary_path = None
@@ -58,7 +58,7 @@ class IpiCluster(OCPCluster):
         self.set_cluster_install_version()
         self._set_install_version_url()
         self._ipi_download_installer()
-        if self.create:
+        if self.user_input.create:
             self._create_install_config_file()
 
     def _ipi_download_installer(self):
@@ -66,6 +66,7 @@ class IpiCluster(OCPCluster):
         version_url = self.cluster_info["version-url"]
         binary_dir = os.path.join(tempfile.TemporaryDirectory().name, version_url)
         self.openshift_install_binary_path = os.path.join(binary_dir, openshift_install_str)
+
         with self._set_docker_config_file() as unified_pull_secret:
             rc, _, err = run_command(
                 command=shlex.split(
@@ -83,14 +84,12 @@ class IpiCluster(OCPCluster):
                 raise click.Abort()
 
     def _create_install_config_file(self):
-        self.ssh_key = get_local_ssh_key(ssh_key_file=self.ssh_key_file)
-
         terraform_parameters = {
             "name": self.cluster_info["name"],
             "region": self.cluster_info["region"],
             "base_domain": self.cluster_info["base-domain"],
             "platform": self.cluster_info["platform"],
-            "ssh_key": self.ssh_key,
+            "ssh_key": get_local_ssh_key(ssh_key_file=self.user_input.ssh_key_file),
             "pull_secret": self.unified_pull_secret,
         }
 
@@ -202,11 +201,11 @@ class IpiCluster(OCPCluster):
 
 
 class AwsIpiCluster(IpiCluster):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, ocp_cluster, user_input):
+        super().__init__(ocp_cluster=ocp_cluster, user_input=user_input)
         self.logger = get_logger(f"{self.__class__.__module__}-{self.__class__.__name__}")
         self.platform = AWS_STR
-        if not kwargs.get("destroy_from_s3_bucket_or_local_directory"):
+        if not self.user_input.destroy_from_s3_bucket_or_local_directory:
             self._prepare_ipi_cluster()
             self.dump_cluster_data_to_file()
 
@@ -214,13 +213,14 @@ class AwsIpiCluster(IpiCluster):
 
 
 class GcpIpiCluster(IpiCluster):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, ocp_cluster, user_input):
+        super().__init__(ocp_cluster=ocp_cluster, user_input=user_input)
         self.logger = get_logger(f"{self.__class__.__module__}-{self.__class__.__name__}")
         self.platform = GCP_STR
-        self.gcp_service_account_file = kwargs["ocp_cluster"]["gcp-service-account-file"]
-        self.gcp_project_id = get_dict_from_json(gcp_service_account_file=self.gcp_service_account_file)["project_id"]
-        if not kwargs.get("destroy_from_s3_bucket_or_local_directory"):
+        self.gcp_project_id = get_dict_from_json(gcp_service_account_file=self.user_input.gcp_service_account_file)[
+            "project_id"
+        ]
+        if not self.user_input.destroy_from_s3_bucket_or_local_directory:
             self._prepare_ipi_cluster()
             self.dump_cluster_data_to_file()
 
