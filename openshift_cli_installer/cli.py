@@ -256,7 +256,7 @@ def main(**kwargs):
 if __name__ == "__main__":
     start_time = time.time()
     should_raise = False
-    _logger = get_logger(name="main-openshift-cli-installer")
+    _logger = get_logger(name="openshift-cli-installer")
     try:
         main()
     except Exception as ex:
