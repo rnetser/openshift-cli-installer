@@ -44,9 +44,8 @@ class UserInput:
         self.clusters = self.get_clusters_from_user_input()
         self.ocm_token = self.user_kwargs.get("ocm_token")
         self.parallel = False if self.clusters and len(self.clusters) == 1 else self.user_kwargs.get("parallel")
-        self.clusters_install_data_directory = self.user_kwargs.get(
-            "clusters_install_data_directory",
-            "/openshift-cli-installer/clusters-install-data",
+        self.clusters_install_data_directory = (
+            self.user_kwargs["clusters_install_data_directory"] or "/openshift-cli-installer/clusters-install-data"
         )
         self.destroy_clusters_from_s3_config_files = self.user_kwargs.get("destroy_clusters_from_s3_config_files")
         self.s3_bucket_name = self.user_kwargs.get("s3_bucket_name")
@@ -161,6 +160,8 @@ class UserInput:
             self.assert_acm_clusters_user_input()
             self.assert_gcp_user_input()
             self.assert_cluster_platform_support_observability()
+            self.assert_missing_cluster_region()
+            self.assert_clusters_data_directory_missing_permissions()
 
     def abort_no_ocm_token(self):
         if not self.ocm_token:
@@ -369,3 +370,19 @@ class UserInput:
             if not cluster.get("name", cluster.get("name-prefix")):
                 self.logger.error("Cluster name or name_prefix must be provided")
                 raise click.Abort()
+
+    def assert_missing_cluster_region(self):
+        if clusters_wtih_missing_regions := [
+            _cluster["name"]
+            for _cluster in self.clusters
+            if not _cluster.get("region") and not _cluster.get("auto-region")
+        ]:
+            self.logger.error(
+                f"Cluster region must be provided for the following clusters: {clusters_wtih_missing_regions}"
+            )
+            raise click.Abort()
+
+    def assert_clusters_data_directory_missing_permissions(self):
+        if not os.access(self.clusters_install_data_directory, os.W_OK):
+            self.logger.error(f"Clusters data directory: {self.clusters_install_data_directory} is not writable")
+            raise click.Abort()
