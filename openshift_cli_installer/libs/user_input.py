@@ -372,6 +372,7 @@ class UserInput:
                 raise click.Abort()
 
     def assert_missing_cluster_region(self):
+        # TODO: add tests
         if clusters_wtih_missing_regions := [
             _cluster["name"]
             for _cluster in self.clusters
@@ -383,6 +384,7 @@ class UserInput:
             raise click.Abort()
 
     def assert_clusters_data_directory_missing_permissions(self):
+        # TODO: add tests
         if not os.access(os.path.dirname(self.clusters_install_data_directory), os.W_OK):
             self.logger.error(f"Clusters data directory: {self.clusters_install_data_directory} is not writable")
             raise click.Abort()
