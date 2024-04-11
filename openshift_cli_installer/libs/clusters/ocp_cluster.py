@@ -48,8 +48,12 @@ class OCPCluster:
         self.logger = get_logger(f"{self.__class__.__module__}-{self.__class__.__name__}")
         self.cluster = ocp_cluster
 
-        self.s3_bucket_name = self.user_input.s3_bucket_name or self.cluster["cluster_info"].get("s3_bucket_name")
-        self.s3_bucket_path = self.user_input.s3_bucket_path or self.cluster["cluster_info"].get("s3_bucket_path")
+        self.s3_bucket_name = self.user_input.s3_bucket_name or self.cluster.get("cluster_info", {}).get(
+            "s3_bucket_name"
+        )
+        self.s3_bucket_path = self.user_input.s3_bucket_path or self.cluster.get("cluster_info", {}).get(
+            "s3_bucket_path"
+        )
 
         if self.user_input.destroy_from_s3_bucket_or_local_directory:
             self.cluster_info = self.cluster["cluster_info"]
@@ -465,7 +469,9 @@ class OCPCluster:
         )
 
     def get_cluster_kubeconfig_from_install_dir(self, cluster_name, cluster_platform):
-        cluster_install_dir = os.path.join(self.clusters_install_data_directory, cluster_platform, cluster_name)
+        cluster_install_dir = os.path.join(
+            self.user_input.clusters_install_data_directory, cluster_platform, cluster_name
+        )
         if not os.path.exists(cluster_install_dir):
             self.logger.error(f"{self.log_prefix}: ACM managed cluster data dir not found in {cluster_install_dir}")
             raise click.Abort()
