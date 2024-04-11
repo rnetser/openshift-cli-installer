@@ -383,6 +383,6 @@ class UserInput:
             raise click.Abort()
 
     def assert_clusters_data_directory_missing_permissions(self):
-        if not os.access(self.clusters_install_data_directory, os.W_OK):
+        if not os.access(os.path.dirname(self.clusters_install_data_directory), os.W_OK):
             self.logger.error(f"Clusters data directory: {self.clusters_install_data_directory} is not writable")
             raise click.Abort()
