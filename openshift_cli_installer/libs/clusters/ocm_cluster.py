@@ -1,4 +1,7 @@
 from datetime import datetime, timedelta
+import functools
+import re
+from typing import Dict, List
 
 import rosa.cli
 from ocm_python_wrapper.cluster import Cluster
@@ -41,19 +44,32 @@ class OcmCluster(OCPCluster):
                 f"{(datetime.now() + timedelta(seconds=_expiration_time)).isoformat()}Z"
             )
 
+    @functools.cache
     def get_osd_versions(self):
-        self.osd_base_available_versions_dict.update(
-            Versions(client=self.ocm_client).get(channel_group=self.cluster_info["channel-group"])
-        )
+        updated_versions_dict: Dict[str, Dict[str, List[str]]] = {}
+        for channel, versions in (
+            Versions(client=self.ocm_client).get(channel_group=self.cluster_info["channel-group"]).items()
+        ):
+            updated_versions_dict[channel] = {}
+            for version in versions:
+                _version_key = re.findall(r"^\d+.\d+", version)[0]
+                updated_versions_dict[channel].setdefault(_version_key, []).append(version)
 
+        self.osd_base_available_versions_dict.update(updated_versions_dict)
+
+    @functools.cache
     def get_rosa_versions(self):
+        _cannel_group = self.cluster_info["channel-group"]
         base_available_versions = rosa.cli.execute(
             command=(
-                f"list versions --channel-group={self.cluster_info['channel-group']} "
+                f"list versions --channel-group={_cannel_group} "
                 f"{'--hosted-cp' if self.cluster_info['platform'] == HYPERSHIFT_STR else ''}"
             ),
             aws_region=self.cluster_info["region"],
             ocm_client=self.ocm_client,
         )["out"]
         _all_versions = [ver["raw_id"] for ver in base_available_versions]
-        self.rosa_base_available_versions_dict.setdefault(self.cluster_info["channel-group"], []).extend(_all_versions)
+        self.rosa_base_available_versions_dict[_cannel_group] = {}
+        for version in _all_versions:
+            _version_key = re.findall(r"^\d+.\d+", version)[0]
+            self.rosa_base_available_versions_dict[_cannel_group].setdefault(_version_key, []).append(version)
